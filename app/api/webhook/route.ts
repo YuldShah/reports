@@ -9,8 +9,16 @@ export async function POST(request: NextRequest) {
     if (body.message) {
       const { chat, from, text } = body.message
 
-      if (text?.startsWith("/")) {
-        await handleBotCommand(chat.id, text, from.id)
+      // Handle all messages (not just commands)
+      if (text) {
+        await handleBotCommand(
+          chat.id, 
+          text, 
+          from.id,
+          from.first_name,
+          from.last_name,
+          from.username
+        )
       }
     }
 
