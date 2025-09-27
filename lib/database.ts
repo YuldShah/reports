@@ -49,6 +49,7 @@ if (typeof window === 'undefined') {
 
   // Ensure data directory exists
   if (!fs.existsSync(dataPath)) {
+    console.log('Creating data directory:', dataPath)
     fs.mkdirSync(dataPath, { recursive: true })
   }
 }
@@ -61,15 +62,19 @@ const readJsonFile = (filePath: string): any[] => {
     const fs = require('fs')
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath, 'utf8')
-      return JSON.parse(data, (key, value) => {
+      const parsed = JSON.parse(data, (key, value) => {
         // Convert date strings back to Date objects
         if (key.endsWith('At') || key.endsWith('Date')) {
           return new Date(value)
         }
         return value
       })
+      console.log(`Loaded ${parsed.length} items from ${filePath}`)
+      return parsed
+    } else {
+      console.log(`File ${filePath} does not exist, returning empty array`)
+      return []
     }
-    return []
   } catch (error) {
     console.error(`Error reading ${filePath}:`, error)
     return []
@@ -82,6 +87,7 @@ const writeJsonFile = (filePath: string, data: any[]) => {
   try {
     const fs = require('fs')
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
+    console.log(`Saved ${data.length} items to ${filePath}`)
   } catch (error) {
     console.error(`Error writing ${filePath}:`, error)
   }
@@ -94,9 +100,11 @@ let reports: Report[] = []
 
 // Initialize data on server side
 if (typeof window === 'undefined' && usersFile && teamsFile && reportsFile) {
+  console.log('Initializing database from files...')
   users = readJsonFile(usersFile)
   teams = readJsonFile(teamsFile)
   reports = readJsonFile(reportsFile)
+  console.log(`Database initialized with ${users.length} users, ${teams.length} teams, ${reports.length} reports`)
 }
 
 // User operations
@@ -106,7 +114,12 @@ export const createUser = (userData: Omit<User, "createdAt">): User => {
     createdAt: new Date(),
   }
   users.push(user)
-  if (usersFile) writeJsonFile(usersFile, users)
+  console.log(`Creating user: ${user.firstName} (ID: ${user.telegramId})`)
+  if (usersFile) {
+    writeJsonFile(usersFile, users)
+  } else {
+    console.warn('usersFile is null, cannot save user data to disk')
+  }
   return user
 }
 
@@ -119,7 +132,12 @@ export const updateUser = (telegramId: number, updates: Partial<User>): User | n
   if (userIndex === -1) return null
 
   users[userIndex] = { ...users[userIndex], ...updates }
-  if (usersFile) writeJsonFile(usersFile, users)
+  console.log(`Updating user: ${users[userIndex].firstName} (ID: ${telegramId})`)
+  if (usersFile) {
+    writeJsonFile(usersFile, users)
+  } else {
+    console.warn('usersFile is null, cannot save user updates to disk')
+  }
   return users[userIndex]
 }
 
@@ -135,7 +153,12 @@ export const createTeam = (teamData: Omit<Team, "id" | "createdAt">): Team => {
     createdAt: new Date(),
   }
   teams.push(team)
-  if (teamsFile) writeJsonFile(teamsFile, teams)
+  console.log(`Creating team: ${team.name} (ID: ${team.id})`)
+  if (teamsFile) {
+    writeJsonFile(teamsFile, teams)
+  } else {
+    console.warn('teamsFile is null, cannot save team data to disk')
+  }
   return team
 }
 

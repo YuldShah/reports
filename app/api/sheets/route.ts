@@ -28,21 +28,34 @@ export async function GET(request: NextRequest) {
     const apiKey = process.env.GOOGLE_SHEETS_API_KEY
 
     if (!spreadsheetId || !apiKey) {
-      return NextResponse.json({ error: "Google Sheets not configured" }, { status: 500 })
+      return NextResponse.json({ 
+        error: "Google Sheets not configured", 
+        url: "#",
+        configured: false
+      }, { status: 200 })
     }
 
-    // Return sheet URL and configuration info
-    const sheetUrl = teamName
-      ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit#gid=0&range=Team_${teamName.replace(/[^a-zA-Z0-9]/g, "_")}`
-      : `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
+    // Return the Google Sheets URL
+    const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+    let url = `${baseUrl}/edit`
+    
+    if (teamName) {
+      const sheetName = `Team_${teamName.replace(/[^a-zA-Z0-9]/g, "_")}`
+      url = `${baseUrl}/edit#gid=0&range=${sheetName}`
+    }
 
-    return NextResponse.json({
-      spreadsheetId,
-      sheetUrl,
+    // If client wants to redirect directly
+    if (searchParams.get("redirect") === "true") {
+      return NextResponse.redirect(url)
+    }
+
+    return NextResponse.json({ 
+      url, 
       configured: true,
+      spreadsheetId 
     })
   } catch (error) {
-    console.error("Google Sheets config error:", error)
-    return NextResponse.json({ error: "Failed to get Google Sheets configuration" }, { status: 500 })
+    console.error("Google Sheets URL error:", error)
+    return NextResponse.json({ error: "Failed to get Google Sheets URL", url: "#", configured: false }, { status: 500 })
   }
 }
