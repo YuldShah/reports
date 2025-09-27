@@ -1,10 +1,11 @@
 "use client"
 
+import * as React from "react"
 import type { ReactNode } from "react"
-import { Card, type CardProps } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
-interface EnhancedCardProps extends CardProps {
+interface EnhancedCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: ReactNode
   hover?: boolean
   glass?: boolean
