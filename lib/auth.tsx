@@ -74,6 +74,35 @@ export const useAuth = (): AuthState => {
             const data = await response.json()
             dbUser = data.user
             console.log("[v0] Found existing user:", dbUser?.firstName)
+            
+            // Update existing user with latest profile info (including photo)
+            if (dbUser && (
+              dbUser.firstName !== telegramUser.first_name ||
+              dbUser.lastName !== telegramUser.last_name ||
+              dbUser.username !== telegramUser.username ||
+              dbUser.photoUrl !== telegramUser.photo_url
+            )) {
+              console.log("[v0] Updating existing user profile")
+              const updateResponse = await fetch('/api/users', {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  telegramId: telegramUser.id,
+                  firstName: telegramUser.first_name,
+                  lastName: telegramUser.last_name,
+                  username: telegramUser.username,
+                  photoUrl: telegramUser.photo_url,
+                }),
+              })
+              
+              if (updateResponse.ok) {
+                const updateData = await updateResponse.json()
+                dbUser = updateData.user
+                console.log("[v0] User profile updated successfully")
+              }
+            }
           } else if (response.status === 404) {
             // User doesn't exist, create them
             console.log("[v0] Auto-registering new user")

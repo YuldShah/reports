@@ -8,14 +8,14 @@ export async function GET(request: NextRequest) {
     const telegramId = searchParams.get("telegramId")
 
     if (telegramId) {
-      const user = getUserByTelegramId(Number(telegramId))
+      const user = await getUserByTelegramId(Number(telegramId))
       if (!user) {
         return NextResponse.json({ error: "User not found" }, { status: 404 })
       }
       return NextResponse.json({ user })
     }
 
-    const users = getAllUsers()
+    const users = await getAllUsers()
     return NextResponse.json({ users })
   } catch (error) {
     console.error("Error fetching users:", error)
@@ -33,12 +33,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const existingUser = getUserByTelegramId(telegramId)
+    const existingUser = await getUserByTelegramId(telegramId)
     if (existingUser) {
       return NextResponse.json({ error: "User already exists" }, { status: 409 })
     }
 
-    const user = createUser({
+    const user = await createUser({
       telegramId,
       firstName,
       lastName,
@@ -63,7 +63,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Telegram ID is required" }, { status: 400 })
     }
 
-    const updatedUser = updateUser(telegramId, updates)
+    const updatedUser = await updateUser(telegramId, updates)
 
     if (!updatedUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })

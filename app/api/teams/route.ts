@@ -7,16 +7,16 @@ export async function GET(request: NextRequest) {
     const teamId = searchParams.get("id")
 
     if (teamId) {
-      const team = getTeamById(teamId)
+      const team = await getTeamById(teamId)
       if (!team) {
         return NextResponse.json({ error: "Team not found" }, { status: 404 })
       }
 
-      const members = getUsersByTeam(teamId)
+      const members = await getUsersByTeam(teamId)
       return NextResponse.json({ team: { ...team, members } })
     }
 
-    const teams = getAllTeams()
+    const teams = await getAllTeams()
     return NextResponse.json({ teams })
   } catch (error) {
     console.error("Error fetching teams:", error)
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Team name and creator ID are required" }, { status: 400 })
     }
 
-    const team = createTeam({
+    const team = await createTeam({
       name,
       description: description || "",
       createdBy,
@@ -55,7 +55,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Team ID is required" }, { status: 400 })
     }
 
-    const success = deleteTeam(teamId)
+    const success = await deleteTeam(teamId)
     
     if (!success) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 })

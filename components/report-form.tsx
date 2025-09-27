@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowLeft, Send, AlertCircle } from "lucide-react"
-import { createReport } from "@/lib/database"
 import { appendToGoogleSheet } from "@/lib/google-sheets"
 import { toast } from "@/hooks/use-toast"
 import type { User } from "@/lib/database"
@@ -120,16 +119,29 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
     setIsSubmitting(true)
 
     try {
-      // Create report in database
-      const report = createReport({
-        userId: user.telegramId,
-        teamId: user.teamId,
-        title: formData.title,
-        description: formData.description,
-        priority: formData.priority as "low" | "medium" | "high",
-        status: "pending",
-        category: formData.category,
+      // Create report via API
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.telegramId,
+          teamId: user.teamId,
+          title: formData.title,
+          description: formData.description,
+          priority: formData.priority,
+          status: "pending",
+          category: formData.category,
+        }),
       })
+
+      if (!response.ok) {
+        throw new Error('Failed to create report')
+      }
+
+      const data = await response.json()
+      const report = data.report
 
       // Prepare data for Google Sheets
       const sheetData = {

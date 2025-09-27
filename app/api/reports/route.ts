@@ -10,11 +10,11 @@ export async function GET(request: NextRequest) {
 
     let reports
     if (userId) {
-      reports = getReportsByUser(Number(userId))
+      reports = await getReportsByUser(Number(userId))
     } else if (teamId) {
-      reports = getReportsByTeam(teamId)
+      reports = await getReportsByTeam(teamId)
     } else {
-      reports = getAllReports()
+      reports = await getAllReports()
     }
 
     return NextResponse.json({ reports })
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create report in database
-    const report = createReport({
+    const report = await createReport({
       userId,
       teamId,
       title,

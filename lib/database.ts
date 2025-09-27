@@ -1,3 +1,5 @@
+import { Pool, PoolClient } from 'pg'
+
 export interface User {
   telegramId: number
   firstName: string
@@ -31,214 +33,393 @@ export interface Report {
   updatedAt: Date
 }
 
-// File-based storage for persistence (server-side only)
-let dataPath: string | null = null
-let usersFile: string | null = null
-let teamsFile: string | null = null
-let reportsFile: string | null = null
+// Database connection pool
+let pool: Pool | null = null
 
-// Initialize paths only on server side
-if (typeof window === 'undefined') {
-  const fs = require('fs')
-  const path = require('path')
-  
-  dataPath = path.join(process.cwd(), 'data')
-  usersFile = path.join(dataPath, 'users.json')
-  teamsFile = path.join(dataPath, 'teams.json')
-  reportsFile = path.join(dataPath, 'reports.json')
-
-  // Ensure data directory exists
-  if (!fs.existsSync(dataPath)) {
-    console.log('Creating data directory:', dataPath)
-    fs.mkdirSync(dataPath, { recursive: true })
+const getPool = () => {
+  if (!pool) {
+    pool = new Pool({
+      host: 'localhost',
+      port: 5432,
+      database: 'reports_db',
+      user: 'reports_user',
+      password: 'reports_password123',
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    })
   }
+  return pool
 }
 
-// Helper functions for file operations
-const readJsonFile = (filePath: string): any[] => {
-  if (typeof window !== 'undefined') return [] // Client-side fallback
-  
+// Helper function to execute queries
+const query = async (text: string, params?: any[]): Promise<any> => {
+  const client = await getPool().connect()
   try {
-    const fs = require('fs')
-    if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf8')
-      const parsed = JSON.parse(data, (key, value) => {
-        // Convert date strings back to Date objects
-        if (key.endsWith('At') || key.endsWith('Date')) {
-          return new Date(value)
-        }
-        return value
-      })
-      console.log(`Loaded ${parsed.length} items from ${filePath}`)
-      return parsed
-    } else {
-      console.log(`File ${filePath} does not exist, returning empty array`)
-      return []
-    }
-  } catch (error) {
-    console.error(`Error reading ${filePath}:`, error)
-    return []
+    const result = await client.query(text, params)
+    return result
+  } finally {
+    client.release()
   }
-}
-
-const writeJsonFile = (filePath: string, data: any[]) => {
-  if (typeof window !== 'undefined') return // Client-side fallback
-  
-  try {
-    const fs = require('fs')
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
-    console.log(`Saved ${data.length} items to ${filePath}`)
-  } catch (error) {
-    console.error(`Error writing ${filePath}:`, error)
-  }
-}
-
-// In-memory cache
-let users: User[] = []
-let teams: Team[] = []
-let reports: Report[] = []
-
-// Initialize data on server side
-if (typeof window === 'undefined' && usersFile && teamsFile && reportsFile) {
-  console.log('Initializing database from files...')
-  users = readJsonFile(usersFile)
-  teams = readJsonFile(teamsFile)
-  reports = readJsonFile(reportsFile)
-  console.log(`Database initialized with ${users.length} users, ${teams.length} teams, ${reports.length} reports`)
 }
 
 // User operations
-export const createUser = (userData: Omit<User, "createdAt">): User => {
-  const user: User = {
-    ...userData,
-    createdAt: new Date(),
+export const createUser = async (userData: Omit<User, "createdAt">): Promise<User> => {
+  const { telegramId, firstName, lastName, username, photoUrl, teamId, role } = userData
+  
+  const result = await query(
+    `INSERT INTO users (telegram_id, first_name, last_name, username, photo_url, team_id, role) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7) 
+     RETURNING telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at`,
+    [telegramId, firstName, lastName, username, photoUrl, teamId, role]
+  )
+
+  const row = result.rows[0]
+  return {
+    telegramId: row.telegram_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    username: row.username,
+    photoUrl: row.photo_url,
+    teamId: row.team_id,
+    role: row.role,
+    createdAt: row.created_at
   }
-  users.push(user)
-  console.log(`Creating user: ${user.firstName} (ID: ${user.telegramId})`)
-  if (usersFile) {
-    writeJsonFile(usersFile, users)
-  } else {
-    console.warn('usersFile is null, cannot save user data to disk')
-  }
-  return user
 }
 
-export const getUserByTelegramId = (telegramId: number): User | null => {
-  return users.find((user) => user.telegramId === telegramId) || null
-}
+export const getUserByTelegramId = async (telegramId: number): Promise<User | null> => {
+  const result = await query(
+    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE telegram_id = $1',
+    [telegramId]
+  )
 
-export const updateUser = (telegramId: number, updates: Partial<User>): User | null => {
-  const userIndex = users.findIndex((user) => user.telegramId === telegramId)
-  if (userIndex === -1) return null
+  if (result.rows.length === 0) return null
 
-  users[userIndex] = { ...users[userIndex], ...updates }
-  console.log(`Updating user: ${users[userIndex].firstName} (ID: ${telegramId})`)
-  if (usersFile) {
-    writeJsonFile(usersFile, users)
-  } else {
-    console.warn('usersFile is null, cannot save user updates to disk')
+  const row = result.rows[0]
+  return {
+    telegramId: row.telegram_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    username: row.username,
+    photoUrl: row.photo_url,
+    teamId: row.team_id,
+    role: row.role,
+    createdAt: row.created_at
   }
-  return users[userIndex]
 }
 
-export const getAllUsers = (): User[] => {
-  return users
+export const updateUser = async (telegramId: number, updates: Partial<User>): Promise<User | null> => {
+  const fields = []
+  const values = []
+  let paramCount = 1
+
+  if (updates.firstName !== undefined) {
+    fields.push(`first_name = $${paramCount++}`)
+    values.push(updates.firstName)
+  }
+  if (updates.lastName !== undefined) {
+    fields.push(`last_name = $${paramCount++}`)
+    values.push(updates.lastName)
+  }
+  if (updates.username !== undefined) {
+    fields.push(`username = $${paramCount++}`)
+    values.push(updates.username)
+  }
+  if (updates.photoUrl !== undefined) {
+    fields.push(`photo_url = $${paramCount++}`)
+    values.push(updates.photoUrl)
+  }
+  if (updates.teamId !== undefined) {
+    fields.push(`team_id = $${paramCount++}`)
+    values.push(updates.teamId)
+  }
+  if (updates.role !== undefined) {
+    fields.push(`role = $${paramCount++}`)
+    values.push(updates.role)
+  }
+
+  if (fields.length === 0) return null
+
+  values.push(telegramId)
+
+  const result = await query(
+    `UPDATE users SET ${fields.join(', ')} 
+     WHERE telegram_id = $${paramCount} 
+     RETURNING telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at`,
+    values
+  )
+
+  if (result.rows.length === 0) return null
+
+  const row = result.rows[0]
+  return {
+    telegramId: row.telegram_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    username: row.username,
+    photoUrl: row.photo_url,
+    teamId: row.team_id,
+    role: row.role,
+    createdAt: row.created_at
+  }
+}
+
+export const getAllUsers = async (): Promise<User[]> => {
+  const result = await query(
+    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users ORDER BY created_at DESC'
+  )
+
+  return result.rows.map((row: any) => ({
+    telegramId: row.telegram_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    username: row.username,
+    photoUrl: row.photo_url,
+    teamId: row.team_id,
+    role: row.role,
+    createdAt: row.created_at
+  }))
 }
 
 // Team operations
-export const createTeam = (teamData: Omit<Team, "id" | "createdAt">): Team => {
-  const team: Team = {
-    ...teamData,
-    id: `team_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    createdAt: new Date(),
+export const createTeam = async (teamData: Omit<Team, "id" | "createdAt">): Promise<Team> => {
+  const teamId = `team_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const { name, description, createdBy } = teamData
+
+  const result = await query(
+    'INSERT INTO teams (id, name, description, created_by) VALUES ($1, $2, $3, $4) RETURNING id, name, description, created_by, created_at',
+    [teamId, name, description, createdBy]
+  )
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    createdBy: row.created_by,
+    createdAt: row.created_at
   }
-  teams.push(team)
-  console.log(`Creating team: ${team.name} (ID: ${team.id})`)
-  if (teamsFile) {
-    writeJsonFile(teamsFile, teams)
-  } else {
-    console.warn('teamsFile is null, cannot save team data to disk')
+}
+
+export const getAllTeams = async (): Promise<Team[]> => {
+  const result = await query(
+    'SELECT id, name, description, created_by, created_at FROM teams ORDER BY created_at DESC'
+  )
+
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    createdBy: row.created_by,
+    createdAt: row.created_at
+  }))
+}
+
+export const getTeamById = async (id: string): Promise<Team | null> => {
+  const result = await query(
+    'SELECT id, name, description, created_by, created_at FROM teams WHERE id = $1',
+    [id]
+  )
+
+  if (result.rows.length === 0) return null
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    createdBy: row.created_by,
+    createdAt: row.created_at
   }
-  return team
 }
 
-export const getAllTeams = (): Team[] => {
-  return teams
-}
-
-export const getTeamById = (id: string): Team | null => {
-  return teams.find((team) => team.id === id) || null
-}
-
-export const deleteTeam = (id: string): boolean => {
-  const teamIndex = teams.findIndex((team) => team.id === id)
-  if (teamIndex === -1) return false
-
-  // Remove team from teams array
-  teams.splice(teamIndex, 1)
-  console.log(`Deleting team: ${id}`)
+export const deleteTeam = async (id: string): Promise<boolean> => {
+  const client = await getPool().connect()
   
-  // Unassign all users from this team
-  users.forEach(user => {
-    if (user.teamId === id) {
-      user.teamId = undefined
-    }
-  })
-
-  // Save both teams and users files
-  if (teamsFile) {
-    writeJsonFile(teamsFile, teams)
-  } else {
-    console.warn('teamsFile is null, cannot save team data to disk')
+  try {
+    await client.query('BEGIN')
+    
+    // Unassign all users from this team
+    await client.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [id])
+    
+    // Delete the team
+    const result = await client.query('DELETE FROM teams WHERE id = $1', [id])
+    
+    await client.query('COMMIT')
+    
+    return result.rowCount > 0
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
   }
-  
-  if (usersFile) {
-    writeJsonFile(usersFile, users)
-  } else {
-    console.warn('usersFile is null, cannot save user data to disk')
-  }
-  
-  return true
 }
 
-export const getUsersByTeam = (teamId: string): User[] => {
-  return users.filter((user) => user.teamId === teamId)
+export const getUsersByTeam = async (teamId: string): Promise<User[]> => {
+  const result = await query(
+    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE team_id = $1 ORDER BY first_name',
+    [teamId]
+  )
+
+  return result.rows.map((row: any) => ({
+    telegramId: row.telegram_id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    username: row.username,
+    photoUrl: row.photo_url,
+    teamId: row.team_id,
+    role: row.role,
+    createdAt: row.created_at
+  }))
 }
 
 // Report operations
-export const createReport = (reportData: Omit<Report, "id" | "createdAt" | "updatedAt">): Report => {
-  const report: Report = {
-    ...reportData,
-    id: `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+export const createReport = async (reportData: Omit<Report, "id" | "createdAt" | "updatedAt">): Promise<Report> => {
+  const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  const { userId, teamId, title, description, priority, status, category, attachments } = reportData
+
+  const result = await query(
+    `INSERT INTO reports (id, user_id, team_id, title, description, priority, status, category, attachments) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at`,
+    [reportId, userId, teamId, title, description, priority, status, category, attachments || []]
+  )
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    userId: row.user_id,
+    teamId: row.team_id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    category: row.category,
+    attachments: row.attachments,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   }
-  reports.push(report)
-  if (reportsFile) writeJsonFile(reportsFile, reports)
-  return report
 }
 
-export const getAllReports = (): Report[] => {
-  return reports
+export const getAllReports = async (): Promise<Report[]> => {
+  const result = await query(
+    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at FROM reports ORDER BY created_at DESC'
+  )
+
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    userId: row.user_id,
+    teamId: row.team_id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    category: row.category,
+    attachments: row.attachments,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }))
 }
 
-export const getReportsByTeam = (teamId: string): Report[] => {
-  return reports.filter((report) => report.teamId === teamId)
+export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
+  const result = await query(
+    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at FROM reports WHERE team_id = $1 ORDER BY created_at DESC',
+    [teamId]
+  )
+
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    userId: row.user_id,
+    teamId: row.team_id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    category: row.category,
+    attachments: row.attachments,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }))
 }
 
-export const getReportsByUser = (userId: number): Report[] => {
-  return reports.filter((report) => report.userId === userId)
+export const getReportsByUser = async (userId: number): Promise<Report[]> => {
+  const result = await query(
+    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at FROM reports WHERE user_id = $1 ORDER BY created_at DESC',
+    [userId]
+  )
+
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    userId: row.user_id,
+    teamId: row.team_id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    category: row.category,
+    attachments: row.attachments,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }))
 }
 
-export const updateReport = (id: string, updates: Partial<Report>): Report | null => {
-  const reportIndex = reports.findIndex((report) => report.id === id)
-  if (reportIndex === -1) return null
+export const updateReport = async (id: string, updates: Partial<Report>): Promise<Report | null> => {
+  const fields = []
+  const values = []
+  let paramCount = 1
 
-  reports[reportIndex] = {
-    ...reports[reportIndex],
-    ...updates,
-    updatedAt: new Date(),
+  if (updates.title !== undefined) {
+    fields.push(`title = $${paramCount++}`)
+    values.push(updates.title)
   }
-  if (reportsFile) writeJsonFile(reportsFile, reports)
-  return reports[reportIndex]
+  if (updates.description !== undefined) {
+    fields.push(`description = $${paramCount++}`)
+    values.push(updates.description)
+  }
+  if (updates.priority !== undefined) {
+    fields.push(`priority = $${paramCount++}`)
+    values.push(updates.priority)
+  }
+  if (updates.status !== undefined) {
+    fields.push(`status = $${paramCount++}`)
+    values.push(updates.status)
+  }
+  if (updates.category !== undefined) {
+    fields.push(`category = $${paramCount++}`)
+    values.push(updates.category)
+  }
+  if (updates.attachments !== undefined) {
+    fields.push(`attachments = $${paramCount++}`)
+    values.push(updates.attachments)
+  }
+
+  if (fields.length === 0) return null
+
+  fields.push(`updated_at = CURRENT_TIMESTAMP`)
+  values.push(id)
+
+  const result = await query(
+    `UPDATE reports SET ${fields.join(', ')} 
+     WHERE id = $${paramCount} 
+     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at`,
+    values
+  )
+
+  if (result.rows.length === 0) return null
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    userId: row.user_id,
+    teamId: row.team_id,
+    title: row.title,
+    description: row.description,
+    priority: row.priority,
+    status: row.status,
+    category: row.category,
+    attachments: row.attachments,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
 }
