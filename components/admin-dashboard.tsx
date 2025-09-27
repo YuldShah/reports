@@ -86,15 +86,17 @@ export default function AdminDashboard() {
                   </div>
                 </Button>
 
-                <Button variant="outline" className="justify-start h-auto p-4 bg-transparent" asChild>
-                  <a href={getGoogleSheetsUrl()} target="_blank" rel="noopener noreferrer">
-                    <div className="text-left">
-                      <div className="font-medium flex items-center gap-2">
-                        View Google Sheets <ExternalLink className="w-4 h-4" />
-                      </div>
-                      <div className="text-sm text-muted-foreground">Access all reports data</div>
+                <Button
+                  variant="outline"
+                  className="justify-start h-auto p-4 bg-transparent"
+                  onClick={() => setActiveTab("reports")}
+                >
+                  <div className="text-left">
+                    <div className="font-medium flex items-center gap-2">
+                      View Reports <ExternalLink className="w-4 h-4" />
                     </div>
-                  </a>
+                    <div className="text-sm text-muted-foreground">Access all reports data</div>
+                  </div>
                 </Button>
               </div>
             </CardContent>

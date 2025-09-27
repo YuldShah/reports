@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { handleBotCommand } from "@/lib/auth"
+import { handleBotCommand } from "@/lib/bot-commands"
 
 export async function POST(request: NextRequest) {
   try {
