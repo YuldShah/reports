@@ -114,9 +114,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         variant: "destructive",
         duration: 3000,
       })
-    }
-  }
-
   const handleAddMember = async () => {
     if (!selectedUserId || !selectedTeam) return
 
@@ -227,11 +224,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
           <p className="text-sm text-muted-foreground">Create teams and manage team members</p>
         </div>
 
-        {/* Create Team Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
+            <Button>
+              <Plus className="w-4 h-4" />
               Create Team
             </Button>
           </DialogTrigger>
@@ -245,34 +241,26 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                 <Label htmlFor="team-name">Team Name</Label>
                 <Input
                   id="team-name"
-                  placeholder="Enter team name"
                   value={newTeam.name}
                   onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                  placeholder="e.g., Development Team"
                 />
               </div>
               <div>
                 <Label htmlFor="team-description">Description (Optional)</Label>
                 <Textarea
                   id="team-description"
-                  placeholder="Enter team description"
                   value={newTeam.description}
                   onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
+                  placeholder="Brief description of the team's purpose"
                   rows={3}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleCreateTeam} className="flex-1">
-                  Create Team
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setNewTeam({ name: "", description: "" })
-                    setIsCreateDialogOpen(false)
-                  }}
-                >
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
+                <Button onClick={handleCreateTeam}>Create Team</Button>
               </div>
             </div>
           </DialogContent>
@@ -307,29 +295,28 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                 {/* Team Members */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium">Team Members</h4>
+                    <h4 className="text-sm font-medium flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Members
+                    </h4>
+
                     <Dialog
                       open={isAddMemberDialogOpen && selectedTeam === team.id}
                       onOpenChange={(open) => {
                         setIsAddMemberDialogOpen(open)
-                        if (open) {
-                          setSelectedTeam(team.id)
-                        } else {
-                          setSelectedTeam(null)
-                          setSelectedUserId("")
-                        }
+                        if (open) setSelectedTeam(team.id)
                       }}
                     >
                       <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" className="h-8 px-2">
-                          <UserPlus className="w-3 h-3 mr-1" />
-                          Add Member
+                        <Button size="sm" variant="outline">
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          Add
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Add Member to {team.name}</DialogTitle>
-                          <DialogDescription>Select a user to add to this team</DialogDescription>
+                          <DialogDescription>Select an unassigned user to add to this team</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
@@ -341,18 +328,32 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               <SelectContent>
                                 {unassignedUsers.map((user) => (
                                   <SelectItem key={user.telegramId} value={user.telegramId.toString()}>
-                                    {user.firstName} {user.lastName} ({user.username})
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="w-6 h-6">
+                                        <AvatarImage src={user.photoUrl || "/placeholder.svg"} />
+                                        <AvatarFallback className="text-xs">{user.firstName.charAt(0)}</AvatarFallback>
+                                      </Avatar>
+                                      {user.firstName} {user.lastName}
+                                      {user.username && <span className="text-muted-foreground">@{user.username}</span>}
+                                    </div>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="flex gap-2">
-                            <Button onClick={handleAddMember} disabled={!selectedUserId}>
-                              Add Member
-                            </Button>
+
+                          {unassignedUsers.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              No unassigned users available
+                            </p>
+                          )}
+
+                          <div className="flex gap-2 justify-end">
                             <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
                               Cancel
+                            </Button>
+                            <Button onClick={handleAddMember} disabled={!selectedUserId}>
+                              Add Member
                             </Button>
                           </div>
                         </div>
@@ -361,13 +362,18 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   </div>
 
                   <div className="space-y-2">
-                    {teamMembers.length > 0 ? (
-                      teamMembers.map((member: User) => (
-                        <div key={member.telegramId} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                          <div className="flex items-center gap-2">
+                    {teamMembers.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">No members assigned yet</div>
+                    ) : (
+                      teamMembers.map((member) => (
+                        <div
+                          key={member.telegramId}
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8">
                               <AvatarImage src={member.photoUrl || "/placeholder.svg"} />
-                              <AvatarFallback>{member.firstName.charAt(0)}</AvatarFallback>
+                              <AvatarFallback className="text-xs">{member.firstName.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="text-sm font-medium">
@@ -378,20 +384,17 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               )}
                             </div>
                           </div>
+
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => handleRemoveMember(member.telegramId)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="text-destructive hover:text-destructive"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       ))
-                    ) : (
-                      <div className="text-sm text-muted-foreground text-center py-4">
-                        No members assigned yet
-                      </div>
                     )}
                   </div>
                 </div>

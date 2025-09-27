@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Users, FileText, TrendingUp, ExternalLink, Zap } from "lucide-react"
-import { getAllUsers, getAllTeams, getAllReports } from "@/lib/database"
+import { type User, type Team, type Report } from "@/lib/database"
 import { getGoogleSheetsUrl } from "@/lib/google-sheets"
 import TeamManagement from "@/components/team-management"
 import ReportsView from "@/components/reports-view"
@@ -15,10 +15,39 @@ import SheetsIntegrationStatus from "@/components/sheets-integration-status"
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
+  const [users, setUsers] = useState<User[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [reports, setReports] = useState<Report[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const users = getAllUsers()
-  const teams = getAllTeams()
-  const reports = getAllReports()
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch users
+        const usersResponse = await fetch('/api/users')
+        const usersData = await usersResponse.json()
+        setUsers(usersData.users || [])
+
+        // Fetch teams
+        const teamsResponse = await fetch('/api/teams')
+        const teamsData = await teamsResponse.json()
+        setTeams(teamsData.teams || [])
+
+        // Fetch reports
+        const reportsResponse = await fetch('/api/reports')
+        const reportsData = await reportsResponse.json()
+        setReports(reportsData.reports || [])
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const stats = {
     totalUsers: users.length,
@@ -26,6 +55,41 @@ export default function AdminDashboard() {
     totalReports: reports.length,
     pendingReports: reports.filter((r) => r.status === "pending").length,
     completedReports: reports.filter((r) => r.status === "completed").length,
+  }
+
+  const refreshData = async () => {
+    try {
+      // Fetch users
+      const usersResponse = await fetch('/api/users')
+      const usersData = await usersResponse.json()
+      setUsers(usersData.users || [])
+
+      // Fetch teams
+      const teamsResponse = await fetch('/api/teams')
+      const teamsData = await teamsResponse.json()
+      setTeams(teamsData.teams || [])
+
+      // Fetch reports
+      const reportsResponse = await fetch('/api/reports')
+      const reportsData = await reportsResponse.json()
+      setReports(reportsData.reports || [])
+    } catch (error) {
+      console.error('Error refreshing data:', error)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -150,7 +214,7 @@ export default function AdminDashboard() {
         </TabsContent>
 
         <TabsContent value="teams">
-          <TeamManagement />
+          <TeamManagement onDataChange={refreshData} />
         </TabsContent>
 
         <TabsContent value="reports">

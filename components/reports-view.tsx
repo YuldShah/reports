@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, ExternalLink, Calendar, User, Building, FileText } from "lucide-react"
-import { getAllReports, getAllUsers, getAllTeams } from "@/lib/database"
+import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText } from "lucide-react"
+import { type User, type Team, type Report } from "@/lib/database"
 import { getGoogleSheetsUrl } from "@/lib/google-sheets"
 
 export default function ReportsView() {
@@ -15,10 +15,39 @@ export default function ReportsView() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [teamFilter, setTeamFilter] = useState("all")
+  const [reports, setReports] = useState<Report[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const reports = getAllReports()
-  const users = getAllUsers()
-  const teams = getAllTeams()
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch reports
+      const reportsResponse = await fetch('/api/reports')
+      const reportsData = await reportsResponse.json()
+      setReports(reportsData.reports || [])
+
+      // Fetch users
+      const usersResponse = await fetch('/api/users')
+      const usersData = await usersResponse.json()
+      setUsers(usersData.users || [])
+
+      // Fetch teams
+      const teamsResponse = await fetch('/api/teams')
+      const teamsData = await teamsResponse.json()
+      setTeams(teamsData.teams || [])
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -57,6 +86,22 @@ export default function ReportsView() {
       default:
         return "outline"
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Reports Management</h2>
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -172,7 +217,7 @@ export default function ReportsView() {
                 <CardContent>
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <User className="w-4 h-4" />
+                      <UserIcon className="w-4 h-4" />
                       {user?.firstName} {user?.lastName}
                     </div>
                     <div className="flex items-center gap-1">
