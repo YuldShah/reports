@@ -31,17 +31,30 @@ export default function ReportsView() {
       // Fetch reports
       const reportsResponse = await fetch('/api/reports')
       const reportsData = await reportsResponse.json()
-      setReports(reportsData.reports || [])
+      const reportsWithDates = (reportsData.reports || []).map((report: any) => ({
+        ...report,
+        createdAt: new Date(report.createdAt),
+        updatedAt: new Date(report.updatedAt)
+      }))
+      setReports(reportsWithDates)
 
       // Fetch users
       const usersResponse = await fetch('/api/users')
       const usersData = await usersResponse.json()
-      setUsers(usersData.users || [])
+      const usersWithDates = (usersData.users || []).map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt)
+      }))
+      setUsers(usersWithDates)
 
       // Fetch teams
       const teamsResponse = await fetch('/api/teams')
       const teamsData = await teamsResponse.json()
-      setTeams(teamsData.teams || [])
+      const teamsWithDates = (teamsData.teams || []).map((team: any) => ({
+        ...team,
+        createdAt: new Date(team.createdAt)
+      }))
+      setTeams(teamsWithDates)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {

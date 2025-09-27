@@ -46,12 +46,20 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       // Fetch teams
       const teamsResponse = await fetch('/api/teams')
       const teamsData = await teamsResponse.json()
-      setTeams(teamsData.teams || [])
+      const teamsWithDates = (teamsData.teams || []).map((team: any) => ({
+        ...team,
+        createdAt: new Date(team.createdAt)
+      }))
+      setTeams(teamsWithDates)
 
       // Fetch users
       const usersResponse = await fetch('/api/users')
       const usersData = await usersResponse.json()
-      setUsers(usersData.users || [])
+      const usersWithDates = (usersData.users || []).map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt)
+      }))
+      setUsers(usersWithDates)
     } catch (error) {
       console.error('Error fetching data:', error)
       toast({

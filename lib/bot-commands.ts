@@ -12,11 +12,9 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
       return
     }
 
-    // Check if user exists in database
+    // Check if user exists in database, create if not
     let user = await getUserByTelegramId(userId)
-    
     if (!user) {
-      // Create new user record with actual user data
       user = await createUser({
         telegramId: userId,
         firstName: firstName || "User",
@@ -32,87 +30,34 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     const adminIds = process.env.TELEGRAM_ADMIN_IDS?.split(',').map(id => parseInt(id.trim())) || []
     const isUserAdmin = adminIds.includes(userId) || user.role === "admin"
 
-    if (message === "/start" || message.toLowerCase().includes("start") || message.toLowerCase().includes("help")) {
-      // Handle start/help commands
-      if (isUserAdmin) {
-        // Send admin dashboard button with fullscreen
-        const webAppUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}?admin=true`
-        const replyMarkup = {
-          inline_keyboard: [[
-            {
-              text: "📊 Admin Dashboard",
-              web_app: { 
-                url: webAppUrl
-              }
-            }
-          ]]
+    // Echo the message with appropriate button
+    const echoText = message === "/start" ? 
+      (isUserAdmin ? "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports." : "Welcome! 👋\n\nClick the button below to submit your daily report.") :
+      `Echo: ${message}`
+
+    const webAppUrl = isUserAdmin ? 
+      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}?admin=true` : 
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+    const buttonText = isUserAdmin ? "📊 Admin Dashboard" : "📝 Submit Report"
+    const additionalText = isUserAdmin ? 
+      "\n\nUse the button below to access your admin dashboard." : 
+      "\n\nUse the button below to submit your report."
+
+    const replyMarkup = {
+      inline_keyboard: [[
+        {
+          text: buttonText,
+          web_app: { url: webAppUrl }
         }
-        
-        await sendTelegramMessage(
-          chatId,
-          "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports.",
-          replyMarkup
-        )
-      } else {
-        // Send employee report submission button with fullscreen
-        const webAppUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-        const replyMarkup = {
-          inline_keyboard: [[
-            {
-              text: "📝 Submit Report",
-              web_app: { 
-                url: webAppUrl
-              }
-            }
-          ]]
-        }
-        
-        await sendTelegramMessage(
-          chatId,
-          "Welcome! 👋\n\nClick the button below to submit your daily report.",
-          replyMarkup
-        )
-      }
-    } else {
-      // Echo all other messages with appropriate buttons
-      if (isUserAdmin) {
-        const webAppUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}?admin=true`
-        const replyMarkup = {
-          inline_keyboard: [[
-            {
-              text: "📊 Admin Dashboard",
-              web_app: { 
-                url: webAppUrl
-              }
-            }
-          ]]
-        }
-        
-        await sendTelegramMessage(
-          chatId,
-          `Echo: ${message}\n\nUse the button below to access your admin dashboard.`,
-          replyMarkup
-        )
-      } else {
-        const webAppUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-        const replyMarkup = {
-          inline_keyboard: [[
-            {
-              text: "📝 Submit Report",
-              web_app: { 
-                url: webAppUrl
-              }
-            }
-          ]]
-        }
-        
-        await sendTelegramMessage(
-          chatId,
-          `Echo: ${message}\n\nUse the button below to submit your report.`,
-          replyMarkup
-        )
-      }
+      ]]
     }
+    
+    await sendTelegramMessage(
+      chatId,
+      message === "/start" ? echoText : echoText + additionalText,
+      replyMarkup
+    )
   } catch (error) {
     console.error("Error handling bot message:", error)
     
