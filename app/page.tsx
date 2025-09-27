@@ -21,10 +21,12 @@ export default function HomePage() {
         <div className="pt-44 pb-6 px-4">
           {isAdmin ? (
             <AdminDashboard />
-          ) : (
+          ) : dbUser ? (
             <ProtectedRoute requireTeam>
               <EmployeeDashboard user={dbUser} />
             </ProtectedRoute>
+          ) : (
+            <div>Loading...</div>
           )}
         </div>
       </div>
