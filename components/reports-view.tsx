@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -8,35 +8,17 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, ExternalLink, Calendar, User, Building, FileText } from "lucide-react"
 import { getAllReports, getAllUsers, getAllTeams } from "@/lib/database"
+import { getGoogleSheetsUrl } from "@/lib/google-sheets"
 
 export default function ReportsView() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [priorityFilter, setPriorityFilter] = useState("all")
   const [teamFilter, setTeamFilter] = useState("all")
-  const [sheetsUrl, setSheetsUrl] = useState("#")
-  const [sheetsConfigured, setSheetsConfigured] = useState(false)
 
   const reports = getAllReports()
   const users = getAllUsers()
   const teams = getAllTeams()
-
-  // Fetch Google Sheets URL on component mount
-  useEffect(() => {
-    const fetchSheetsUrl = async () => {
-      try {
-        const response = await fetch('/api/sheets')
-        const data = await response.json()
-        setSheetsUrl(data.url || "#")
-        setSheetsConfigured(data.configured || false)
-      } catch (error) {
-        console.error('Failed to fetch sheets URL:', error)
-        setSheetsUrl("#")
-        setSheetsConfigured(false)
-      }
-    }
-    fetchSheetsUrl()
-  }, [])
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -85,10 +67,10 @@ export default function ReportsView() {
           <h2 className="text-xl font-semibold">Reports Management</h2>
           <p className="text-sm text-muted-foreground">View and manage all submitted reports</p>
         </div>
-        <Button asChild variant="outline" className="bg-[#0f9d58] hover:bg-[#0d8a4e] text-black border-[#0f9d58]" disabled={!sheetsConfigured}>
-          <a href={sheetsUrl} target="_blank" rel="noopener noreferrer">
+        <Button asChild variant="outline" className="bg-[#0f9d58] hover:bg-[#0d8a4e] text-black border-[#0f9d58]">
+          <a href={getGoogleSheetsUrl()} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="w-4 h-4" />
-            {sheetsConfigured ? "Open in Sheets" : "Sheets Not Configured"}
+            Open in Sheets
           </a>
         </Button>
       </div>

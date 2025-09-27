@@ -180,11 +180,11 @@ export const appendToGoogleSheet = async (
 }
 
 export const getGoogleSheetsUrl = (teamName?: string): string => {
-  // Try to get from client-side env first, fallback to placeholder
+  // Try to get from client-side env first, fallback to server-side
   const spreadsheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_ID || process.env.GOOGLE_SHEETS_ID
   if (!spreadsheetId) {
-    // Return a placeholder URL that will be updated by API call
-    return "/api/sheets"
+    // Return # when not configured (same as admin dashboard)
+    return "#"
   }
 
   const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
