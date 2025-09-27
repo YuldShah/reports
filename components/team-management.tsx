@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Users, UserPlus, Trash2, Building } from "lucide-react"
-import { type User, type Team } from "@/lib/database"
+import { type User, type Team } from "@/lib/types"
 import { toast } from "@/hooks/use-toast"
 
 interface TeamManagementProps {

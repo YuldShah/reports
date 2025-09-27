@@ -5,7 +5,6 @@ import { useEffect } from "react"
 import { useState } from "react"
 
 import { isAdmin, waitForTelegram } from "@/lib/telegram"
-import { getUserByTelegramId, createUser } from "@/lib/database"
 import type { TelegramUser, User } from "@/lib/telegram"
 
 export interface AuthState {
@@ -162,50 +161,4 @@ export const useAuth = (): AuthState => {
   }, [])
 
   return authState
-}
-
-// Bot response handlers
-export const handleBotCommand = async (chatId: number, command: string, userId: number) => {
-  const { sendTelegramMessage } = await import("@/lib/telegram")
-
-  try {
-    if (command === "/start") {
-      const user = getUserByTelegramId(userId)
-
-      if (isAdmin(userId)) {
-        // Admin response with inline button
-        await sendTelegramMessage(chatId, "Welcome, Admin! You can open the admin dashboard using this button:", {
-          inline_keyboard: [
-            [
-              {
-                text: "📊 Open Admin Dashboard",
-                web_app: { url: process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.vercel.app" },
-              },
-            ],
-          ],
-        })
-      } else if (user && user.teamId) {
-        // Registered employee with team
-        await sendTelegramMessage(chatId, "Welcome! You can submit a report using this button:", {
-          inline_keyboard: [
-            [
-              {
-                text: "📝 Submit Report",
-                web_app: { url: process.env.NEXT_PUBLIC_APP_URL || "https://your-app-url.vercel.app" },
-              },
-            ],
-          ],
-        })
-      } else {
-        // Unregistered user
-        await sendTelegramMessage(
-          chatId,
-          `You're not registered in the system yet. Please contact your administrator to assign you to a team.\n\nYour Telegram ID: <code>${userId}</code>`,
-        )
-      }
-    }
-  } catch (error) {
-    console.error("Error handling bot command:", error)
-    await sendTelegramMessage(chatId, "Sorry, something went wrong. Please try again later.")
-  }
 }

@@ -1,14 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, FileText, Clock, CheckCircle, TrendingUp, Calendar } from "lucide-react"
-import { getReportsByUser, getAllTeams } from "@/lib/database"
 import ReportForm from "@/components/report-form"
-import type { User } from "@/lib/database"
+import type { User } from "@/lib/types"
 
 interface EmployeeDashboardProps {
   user: User
@@ -17,16 +16,47 @@ interface EmployeeDashboardProps {
 export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [showReportForm, setShowReportForm] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [userReports, setUserReports] = useState<any[]>([])
+  const [teams, setTeams] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const userReports = getReportsByUser(user.telegramId)
-  const teams = getAllTeams()
-  const userTeam = teams.find((t) => t.id === user.teamId)
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [reportsRes, teamsRes] = await Promise.all([
+          fetch('/api/reports'),
+          fetch('/api/teams')
+        ])
+        
+        const allReports = await reportsRes.json()
+        const allTeams = await teamsRes.json()
+        
+        setUserReports(allReports.filter((r: any) => r.userId === user.telegramId))
+        setTeams(allTeams)
+        setLoading(false)
+      } catch (error) {
+        console.error('Failed to fetch data:', error)
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [user.telegramId])
+
+  const userTeam = teams.find((t: any) => t.id === user.teamId)
 
   const stats = {
     totalReports: userReports.length,
-    pendingReports: userReports.filter((r) => r.status === "pending").length,
-    inProgressReports: userReports.filter((r) => r.status === "in-progress").length,
-    completedReports: userReports.filter((r) => r.status === "completed").length,
+    pendingReports: userReports.filter((r: any) => r.status === "pending").length,
+    inProgressReports: userReports.filter((r: any) => r.status === "in-progress").length,
+    completedReports: userReports.filter((r: any) => r.status === "completed").length,
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">Loading...</div>
+      </div>
+    )
   }
 
   if (showReportForm) {

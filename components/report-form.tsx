@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowLeft, Send, AlertCircle } from "lucide-react"
 import { appendToGoogleSheet } from "@/lib/google-sheets"
 import { toast } from "@/hooks/use-toast"
-import type { User } from "@/lib/database"
+import type { User } from "@/lib/types"
 
 interface ReportFormProps {
   user: User
