@@ -1,6 +1,3 @@
-import fs from 'fs'
-import path from 'path'
-
 export interface User {
   telegramId: number
   firstName: string
@@ -34,20 +31,34 @@ export interface Report {
   updatedAt: Date
 }
 
-// File-based storage for persistence
-const dataPath = path.join(process.cwd(), 'data')
-const usersFile = path.join(dataPath, 'users.json')
-const teamsFile = path.join(dataPath, 'teams.json')
-const reportsFile = path.join(dataPath, 'reports.json')
+// File-based storage for persistence (server-side only)
+let dataPath: string | null = null
+let usersFile: string | null = null
+let teamsFile: string | null = null
+let reportsFile: string | null = null
 
-// Ensure data directory exists
-if (!fs.existsSync(dataPath)) {
-  fs.mkdirSync(dataPath, { recursive: true })
+// Initialize paths only on server side
+if (typeof window === 'undefined') {
+  const fs = require('fs')
+  const path = require('path')
+  
+  dataPath = path.join(process.cwd(), 'data')
+  usersFile = path.join(dataPath, 'users.json')
+  teamsFile = path.join(dataPath, 'teams.json')
+  reportsFile = path.join(dataPath, 'reports.json')
+
+  // Ensure data directory exists
+  if (!fs.existsSync(dataPath)) {
+    fs.mkdirSync(dataPath, { recursive: true })
+  }
 }
 
 // Helper functions for file operations
 const readJsonFile = (filePath: string): any[] => {
+  if (typeof window !== 'undefined') return [] // Client-side fallback
+  
   try {
+    const fs = require('fs')
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath, 'utf8')
       return JSON.parse(data, (key, value) => {
@@ -66,7 +77,10 @@ const readJsonFile = (filePath: string): any[] => {
 }
 
 const writeJsonFile = (filePath: string, data: any[]) => {
+  if (typeof window !== 'undefined') return // Client-side fallback
+  
   try {
+    const fs = require('fs')
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2))
   } catch (error) {
     console.error(`Error writing ${filePath}:`, error)
@@ -74,9 +88,16 @@ const writeJsonFile = (filePath: string, data: any[]) => {
 }
 
 // In-memory cache
-let users: User[] = readJsonFile(usersFile)
-let teams: Team[] = readJsonFile(teamsFile)
-let reports: Report[] = readJsonFile(reportsFile)
+let users: User[] = []
+let teams: Team[] = []
+let reports: Report[] = []
+
+// Initialize data on server side
+if (typeof window === 'undefined' && usersFile && teamsFile && reportsFile) {
+  users = readJsonFile(usersFile)
+  teams = readJsonFile(teamsFile)
+  reports = readJsonFile(reportsFile)
+}
 
 // User operations
 export const createUser = (userData: Omit<User, "createdAt">): User => {
@@ -85,7 +106,7 @@ export const createUser = (userData: Omit<User, "createdAt">): User => {
     createdAt: new Date(),
   }
   users.push(user)
-  writeJsonFile(usersFile, users)
+  if (usersFile) writeJsonFile(usersFile, users)
   return user
 }
 
@@ -98,7 +119,7 @@ export const updateUser = (telegramId: number, updates: Partial<User>): User | n
   if (userIndex === -1) return null
 
   users[userIndex] = { ...users[userIndex], ...updates }
-  writeJsonFile(usersFile, users)
+  if (usersFile) writeJsonFile(usersFile, users)
   return users[userIndex]
 }
 
@@ -114,7 +135,7 @@ export const createTeam = (teamData: Omit<Team, "id" | "createdAt">): Team => {
     createdAt: new Date(),
   }
   teams.push(team)
-  writeJsonFile(teamsFile, teams)
+  if (teamsFile) writeJsonFile(teamsFile, teams)
   return team
 }
 
@@ -139,7 +160,7 @@ export const createReport = (reportData: Omit<Report, "id" | "createdAt" | "upda
     updatedAt: new Date(),
   }
   reports.push(report)
-  writeJsonFile(reportsFile, reports)
+  if (reportsFile) writeJsonFile(reportsFile, reports)
   return report
 }
 
@@ -164,6 +185,6 @@ export const updateReport = (id: string, updates: Partial<Report>): Report | nul
     ...updates,
     updatedAt: new Date(),
   }
-  writeJsonFile(reportsFile, reports)
+  if (reportsFile) writeJsonFile(reportsFile, reports)
   return reports[reportIndex]
 }
