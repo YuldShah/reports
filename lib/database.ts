@@ -247,7 +247,7 @@ export const deleteTeam = async (id: string): Promise<boolean> => {
     
     await client.query('COMMIT')
     
-    return result.rowCount > 0
+    return (result.rowCount ?? 0) > 0
   } catch (error) {
     await client.query('ROLLBACK')
     throw error
