@@ -170,6 +170,37 @@ export const getTeamById = (id: string): Team | null => {
   return teams.find((team) => team.id === id) || null
 }
 
+export const deleteTeam = (id: string): boolean => {
+  const teamIndex = teams.findIndex((team) => team.id === id)
+  if (teamIndex === -1) return false
+
+  // Remove team from teams array
+  teams.splice(teamIndex, 1)
+  console.log(`Deleting team: ${id}`)
+  
+  // Unassign all users from this team
+  users.forEach(user => {
+    if (user.teamId === id) {
+      user.teamId = undefined
+    }
+  })
+
+  // Save both teams and users files
+  if (teamsFile) {
+    writeJsonFile(teamsFile, teams)
+  } else {
+    console.warn('teamsFile is null, cannot save team data to disk')
+  }
+  
+  if (usersFile) {
+    writeJsonFile(usersFile, users)
+  } else {
+    console.warn('usersFile is null, cannot save user data to disk')
+  }
+  
+  return true
+}
+
 export const getUsersByTeam = (teamId: string): User[] => {
   return users.filter((user) => user.teamId === teamId)
 }

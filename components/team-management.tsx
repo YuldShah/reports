@@ -208,6 +208,42 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     }
   }
 
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
+    if (!confirm(`Are you sure you want to delete the team "${teamName}"? All members will be unassigned.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/teams?id=${teamId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete team')
+      }
+
+      // Refresh local data
+      await fetchData()
+
+      toast({
+        title: "Success",
+        description: "Team deleted successfully",
+        duration: 3000,
+      })
+
+      // Notify parent to refresh data
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error deleting team:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete team",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
   const unassignedUsers = users.filter((user) => !user.teamId && user.role !== "admin")
 
   if (loading) {
@@ -307,7 +343,17 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="secondary">{teamMembers.length} members</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{teamMembers.length} members</Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteTeam(team.id, team.name)}
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
 
@@ -349,7 +395,9 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               <SelectContent>
                                 {unassignedUsers.map((user) => (
                                   <SelectItem key={user.telegramId} value={user.telegramId.toString()}>
-                                    {user.firstName} {user.lastName} ({user.username})
+                                    {user.firstName} {user.lastName} 
+                                    {user.username && ` (@${user.username})`}
+                                    {` [ID: ${user.telegramId}]`}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

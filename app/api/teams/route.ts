@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllTeams, createTeam, getTeamById, getUsersByTeam } from "@/lib/database"
+import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam } from "@/lib/database"
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,5 +43,27 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Error creating team:", error)
     return NextResponse.json({ error: "Failed to create team" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const teamId = searchParams.get("id")
+
+    if (!teamId) {
+      return NextResponse.json({ error: "Team ID is required" }, { status: 400 })
+    }
+
+    const success = deleteTeam(teamId)
+    
+    if (!success) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting team:", error)
+    return NextResponse.json({ error: "Failed to delete team" }, { status: 500 })
   }
 }

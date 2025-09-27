@@ -65,31 +65,60 @@ export const useAuth = (): AuthState => {
 
         console.log("[v0] Telegram user authenticated:", telegramUser.first_name)
 
-        // Check if user exists in database
-        let dbUser = getUserByTelegramId(telegramUser.id)
+        // Check if user exists in database via API
+        try {
+          const response = await fetch(`/api/users?telegramId=${telegramUser.id}`)
+          let dbUser = null
 
-        if (!dbUser) {
-          // Auto-register user
-          console.log("[v0] Auto-registering new user")
-          dbUser = createUser({
-            telegramId: telegramUser.id,
-            firstName: telegramUser.first_name,
-            lastName: telegramUser.last_name,
-            username: telegramUser.username,
-            photoUrl: telegramUser.photo_url,
-            role: isAdmin(telegramUser.id) ? "admin" : "employee",
+          if (response.ok) {
+            const data = await response.json()
+            dbUser = data.user
+            console.log("[v0] Found existing user:", dbUser?.firstName)
+          } else if (response.status === 404) {
+            // User doesn't exist, create them
+            console.log("[v0] Auto-registering new user")
+            const createResponse = await fetch('/api/users', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                telegramId: telegramUser.id,
+                firstName: telegramUser.first_name,
+                lastName: telegramUser.last_name,
+                username: telegramUser.username,
+                photoUrl: telegramUser.photo_url,
+              }),
+            })
+
+            if (createResponse.ok) {
+              const createData = await createResponse.json()
+              dbUser = createData.user
+              console.log("[v0] User created successfully:", dbUser?.firstName)
+            } else {
+              throw new Error('Failed to create user')
+            }
+          } else {
+            throw new Error('Failed to check user')
+          }
+
+          console.log("[v0] Authentication successful")
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            telegramUser,
+            dbUser,
+            isAdmin: isAdmin(telegramUser.id),
+            error: null,
           })
+        } catch (apiError) {
+          console.error("[v0] API error during auth:", apiError)
+          setAuthState((prev) => ({
+            ...prev,
+            isLoading: false,
+            error: "Failed to authenticate with server",
+          }))
         }
-
-        console.log("[v0] Authentication successful")
-        setAuthState({
-          isAuthenticated: true,
-          isLoading: false,
-          telegramUser,
-          dbUser,
-          isAdmin: isAdmin(telegramUser.id),
-          error: null,
-        })
       } catch (error) {
         console.error("[v0] Auth initialization error:", error)
         setAuthState((prev) => ({
