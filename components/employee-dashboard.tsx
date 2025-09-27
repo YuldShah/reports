@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, FileText, Clock, CheckCircle, TrendingUp, Calendar } from "lucide-react"
 import { getReportsByUser, getAllTeams } from "@/lib/database"
 import ReportForm from "@/components/report-form"
-import type { User } from "@/lib/telegram"
+import type { User } from "@/lib/database"
 
 interface EmployeeDashboardProps {
   user: User

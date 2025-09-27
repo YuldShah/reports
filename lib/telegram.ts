@@ -7,6 +7,17 @@ export interface TelegramUser {
   photo_url?: string
 }
 
+export interface User {
+  telegramId: number
+  firstName: string
+  lastName?: string
+  username?: string
+  photoUrl?: string
+  teamId?: string
+  role: "admin" | "employee"
+  createdAt: Date
+}
+
 export interface TelegramWebApp {
   initData: string
   initDataUnsafe: {

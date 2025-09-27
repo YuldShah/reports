@@ -15,7 +15,7 @@ import { ArrowLeft, Send, AlertCircle } from "lucide-react"
 import { createReport } from "@/lib/database"
 import { appendToGoogleSheet } from "@/lib/google-sheets"
 import { toast } from "@/hooks/use-toast"
-import type { User } from "@/lib/telegram"
+import type { User } from "@/lib/database"
 
 interface ReportFormProps {
   user: User
