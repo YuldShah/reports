@@ -77,7 +77,7 @@ export const useAuth = (): AuthState => {
             lastName: telegramUser.last_name,
             username: telegramUser.username,
             photoUrl: telegramUser.photo_url,
-            role: isAdmin(telegramUser.id) ? "Admin" : "Unknown",
+            role: isAdmin(telegramUser.id) ? "admin" : "employee",
           })
         }
 
