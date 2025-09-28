@@ -52,7 +52,14 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
       
       const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
       
-      setUserReports(userReportsFiltered)
+      // Fix: Convert date strings to Date objects
+      const userReportsWithDates = userReportsFiltered.map((report: any) => ({
+        ...report,
+        createdAt: new Date(report.createdAt),
+        updatedAt: new Date(report.updatedAt)
+      }))
+      
+      setUserReports(userReportsWithDates)
       setTeams(allTeams)
     } catch (error) {
       console.error('Failed to refresh data:', error)
@@ -88,12 +95,19 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
         
         const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
         
+        // Fix: Convert date strings to Date objects
+        const userReportsWithDates = userReportsFiltered.map((report: any) => ({
+          ...report,
+          createdAt: new Date(report.createdAt),
+          updatedAt: new Date(report.updatedAt)
+        }))
+        
         await debugLog('Data filtered', { 
-          userReportsCount: userReportsFiltered.length,
+          userReportsCount: userReportsWithDates.length,
           userTelegramId: user.telegramId
         })
         
-        setUserReports(userReportsFiltered)
+        setUserReports(userReportsWithDates)
         setTeams(allTeams)
         setLoading(false)
         
