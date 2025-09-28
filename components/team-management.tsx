@@ -548,69 +548,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         })}
       </div>
 
-      {/* Template Assignment Dialog - Temporarily Disabled */}
-      {false && (
-        <Dialog open={isTemplateDialogOpen && !loading && templates.length > 0} onOpenChange={setIsTemplateDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Assign Report Template</DialogTitle>
-              <DialogDescription>Choose a template for this team's reports</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Select Template</Label>
-                <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a template (or none)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No template (use default form)</SelectItem>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                        {template.description && ` - ${template.description}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedTemplateId && (
-                <div className="text-sm text-muted-foreground">
-                  <div className="font-medium mb-2">Template Fields:</div>
-                  <div className="space-y-1">
-                    {(() => {
-                      const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
-                      if (!selectedTemplate || !selectedTemplate.fields) {
-                        return <div className="text-xs text-muted-foreground">No fields available</div>
-                      }
-                      return selectedTemplate.fields.map((field) => (
-                        <div key={field.id} className="flex items-center gap-2 text-xs">
-                          <span className="font-medium">{field.label}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {field.type}
-                          </Badge>
-                          {field.required && <span className="text-red-500">*</span>}
-                        </div>
-                      ))
-                    })()}
-                  </div>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button onClick={handleAssignTemplate}>
-                  {selectedTemplateId ? "Assign Template" : "Remove Template"}
-                </Button>
-                <Button variant="outline" onClick={() => {
-                  setIsTemplateDialogOpen(false)
-                  setSelectedTemplateId("")
-                }}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Template Assignment Dialog - Removed for now due to TypeScript issues */}
 
       {/* Empty State */}
       {teams.length === 0 && (
