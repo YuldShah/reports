@@ -38,6 +38,23 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   const [selectedUserId, setSelectedUserId] = useState<string>("")
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
 
+  const debugLog = async (message: string, data?: any) => {
+    try {
+      await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          level: 'info',
+          component: 'TeamManagement',
+          data
+        })
+      })
+    } catch (err) {
+      console.error('Debug log failed:', err)
+    }
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -83,7 +100,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   }
 
   const handleCreateTeam = async () => {
+    await debugLog('Starting handleCreateTeam', { teamName: newTeam.name, description: newTeam.description })
+    
     if (!newTeam.name.trim()) {
+      await debugLog('Team creation failed - no name provided')
       toast({
         title: "Error",
         description: "Team name is required",
@@ -94,6 +114,8 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     }
 
     try {
+      await debugLog('Sending team creation request')
+      
       const response = await fetch('/api/teams', {
         method: 'POST',
         headers: {
@@ -106,11 +128,23 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         }),
       })
 
+      await debugLog('Team creation response received', { 
+        status: response.status, 
+        ok: response.ok 
+      })
+
       if (!response.ok) {
+        const errorText = await response.text()
+        await debugLog('Team creation failed - bad response', { 
+          status: response.status, 
+          errorText 
+        })
         throw new Error('Failed to create team')
       }
 
       const data = await response.json()
+      await debugLog('Team creation successful', { teamId: data.team?.id })
+      
       setTeams([...teams, data.team])
       setNewTeam({ name: "", description: "" })
       setIsCreateDialogOpen(false)
@@ -124,6 +158,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       // Notify parent to refresh data
       onDataChange?.()
     } catch (error) {
+      await debugLog('Team creation error caught', { error: error?.toString() })
       console.error('Error creating team:', error)
       toast({
         title: "Error",
