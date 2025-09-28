@@ -131,16 +131,19 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
 
   const filteredAndSortedUsers = useMemo(() => {
     let filtered = users.filter((user) => {
+      // Don't show admin users in the list
+      if (user.role === "admin") return false
+      
       const fullName = `${user.firstName} ${user.lastName || ''}`.toLowerCase()
       const username = user.username?.toLowerCase() || ''
       
       const matchesSearch = 
         fullName.includes(searchTerm.toLowerCase()) ||
         username.includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase())
+        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.telegramId.toString().includes(searchTerm.toLowerCase())
       
       const matchesRole = roleFilter === "all" || 
-        (roleFilter === "admin" && user.role === "admin") ||
         (roleFilter === "employee" && user.role === "employee") ||
         (roleFilter === "custom" && user.role !== "admin" && user.role !== "employee")
       
@@ -211,7 +214,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search users..."
+                placeholder="Search users, roles, or user ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -224,7 +227,6 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="employee">Employee</SelectItem>
                 <SelectItem value="custom">Custom Roles</SelectItem>
               </SelectContent>
@@ -291,9 +293,14 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                       <CardTitle className="text-lg leading-tight">
                         {user.firstName} {user.lastName}
                       </CardTitle>
-                      {user.username && (
-                        <p className="text-sm text-muted-foreground">@{user.username}</p>
-                      )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        {user.username && (
+                          <span>@{user.username}</span>
+                        )}
+                        <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                          ID: {user.telegramId}
+                        </span>
+                      </div>
                     </div>
                     <Button
                       variant="outline"
