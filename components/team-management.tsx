@@ -71,17 +71,44 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       ])
 
       const teamsData = await teamsResponse.json()
-      const teamsWithDates = (teamsData.teams || []).map((team: any) => ({
-        ...team,
-        createdAt: new Date(team.createdAt)
-      }))
+      const teamsWithDates = (teamsData.teams || []).map((team: any) => {
+        let parsedDate: Date
+        try {
+          // Handle various date formats from SQLite
+          parsedDate = new Date(team.createdAt)
+          if (isNaN(parsedDate.getTime())) {
+            // If parsing fails, use current date as fallback
+            parsedDate = new Date()
+          }
+        } catch (error) {
+          // If date parsing completely fails, use current date
+          parsedDate = new Date()
+        }
+        
+        return {
+          ...team,
+          createdAt: parsedDate
+        }
+      })
       setTeams(teamsWithDates)
 
       const usersData = await usersResponse.json()
-      const usersWithDates = (usersData.users || []).map((user: any) => ({
-        ...user,
-        createdAt: new Date(user.createdAt)
-      }))
+      const usersWithDates = (usersData.users || []).map((user: any) => {
+        let parsedDate: Date
+        try {
+          parsedDate = new Date(user.createdAt)
+          if (isNaN(parsedDate.getTime())) {
+            parsedDate = new Date()
+          }
+        } catch (error) {
+          parsedDate = new Date()
+        }
+        
+        return {
+          ...user,
+          createdAt: parsedDate
+        }
+      })
       setUsers(usersWithDates)
 
       const templatesData = await templatesResponse.json()
