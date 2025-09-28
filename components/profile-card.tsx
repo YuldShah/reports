@@ -4,10 +4,12 @@ import { useState, useEffect } from "react"
 import { useAuthContext } from "@/components/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import StatusBadge from "@/components/status-badge"
+import { getTeamById } from "@/lib/database"
 
 export default function ProfileCard() {
   const { telegramUser, dbUser, isAdmin } = useAuthContext()
   const [isLoaded, setIsLoaded] = useState(false)
+  const [teamName, setTeamName] = useState<string>("")
 
   useEffect(() => {
     if (telegramUser) {
@@ -15,11 +17,29 @@ export default function ProfileCard() {
     }
   }, [telegramUser])
 
+  useEffect(() => {
+    const fetchTeamName = async () => {
+      if (dbUser?.teamId && !isAdmin) {
+        try {
+          const team = await getTeamById(dbUser.teamId)
+          if (team?.name) {
+            setTeamName(team.name)
+          }
+        } catch (error) {
+          console.error("Failed to fetch team name:", error)
+          setTeamName("Unknown Team")
+        }
+      }
+    }
+
+    fetchTeamName()
+  }, [dbUser?.teamId, isAdmin])
+
   if (!telegramUser) return null
 
   const displayName = telegramUser.first_name || telegramUser.username || "User"
   const role = isAdmin ? "Admin" : dbUser?.role || "Unknown"
-  const team = isAdmin ? "Administration" : dbUser?.teamId || "Unassigned"
+  const team = isAdmin ? "Administration" : teamName || "Unassigned"
   const usernameDisplay = telegramUser.username ? `@${telegramUser.username}` : ""
 
   return (
