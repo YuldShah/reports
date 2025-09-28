@@ -407,25 +407,9 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        try {
-                          // Don't open dialog yet, just test the state update
-                          setSelectedTeam(team.id)
-                          setSelectedTemplateId(team.templateId || "")
-                          alert(`About to open dialog for team: ${team.name}`)
-                          
-                          // Use setTimeout to delay the dialog opening
-                          setTimeout(() => {
-                            try {
-                              setIsTemplateDialogOpen(true)
-                              alert("Dialog state set to true")
-                            } catch (err) {
-                              alert(`Error setting dialog state: ${err}`)
-                            }
-                          }, 100)
-                          
-                        } catch (error) {
-                          alert(`Error in onClick: ${error instanceof Error ? error.message : String(error)}`)
-                        }
+                        setSelectedTeam(team.id)
+                        setSelectedTemplateId(team.templateId || "")
+                        setIsTemplateDialogOpen(true)
                       }}
                       className="h-8 w-8 p-0"
                       disabled={loading}
@@ -557,49 +541,44 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       </div>
 
       {/* Template Assignment Dialog */}
-      {isTemplateDialogOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h2 className="text-lg font-semibold mb-2">Assign Report Template</h2>
-            <p className="text-sm text-muted-foreground mb-4">Choose a template for this team's reports</p>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Select Template</label>
-                <select 
-                  value={selectedTemplateId || ""} 
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
-                  className="w-full mt-1 p-2 border rounded"
-                >
-                  <option value="">No template (use default form)</option>
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Report Template</DialogTitle>
+            <DialogDescription>Choose a template for this team's reports</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Select Template</Label>
+              <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a template (or none)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No template (use default form)</SelectItem>
                   {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
+                    <SelectItem key={template.id} value={template.id}>
                       {template.name}
-                    </option>
+                      {template.description && ` - ${template.description}`}
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={handleAssignTemplate}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  {selectedTemplateId ? "Assign Template" : "Remove Template"}
-                </button>
-                <button 
-                  onClick={() => {
-                    setIsTemplateDialogOpen(false)
-                    setSelectedTemplateId("")
-                  }}
-                  className="px-4 py-2 border rounded hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleAssignTemplate}>
+                {selectedTemplateId ? "Assign Template" : "Remove Template"}
+              </Button>
+              <Button variant="outline" onClick={() => {
+                setIsTemplateDialogOpen(false)
+                setSelectedTemplateId("")
+              }}>
+                Cancel
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Empty State */}
       {teams.length === 0 && (
