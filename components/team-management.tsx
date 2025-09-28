@@ -545,19 +545,18 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Select Template</Label>
-                <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a template (or none)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No template (use default form)</SelectItem>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select 
+                  value={selectedTemplateId || ""} 
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">No template (use default form)</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleAssignTemplate} className="flex-1">
