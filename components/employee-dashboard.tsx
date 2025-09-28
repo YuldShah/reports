@@ -53,15 +53,11 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
         const reportsData = await reportsRes.json()
         const teamsData = await teamsRes.json()
         
-        console.log('Reports data:', reportsData)
-        console.log('User ID:', user.telegramId)
-        
         // Fix: Extract reports array from the response
         const allReports = reportsData.reports || []
         const allTeams = teamsData.teams || teamsData || []
         
         const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
-        console.log('Filtered user reports:', userReportsFiltered)
         
         setUserReports(userReportsFiltered)
         setTeams(allTeams)
