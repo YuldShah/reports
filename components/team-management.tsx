@@ -407,11 +407,13 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
+                        if (loading) return // Prevent opening dialog while loading
                         setSelectedTeam(team.id)
                         setSelectedTemplateId(team.templateId || "")
                         setIsTemplateDialogOpen(true)
                       }}
                       className="h-8 w-8 p-0"
+                      disabled={loading}
                     >
                       <Settings className="w-3 h-3" />
                     </Button>
@@ -540,7 +542,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       </div>
 
       {/* Template Assignment Dialog */}
-      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+      <Dialog open={isTemplateDialogOpen && !loading} onOpenChange={setIsTemplateDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign Report Template</DialogTitle>
@@ -555,7 +557,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">No template (use default form)</SelectItem>
-                  {templates.map((template) => (
+                  {templates && templates.length > 0 && templates.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
                       {template.name}
                       {template.description && ` - ${template.description}`}
