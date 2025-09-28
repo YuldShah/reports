@@ -580,7 +580,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   <div className="space-y-1">
                     {(() => {
                       const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
-                      if (!selectedTemplate || !selectedTemplate.fields) {
+                      if (!selectedTemplate?.fields) {
                         return <div className="text-xs text-muted-foreground">No fields available</div>
                       }
                       return selectedTemplate.fields.map((field) => (
