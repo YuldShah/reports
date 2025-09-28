@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, updateTeam } from "@/lib/database"
+import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, updateTeamTemplate } from "@/lib/database"
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,7 +77,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Team ID is required" }, { status: 400 })
     }
 
-    const updatedTeam = await updateTeam(teamId, { templateId })
+    const updatedTeam = await updateTeamTemplate(teamId, templateId)
     
     if (!updatedTeam) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 })
