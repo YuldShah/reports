@@ -293,10 +293,10 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                       <CardTitle className="text-lg leading-tight">
                         {user.firstName} {user.lastName}
                       </CardTitle>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        {user.username && (
-                          <span>@{user.username}</span>
-                        )}
+                      {user.username && (
+                        <p className="text-sm text-muted-foreground">@{user.username}</p>
+                      )}
+                      <div className="mt-1">
                         <span className="text-xs bg-muted px-2 py-0.5 rounded">
                           ID: {user.telegramId}
                         </span>
