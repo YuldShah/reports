@@ -20,6 +20,23 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [teams, setTeams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  const debugLog = async (message: string, data?: any) => {
+    try {
+      await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          level: 'info',
+          component: 'EmployeeDashboard',
+          data
+        })
+      })
+    } catch (err) {
+      console.error('Debug log failed:', err)
+    }
+  }
+
   const refreshData = async () => {
     try {
       const [reportsRes, teamsRes] = await Promise.all([
@@ -45,13 +62,25 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   useEffect(() => {
     async function fetchData() {
       try {
+        await debugLog('Starting fetchData', { userId: user.telegramId })
+        
         const [reportsRes, teamsRes] = await Promise.all([
           fetch('/api/reports'),
           fetch('/api/teams')
         ])
         
+        await debugLog('API responses received', { 
+          reportsStatus: reportsRes.status, 
+          teamsStatus: teamsRes.status 
+        })
+        
         const reportsData = await reportsRes.json()
         const teamsData = await teamsRes.json()
+        
+        await debugLog('Data parsed', { 
+          reportsCount: reportsData?.reports?.length || 0,
+          teamsCount: teamsData?.teams?.length || teamsData?.length || 0
+        })
         
         // Fix: Extract reports array from the response
         const allReports = reportsData.reports || []
@@ -59,10 +88,18 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
         
         const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
         
+        await debugLog('Data filtered', { 
+          userReportsCount: userReportsFiltered.length,
+          userTelegramId: user.telegramId
+        })
+        
         setUserReports(userReportsFiltered)
         setTeams(allTeams)
         setLoading(false)
+        
+        await debugLog('State updated successfully')
       } catch (error) {
+        await debugLog('Error in fetchData', { error: error?.toString() })
         console.error('Failed to fetch data:', error)
         setLoading(false)
       }
