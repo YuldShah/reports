@@ -16,7 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Search, Filter, User as UserIcon, Building, Calendar, Edit3, Shield } from "lucide-react"
+import { Search, Filter, User as UserIcon, Building, Calendar, Edit3, Shield, Hash } from "lucide-react"
 import { type User, type Team } from "@/lib/types"
 import { toast } from "@/hooks/use-toast"
 
@@ -296,11 +296,6 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                       {user.username && (
                         <p className="text-sm text-muted-foreground">@{user.username}</p>
                       )}
-                      <div className="mt-1">
-                        <span className="text-xs bg-muted px-2 py-0.5 rounded">
-                          ID: {user.telegramId}
-                        </span>
-                      </div>
                     </div>
                     <Button
                       variant="outline"
@@ -332,6 +327,13 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
                         Joined {user.createdAt.toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Hash className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground font-mono">
+                        {user.telegramId}
                       </span>
                     </div>
                   </div>
