@@ -1,4 +1,4 @@
-import { Database } from 'sqlite3'
+import { Database, RunResult } from 'sqlite3'
 import { promisify } from 'util'
 
 // Type definitions for callback parameters
@@ -69,10 +69,11 @@ const query = async (sql: string, params: any[] = []): Promise<any> => {
 const run = async (sql: string, params: any[] = []): Promise<any> => {
   const database = getDatabase()
   return new Promise((resolve, reject) => {
-    database.run(sql, params, function(this: Database, err: SQLiteError) {
+    database.run(sql, params, function(err: SQLiteError) {
       if (err) {
         reject(err)
       } else {
+        // @ts-ignore - this context has changes and lastID properties in sqlite3
         resolve({ rowsAffected: this.changes, insertId: this.lastID })
       }
     })
