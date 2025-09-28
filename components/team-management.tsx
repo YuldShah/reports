@@ -32,11 +32,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   const [loading, setLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
-  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
   const [newTeam, setNewTeam] = useState({ name: "", description: "" })
   const [selectedUserId, setSelectedUserId] = useState<string>("")
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+  const [editingTemplateTeam, setEditingTemplateTeam] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -253,9 +252,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     }
   }
 
-  const handleAssignTemplate = async () => {
-    if (!selectedTeam) return
-
+  const handleAssignTemplate = async (teamId: string, templateId: string) => {
     try {
       const response = await fetch('/api/teams', {
         method: 'PATCH',
@@ -263,8 +260,8 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          teamId: selectedTeam,
-          templateId: selectedTemplateId || null,
+          teamId,
+          templateId: templateId || null,
         }),
       })
 
@@ -274,12 +271,11 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       // Refresh local data
       await fetchData()
-      setSelectedTemplateId("")
-      setIsTemplateDialogOpen(false)
+      setEditingTemplateTeam(null)
 
       toast({
         title: "Success",
-        description: selectedTemplateId ? "Template assigned successfully" : "Template removed successfully",
+        description: templateId ? "Template assigned successfully" : "Template removed successfully",
         duration: 3000,
       })
 
@@ -398,23 +394,43 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                           Template: {templates.find(t => t.id === team.templateId)?.name || "Unknown"}
                         </div>
                       )}
+                      {!team.templateId && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          No template assigned
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{teamMembers.length} members</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedTeam(team.id)
-                        setSelectedTemplateId(team.templateId || "")
-                        setIsTemplateDialogOpen(true)
-                      }}
-                      className="h-8 w-8 p-0"
-                      disabled={loading}
-                    >
-                      <Settings className="w-3 h-3" />
-                    </Button>
+                    {editingTemplateTeam === team.id ? (
+                      <div className="flex items-center gap-1">
+                        <select 
+                          defaultValue={team.templateId || ""}
+                          onChange={(e) => handleAssignTemplate(team.id, e.target.value)}
+                          className="text-xs px-2 py-1 border rounded bg-background"
+                          onBlur={() => setEditingTemplateTeam(null)}
+                          autoFocus
+                        >
+                          <option value="">No template</option>
+                          {templates.map((template) => (
+                            <option key={template.id} value={template.id}>
+                              {template.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingTemplateTeam(team.id)}
+                        className="h-8 w-8 p-0"
+                        disabled={loading}
+                      >
+                        <Settings className="w-3 h-3" />
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -533,45 +549,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
           )
         })}
       </div>
-
-      {/* Template Assignment Dialog */}
-      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Report Template</DialogTitle>
-            <DialogDescription>Choose a template for this team's reports</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Select Template</Label>
-              <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a template (or none)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">No template (use default form)</SelectItem>
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleAssignTemplate} className="flex-1">
-                {selectedTemplateId ? "Assign Template" : "Remove Template"}
-              </Button>
-              <Button variant="outline" onClick={() => {
-                setIsTemplateDialogOpen(false)
-                setSelectedTemplateId("")
-              }}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Empty State */}
       {teams.length === 0 && (
