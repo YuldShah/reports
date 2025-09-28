@@ -172,7 +172,23 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       const data = await response.json()
       await debugLog('Team creation successful', { teamId: data.team?.id })
       
-      setTeams([...teams, data.team])
+      // Convert the createdAt string to Date object before adding to state
+      let parsedDate: Date
+      try {
+        parsedDate = new Date(data.team.createdAt)
+        if (isNaN(parsedDate.getTime())) {
+          parsedDate = new Date()
+        }
+      } catch (error) {
+        parsedDate = new Date()
+      }
+      
+      const newTeamWithDate = {
+        ...data.team,
+        createdAt: parsedDate
+      }
+      
+      setTeams([...teams, newTeamWithDate])
       setNewTeam({ name: "", description: "" })
       setIsCreateDialogOpen(false)
 
