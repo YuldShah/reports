@@ -310,6 +310,12 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                 <CardContent className="pt-0">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
+                      <Hash className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground font-mono">
+                        {user.telegramId}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-muted-foreground" />
                       <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">
                         {user.role}
@@ -327,13 +333,6 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
                         Joined {user.createdAt.toLocaleDateString()}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Hash className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground font-mono">
-                        {user.telegramId}
                       </span>
                     </div>
                   </div>
