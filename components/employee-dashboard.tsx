@@ -105,7 +105,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             </CardHeader>
             <CardContent>
               <Button onClick={() => setShowReportForm(true)} className="w-full sm:w-auto">
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4" />
                 Create Report
               </Button>
             </CardContent>
@@ -209,10 +209,6 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               <h2 className="text-xl font-semibold">My Reports</h2>
               <p className="text-sm text-muted-foreground">All your submitted reports</p>
             </div>
-            <Button onClick={() => setShowReportForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Report
-            </Button>
           </div>
 
           <div className="space-y-4">
