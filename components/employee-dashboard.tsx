@@ -20,6 +20,28 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [teams, setTeams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  const refreshData = async () => {
+    try {
+      const [reportsRes, teamsRes] = await Promise.all([
+        fetch('/api/reports'),
+        fetch('/api/teams')
+      ])
+      
+      const reportsData = await reportsRes.json()
+      const teamsData = await teamsRes.json()
+      
+      const allReports = reportsData.reports || []
+      const allTeams = teamsData.teams || teamsData || []
+      
+      const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
+      
+      setUserReports(userReportsFiltered)
+      setTeams(allTeams)
+    } catch (error) {
+      console.error('Failed to refresh data:', error)
+    }
+  }
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -28,10 +50,20 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
           fetch('/api/teams')
         ])
         
-        const allReports = await reportsRes.json()
-        const allTeams = await teamsRes.json()
+        const reportsData = await reportsRes.json()
+        const teamsData = await teamsRes.json()
         
-        setUserReports(allReports.filter((r: any) => r.userId === user.telegramId))
+        console.log('Reports data:', reportsData)
+        console.log('User ID:', user.telegramId)
+        
+        // Fix: Extract reports array from the response
+        const allReports = reportsData.reports || []
+        const allTeams = teamsData.teams || teamsData || []
+        
+        const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
+        console.log('Filtered user reports:', userReportsFiltered)
+        
+        setUserReports(userReportsFiltered)
         setTeams(allTeams)
         setLoading(false)
       } catch (error) {
@@ -65,9 +97,9 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
         <ReportForm
           user={user}
           onCancel={() => setShowReportForm(false)}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowReportForm(false)
-            window.location.reload() // Refresh to show new report
+            await refreshData() // Refresh data instead of page reload
           }}
         />
       </div>
