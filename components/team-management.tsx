@@ -393,16 +393,15 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       <CardDescription className="line-clamp-2">
                         {team.description || "No description provided"}
                       </CardDescription>
+                      {team.templateId && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Template: {templates.find(t => t.id === team.templateId)?.name || "Unknown"}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{teamMembers.length} members</Badge>
-                    {team.templateId && (
-                      <Badge variant="outline" className="text-xs">
-                        <FileText className="w-3 h-3 mr-1" />
-                        Template
-                      </Badge>
-                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -527,11 +526,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                 <div className="pt-3 border-t">
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">Created {team.createdAt.toLocaleDateString()}</div>
-                    {team.templateId && (
-                      <div className="text-xs text-muted-foreground">
-                        Template: {templates.find(t => t.id === team.templateId)?.name || "Unknown"}
-                      </div>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -551,19 +545,19 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Select Template</Label>
-                <select 
-                  value={selectedTemplateId || ""} 
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="">No template (use default form)</option>
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                      {template.description && ` - ${template.description}`}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a template (or none)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No template (use default form)</SelectItem>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleAssignTemplate} className="flex-1">
