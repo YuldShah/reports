@@ -1,4 +1,10 @@
-import { Pool, PoolClient } from 'pg'
+import { Database } from 'sqlite3'
+import { promisify } from 'util'
+
+// Type definitions for callback parameters
+type SQLiteError = Error | null
+type SQLiteRows = any[]
+type SQLiteCallback = (err: SQLiteError, rows: SQLiteRows) => void
 
 export interface User {
   telegramId: number
@@ -15,6 +21,7 @@ export interface Team {
   id: string
   name: string
   description?: string
+  templateId?: string
   createdAt: Date
   createdBy: number
 }
@@ -29,38 +36,47 @@ export interface Report {
   status: "pending" | "in-progress" | "completed"
   category: string
   attachments?: string[]
+  templateData?: Record<string, any>
   createdAt: Date
   updatedAt: Date
 }
 
-// Database connection pool
-let pool: Pool | null = null
+// Database connection
+let db: Database | null = null
 
-const getPool = () => {
-  if (!pool) {
-    pool = new Pool({
-      host: 'localhost',
-      port: 5432,
-      database: 'reports_db',
-      user: 'reports_user',
-      password: 'reports_password123',
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    })
+const getDatabase = (): Database => {
+  if (!db) {
+    db = new Database('./database.db')
   }
-  return pool
+  return db
 }
 
-// Helper function to execute queries
-const query = async (text: string, params?: any[]): Promise<any> => {
-  const client = await getPool().connect()
-  try {
-    const result = await client.query(text, params)
-    return result
-  } finally {
-    client.release()
-  }
+// Helper function to run queries
+const query = async (sql: string, params: any[] = []): Promise<any> => {
+  const database = getDatabase()
+  return new Promise((resolve, reject) => {
+    database.all(sql, params, (err: SQLiteError, rows: SQLiteRows) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve({ rows })
+      }
+    })
+  })
+}
+
+// Helper function to run single queries
+const run = async (sql: string, params: any[] = []): Promise<any> => {
+  const database = getDatabase()
+  return new Promise((resolve, reject) => {
+    database.run(sql, params, function(this: Database, err: SQLiteError) {
+      if (err) {
+        reject(err)
+      } else {
+        resolve({ rowsAffected: this.changes, insertId: this.lastID })
+      }
+    })
+  })
 }
 
 // User operations
@@ -69,7 +85,7 @@ export const createUser = async (userData: Omit<User, "createdAt">): Promise<Use
   
   const result = await query(
     `INSERT INTO users (telegram_id, first_name, last_name, username, photo_url, team_id, role) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7) 
+     VALUES (?, ?, ?, ?, ?, ?, ?) 
      RETURNING telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at`,
     [telegramId, firstName, lastName, username, photoUrl, teamId, role]
   )
@@ -89,7 +105,7 @@ export const createUser = async (userData: Omit<User, "createdAt">): Promise<Use
 
 export const getUserByTelegramId = async (telegramId: number): Promise<User | null> => {
   const result = await query(
-    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE telegram_id = $1',
+    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE telegram_id = ?',
     [telegramId]
   )
 
@@ -184,11 +200,11 @@ export const getAllUsers = async (): Promise<User[]> => {
 // Team operations
 export const createTeam = async (teamData: Omit<Team, "id" | "createdAt">): Promise<Team> => {
   const teamId = `team_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const { name, description, createdBy } = teamData
+  const { name, description, templateId, createdBy } = teamData
 
   const result = await query(
-    'INSERT INTO teams (id, name, description, created_by) VALUES ($1, $2, $3, $4) RETURNING id, name, description, created_by, created_at',
-    [teamId, name, description, createdBy]
+    'INSERT INTO teams (id, name, description, template_id, created_by) VALUES (?, ?, ?, ?, ?) RETURNING id, name, description, template_id, created_by, created_at',
+    [teamId, name, description, templateId, createdBy]
   )
 
   const row = result.rows[0]
@@ -196,6 +212,7 @@ export const createTeam = async (teamData: Omit<Team, "id" | "createdAt">): Prom
     id: row.id,
     name: row.name,
     description: row.description,
+    templateId: row.template_id,
     createdBy: row.created_by,
     createdAt: row.created_at
   }
@@ -203,13 +220,14 @@ export const createTeam = async (teamData: Omit<Team, "id" | "createdAt">): Prom
 
 export const getAllTeams = async (): Promise<Team[]> => {
   const result = await query(
-    'SELECT id, name, description, created_by, created_at FROM teams ORDER BY created_at DESC'
+    'SELECT id, name, description, template_id, created_by, created_at FROM teams ORDER BY created_at DESC'
   )
 
   return result.rows.map((row: any) => ({
     id: row.id,
     name: row.name,
     description: row.description,
+    templateId: row.template_id,
     createdBy: row.created_by,
     createdAt: row.created_at
   }))
@@ -217,7 +235,7 @@ export const getAllTeams = async (): Promise<Team[]> => {
 
 export const getTeamById = async (id: string): Promise<Team | null> => {
   const result = await query(
-    'SELECT id, name, description, created_by, created_at FROM teams WHERE id = $1',
+    'SELECT id, name, description, template_id, created_by, created_at FROM teams WHERE id = ?',
     [id]
   )
 
@@ -228,37 +246,30 @@ export const getTeamById = async (id: string): Promise<Team | null> => {
     id: row.id,
     name: row.name,
     description: row.description,
+    templateId: row.template_id,
     createdBy: row.created_by,
     createdAt: row.created_at
   }
 }
 
 export const deleteTeam = async (id: string): Promise<boolean> => {
-  const client = await getPool().connect()
-  
   try {
-    await client.query('BEGIN')
-    
     // Unassign all users from this team
-    await client.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [id])
+    await run('UPDATE users SET team_id = NULL WHERE team_id = ?', [id])
     
     // Delete the team
-    const result = await client.query('DELETE FROM teams WHERE id = $1', [id])
+    const result = await run('DELETE FROM teams WHERE id = ?', [id])
     
-    await client.query('COMMIT')
-    
-    return (result.rowCount ?? 0) > 0
+    return result.rowsAffected > 0
   } catch (error) {
-    await client.query('ROLLBACK')
+    console.error('Error deleting team:', error)
     throw error
-  } finally {
-    client.release()
   }
 }
 
 export const getUsersByTeam = async (teamId: string): Promise<User[]> => {
   const result = await query(
-    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE team_id = $1 ORDER BY first_name',
+    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE team_id = ? ORDER BY first_name',
     [teamId]
   )
 
@@ -274,16 +285,35 @@ export const getUsersByTeam = async (teamId: string): Promise<User[]> => {
   }))
 }
 
+export const updateTeamTemplate = async (teamId: string, templateId: string | null): Promise<Team | null> => {
+  const result = await query(
+    'UPDATE teams SET template_id = ? WHERE id = ? RETURNING id, name, description, template_id, created_by, created_at',
+    [templateId, teamId]
+  )
+
+  if (result.rows.length === 0) return null
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    templateId: row.template_id,
+    createdBy: row.created_by,
+    createdAt: row.created_at
+  }
+}
+
 // Report operations
 export const createReport = async (reportData: Omit<Report, "id" | "createdAt" | "updatedAt">): Promise<Report> => {
   const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const { userId, teamId, title, description, priority, status, category, attachments } = reportData
+  const { userId, teamId, title, description, priority, status, category, attachments, templateData } = reportData
 
   const result = await query(
-    `INSERT INTO reports (id, user_id, team_id, title, description, priority, status, category, attachments) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at`,
-    [reportId, userId, teamId, title, description, priority, status, category, attachments || []]
+    `INSERT INTO reports (id, user_id, team_id, title, description, priority, status, category, attachments, template_data) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at`,
+    [reportId, userId, teamId, title, description, priority, status, category, attachments || [], JSON.stringify(templateData || {})]
   )
 
   const row = result.rows[0]
@@ -297,6 +327,7 @@ export const createReport = async (reportData: Omit<Report, "id" | "createdAt" |
     status: row.status,
     category: row.category,
     attachments: row.attachments,
+    templateData: row.template_data ? JSON.parse(row.template_data) : {},
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -304,7 +335,7 @@ export const createReport = async (reportData: Omit<Report, "id" | "createdAt" |
 
 export const getAllReports = async (): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at FROM reports ORDER BY created_at DESC'
+    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at FROM reports ORDER BY created_at DESC'
   )
 
   return result.rows.map((row: any) => ({
@@ -317,6 +348,7 @@ export const getAllReports = async (): Promise<Report[]> => {
     status: row.status,
     category: row.category,
     attachments: row.attachments,
+    templateData: row.template_data ? JSON.parse(row.template_data) : {},
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }))
@@ -324,7 +356,7 @@ export const getAllReports = async (): Promise<Report[]> => {
 
 export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at FROM reports WHERE team_id = $1 ORDER BY created_at DESC',
+    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at FROM reports WHERE team_id = ? ORDER BY created_at DESC',
     [teamId]
   )
 
@@ -338,6 +370,7 @@ export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
     status: row.status,
     category: row.category,
     attachments: row.attachments,
+    templateData: row.template_data ? JSON.parse(row.template_data) : {},
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }))
@@ -345,7 +378,7 @@ export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
 
 export const getReportsByUser = async (userId: number): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at FROM reports WHERE user_id = $1 ORDER BY created_at DESC',
+    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at FROM reports WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   )
 
@@ -359,6 +392,7 @@ export const getReportsByUser = async (userId: number): Promise<Report[]> => {
     status: row.status,
     category: row.category,
     attachments: row.attachments,
+    templateData: row.template_data ? JSON.parse(row.template_data) : {},
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }))
@@ -393,6 +427,10 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
     fields.push(`attachments = $${paramCount++}`)
     values.push(updates.attachments)
   }
+  if (updates.templateData !== undefined) {
+    fields.push(`template_data = $${paramCount++}`)
+    values.push(JSON.stringify(updates.templateData))
+  }
 
   if (fields.length === 0) return null
 
@@ -402,7 +440,7 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
   const result = await query(
     `UPDATE reports SET ${fields.join(', ')} 
      WHERE id = $${paramCount} 
-     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, created_at, updated_at`,
+     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at`,
     values
   )
 
@@ -419,6 +457,7 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
     status: row.status,
     category: row.category,
     attachments: row.attachments,
+    templateData: row.template_data ? JSON.parse(row.template_data) : {},
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }

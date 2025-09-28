@@ -13,6 +13,7 @@ export interface Team {
   id: string
   name: string
   description?: string
+  templateId?: string
   createdAt: Date
   createdBy: number
 }
@@ -27,6 +28,28 @@ export interface Report {
   status: "pending" | "in-progress" | "completed"
   category: string
   attachments?: string[]
+  templateData?: Record<string, any>
   createdAt: Date
   updatedAt: Date
+}
+
+export interface ReportTemplate {
+  id: string
+  name: string
+  description?: string
+  fields: TemplateField[]
+  createdAt: Date
+}
+
+export interface TemplateField {
+  id: string
+  label: string
+  type: "text" | "number" | "date" | "textarea"
+  required: boolean
+  placeholder?: string
+  validation?: {
+    min?: number
+    max?: number
+    pattern?: string
+  }
 }
