@@ -407,10 +407,17 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        if (loading) return
-                        setSelectedTeam(team.id)
-                        setSelectedTemplateId(team.templateId || "")
-                        setIsTemplateDialogOpen(true)
+                        try {
+                          alert(`Test: Gear clicked for team ${team.name}`)
+                          alert(`Available templates: ${templates.map(t => t.name).join(', ')}`)
+                          
+                          // Simple state update test
+                          setSelectedTeam(team.id)
+                          alert("State update successful")
+                          
+                        } catch (error) {
+                          alert(`Error in onClick: ${error instanceof Error ? error.message : String(error)}`)
+                        }
                       }}
                       className="h-8 w-8 p-0"
                       disabled={loading}
@@ -541,9 +548,9 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         })}
       </div>
 
-      {/* Template Assignment Dialog */}
-      {templates.length > 0 && (
-        <Dialog open={isTemplateDialogOpen && !loading} onOpenChange={setIsTemplateDialogOpen}>
+      {/* Template Assignment Dialog - Temporarily Disabled */}
+      {false && (
+        <Dialog open={isTemplateDialogOpen && !loading && templates.length > 0} onOpenChange={setIsTemplateDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Assign Report Template</DialogTitle>
@@ -552,13 +559,13 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
             <div className="space-y-4">
               <div>
                 <Label>Select Template</Label>
-                <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a template (or none)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">No template (use default form)</SelectItem>
-                    {templates && templates.length > 0 && templates.map((template) => (
+                    {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name}
                         {template.description && ` - ${template.description}`}
@@ -567,21 +574,25 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   </SelectContent>
                 </Select>
               </div>
-              {selectedTemplateId && templates.find(t => t.id === selectedTemplateId) && (
+              {selectedTemplateId && (
                 <div className="text-sm text-muted-foreground">
                   <div className="font-medium mb-2">Template Fields:</div>
                   <div className="space-y-1">
-                    {templates.find(t => t.id === selectedTemplateId)?.fields?.map((field) => (
-                      <div key={field.id} className="flex items-center gap-2 text-xs">
-                        <span className="font-medium">{field.label}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {field.type}
-                        </Badge>
-                        {field.required && <span className="text-red-500">*</span>}
-                      </div>
-                    )) || (
-                      <div className="text-xs text-muted-foreground">No fields available</div>
-                    )}
+                    {(() => {
+                      const selectedTemplate = templates.find(t => t.id === selectedTemplateId)
+                      if (!selectedTemplate || !selectedTemplate.fields) {
+                        return <div className="text-xs text-muted-foreground">No fields available</div>
+                      }
+                      return selectedTemplate.fields.map((field) => (
+                        <div key={field.id} className="flex items-center gap-2 text-xs">
+                          <span className="font-medium">{field.label}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {field.type}
+                          </Badge>
+                          {field.required && <span className="text-red-500">*</span>}
+                        </div>
+                      ))
+                    })()}
                   </div>
                 </div>
               )}
