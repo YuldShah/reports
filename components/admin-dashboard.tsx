@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, FileText, TrendingUp, ExternalLink, Zap } from "lucide-react"
+import { Users, FileText, TrendingUp, ExternalLink, Zap, UserCheck, Building2 } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
 import { getGoogleSheetsUrl } from "@/lib/google-sheets"
 import TeamManagement from "@/components/team-management"
 import ReportsView from "@/components/reports-view"
+import UserManagement from "@/components/user-management"
 import OverviewStats from "@/components/overview-stats"
 import SheetsIntegrationStatus from "@/components/sheets-integration-status"
 
@@ -122,11 +123,11 @@ export default function AdminDashboard() {
     <div className="container mx-auto px-4 max-w-6xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage teams, users, and reports</p>
+        <p className="text-muted-foreground">Manage users, teams, and reports</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 border rounded-lg bg-muted/30">
+        <TabsList className="grid w-full grid-cols-4 border rounded-lg bg-muted/30">
           <TabsTrigger
             value="overview"
             className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
@@ -135,10 +136,17 @@ export default function AdminDashboard() {
             Overview
           </TabsTrigger>
           <TabsTrigger
+            value="users"
+            className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
+          >
+            <UserCheck className="w-4 h-4" />
+            Users
+          </TabsTrigger>
+          <TabsTrigger
             value="teams"
             className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
           >
-            <Users className="w-4 h-4" />
+            <Building2 className="w-4 h-4" />
             Teams
           </TabsTrigger>
           <TabsTrigger
@@ -164,7 +172,18 @@ export default function AdminDashboard() {
               <CardDescription>Common administrative tasks</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Button
+                  variant="outline"
+                  className="justify-start h-auto p-4 bg-transparent"
+                  onClick={() => setActiveTab("users")}
+                >
+                  <div className="text-left">
+                    <div className="font-medium">Manage Users</div>
+                    <div className="text-sm text-muted-foreground">Edit user roles</div>
+                  </div>
+                </Button>
+
                 <Button
                   variant="outline"
                   className="justify-start h-auto p-4 bg-transparent"
@@ -237,6 +256,10 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="users">
+          <UserManagement onDataChange={refreshData} />
         </TabsContent>
 
         <TabsContent value="teams">
