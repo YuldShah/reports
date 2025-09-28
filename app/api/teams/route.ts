@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam } from "@/lib/database"
+import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, updateTeam } from "@/lib/database"
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,5 +65,27 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error("Error deleting team:", error)
     return NextResponse.json({ error: "Failed to delete team" }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { teamId, templateId } = body
+
+    if (!teamId) {
+      return NextResponse.json({ error: "Team ID is required" }, { status: 400 })
+    }
+
+    const updatedTeam = await updateTeam(teamId, { templateId })
+    
+    if (!updatedTeam) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ team: updatedTeam })
+  } catch (error) {
+    console.error("Error updating team:", error)
+    return NextResponse.json({ error: "Failed to update team" }, { status: 500 })
   }
 }

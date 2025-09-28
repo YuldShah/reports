@@ -257,7 +257,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     if (!selectedTeam) return
 
     try {
-      const response = await fetch('/api/templates', {
+      const response = await fetch('/api/teams', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -568,7 +568,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
               <div className="text-sm text-muted-foreground">
                 <div className="font-medium mb-2">Template Fields:</div>
                 <div className="space-y-1">
-                  {templates.find(t => t.id === selectedTemplateId)?.fields.map((field) => (
+                  {templates.find(t => t.id === selectedTemplateId)?.fields?.map((field) => (
                     <div key={field.id} className="flex items-center gap-2 text-xs">
                       <span className="font-medium">{field.label}</span>
                       <Badge variant="outline" className="text-xs">
@@ -576,7 +576,9 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       </Badge>
                       {field.required && <span className="text-red-500">*</span>}
                     </div>
-                  )) || []}
+                  )) || (
+                    <div className="text-xs text-muted-foreground">No fields available</div>
+                  )}
                 </div>
               </div>
             )}
