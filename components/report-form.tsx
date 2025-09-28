@@ -322,8 +322,8 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting}>
+      <div className="space-y-2">
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting} className="self-start">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -337,14 +337,14 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
 
       {/* Template info */}
       {template && (
-        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+        <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-2">
-              <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+              <FileText className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <h4 className="font-medium text-blue-900 dark:text-blue-100">{template.name}</h4>
+                <h4 className="font-medium">{template.name}</h4>
                 {template.description && (
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">{template.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
                 )}
               </div>
             </div>
