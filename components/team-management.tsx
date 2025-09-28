@@ -408,15 +408,14 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       variant="outline"
                       onClick={() => {
                         try {
-                          alert(`Test: Gear clicked for team ${team.name}`)
-                          alert(`Available templates: ${templates.map(t => t.name).join(', ')}`)
-                          
-                          // Simple state update test
+                          // Set the selected team for template assignment
                           setSelectedTeam(team.id)
-                          alert("State update successful")
+                          setSelectedTemplateId(team.templateId || "")
+                          setIsTemplateDialogOpen(true)
+                          alert(`Opening template dialog for team: ${team.name}`)
                           
                         } catch (error) {
-                          alert(`Error in onClick: ${error instanceof Error ? error.message : String(error)}`)
+                          alert(`Error: ${error instanceof Error ? error.message : String(error)}`)
                         }
                       }}
                       className="h-8 w-8 p-0"
@@ -548,7 +547,44 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         })}
       </div>
 
-      {/* Template Assignment Dialog - Removed for now due to TypeScript issues */}
+      {/* Template Assignment Dialog */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Report Template</DialogTitle>
+            <DialogDescription>Choose a template for this team's reports</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Select Template</Label>
+              <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a template (or none)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No template (use default form)</SelectItem>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleAssignTemplate}>
+                {selectedTemplateId ? "Assign Template" : "Remove Template"}
+              </Button>
+              <Button variant="outline" onClick={() => {
+                setIsTemplateDialogOpen(false)
+                setSelectedTemplateId("")
+              }}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Empty State */}
       {teams.length === 0 && (
