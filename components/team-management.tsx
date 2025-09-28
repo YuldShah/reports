@@ -44,6 +44,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
   const fetchData = async () => {
     try {
+      console.log('Starting fetchData...')
       setLoading(true)
       
       // Fetch teams, users, and templates in parallel
@@ -53,12 +54,15 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         fetch('/api/templates')
       ])
 
+      console.log('API responses received')
+
       const teamsData = await teamsResponse.json()
       const teamsWithDates = (teamsData.teams || []).map((team: any) => ({
         ...team,
         createdAt: new Date(team.createdAt)
       }))
       setTeams(teamsWithDates)
+      console.log('Teams loaded:', teamsWithDates.length)
 
       const usersData = await usersResponse.json()
       const usersWithDates = (usersData.users || []).map((user: any) => ({
@@ -66,9 +70,11 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         createdAt: new Date(user.createdAt)
       }))
       setUsers(usersWithDates)
+      console.log('Users loaded:', usersWithDates.length)
 
       const templatesData = await templatesResponse.json()
       setTemplates(templatesData.templates || [])
+      console.log('Templates loaded:', templatesData.templates?.length || 0)
     } catch (error) {
       console.error('Error fetching data:', error)
       toast({
@@ -78,6 +84,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         duration: 3000,
       })
     } finally {
+      console.log('fetchData completed, setting loading to false')
       setLoading(false)
     }
   }
@@ -407,10 +414,24 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        if (loading) return // Prevent opening dialog while loading
-                        setSelectedTeam(team.id)
-                        setSelectedTemplateId(team.templateId || "")
-                        setIsTemplateDialogOpen(true)
+                        try {
+                          console.log('Settings button clicked for team:', team.id)
+                          console.log('Loading state:', loading)
+                          console.log('Templates loaded:', templates.length)
+                          
+                          if (loading) {
+                            console.log('Preventing click - still loading')
+                            return
+                          }
+                          
+                          setSelectedTeam(team.id)
+                          setSelectedTemplateId(team.templateId || "")
+                          setIsTemplateDialogOpen(true)
+                          
+                          console.log('Dialog state updated successfully')
+                        } catch (error) {
+                          console.error('Error in settings button click:', error)
+                        }
                       }}
                       className="h-8 w-8 p-0"
                       disabled={loading}
