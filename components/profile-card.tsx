@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useAuthContext } from "@/components/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import StatusBadge from "@/components/status-badge"
-import { getTeamById } from "@/lib/database"
 
 export default function ProfileCard() {
   const { telegramUser, dbUser, isAdmin } = useAuthContext()
@@ -21,9 +20,16 @@ export default function ProfileCard() {
     const fetchTeamName = async () => {
       if (dbUser?.teamId && !isAdmin) {
         try {
-          const team = await getTeamById(dbUser.teamId)
-          if (team?.name) {
-            setTeamName(team.name)
+          const response = await fetch(`/api/teams?id=${dbUser.teamId}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.team?.name) {
+              setTeamName(data.team.name)
+            } else {
+              setTeamName("Unknown Team")
+            }
+          } else {
+            setTeamName("Unknown Team")
           }
         } catch (error) {
           console.error("Failed to fetch team name:", error)
