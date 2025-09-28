@@ -26,6 +26,25 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error("Error caught by boundary:", error, errorInfo)
+    
+    // Send error to debug API
+    fetch('/api/debug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `Error Boundary Caught: ${error.message}`,
+        level: 'error',
+        component: 'ErrorBoundary',
+        data: {
+          error: {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          },
+          errorInfo
+        }
+      })
+    }).catch(err => console.error('Failed to log error to debug API:', err))
   }
 
   render() {
