@@ -70,7 +70,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       const templatesData = await templatesResponse.json()
       setTemplates(templatesData.templates || [])
     } catch (error) {
-      alert(`Error fetching data: ${error instanceof Error ? error.message : String(error)}`)
+      console.error('Error fetching data:', error)
       toast({
         title: "Error",
         description: "Failed to load data",
@@ -411,17 +411,9 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        try {
-                          alert(`Clicking gear button for team: ${team.name} (ID: ${team.id})`)
-                          setSelectedTeam(team.id)
-                          alert(`Set selectedTeam to: ${team.id}`)
-                          setSelectedTemplateId(team.templateId || "")
-                          alert(`Set selectedTemplateId to: ${team.templateId || ""}`)
-                          setIsTemplateDialogOpen(true)
-                          alert('Set isTemplateDialogOpen to true - about to render dialog')
-                        } catch (error) {
-                          alert(`Error in gear button click: ${error}`)
-                        }
+                        setSelectedTeam(team.id)
+                        setSelectedTemplateId(team.templateId || "")
+                        setIsTemplateDialogOpen(true)
                       }}
                       className="h-8 w-8 p-0"
                       disabled={loading}
@@ -548,57 +540,52 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       </div>
 
       {/* Template Assignment Dialog */}
-      <Dialog 
-        open={isTemplateDialogOpen}
-        onOpenChange={(open) => {
-          alert(`Dialog onOpenChange called with: ${open}`)
-          setIsTemplateDialogOpen(open)
-          if (!open) {
-            setSelectedTeam(null)
-            setSelectedTemplateId("")
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Report Template</DialogTitle>
-            <DialogDescription>Choose a template for this team's reports</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Select Template</Label>
-              {templates && templates.length > 0 ? (
-                <Select value={selectedTemplateId || ""} onValueChange={(value) => {
-                  alert(`Template selection changed to: ${value}`)
-                  setSelectedTemplateId(value)
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a template (or none)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No template (use default form)</SelectItem>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="text-sm text-muted-foreground">Loading templates...</div>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleAssignTemplate} disabled={!selectedTeam}>
-                {selectedTemplateId ? "Assign Template" : "Remove Template"}
-              </Button>
-              <Button variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>
-                Cancel
-              </Button>
+      {isTemplateDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 border">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Assign Report Template</h3>
+                <p className="text-sm text-muted-foreground">Choose a template for this team's reports</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Select Template</Label>
+                <select 
+                  value={selectedTemplateId || ""} 
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                >
+                  <option value="">No template (use default form)</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={() => {
+                    handleAssignTemplate()
+                  }} 
+                  disabled={!selectedTeam}
+                  className="flex-1"
+                >
+                  {selectedTemplateId ? "Assign Template" : "Remove Template"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsTemplateDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Empty State */}
       {teams.length === 0 && (

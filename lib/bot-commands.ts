@@ -31,10 +31,8 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     const isUserAdmin = adminIds.includes(userId) || user.role === "admin"
 
     // Echo the message with appropriate button
-    const echoText = message === "/start" ? 
-      (isUserAdmin ? "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports." : "Welcome! 👋\n\nClick the button below to submit your daily report.") :
-      `Echo: ${message}`
-
+    const replyMsg = isUserAdmin ? "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports." : "Welcome! 👋\n\nClick the button below to submit your daily report."
+    
     const webAppUrl = isUserAdmin ? 
       `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}?admin=true` : 
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
@@ -55,7 +53,7 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     
     await sendTelegramMessage(
       chatId,
-      message === "/start" ? echoText : echoText + additionalText,
+      message = replyMsg,
       replyMarkup
     )
   } catch (error) {
