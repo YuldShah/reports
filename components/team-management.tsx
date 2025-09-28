@@ -70,7 +70,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       const templatesData = await templatesResponse.json()
       setTemplates(templatesData.templates || [])
     } catch (error) {
-      alert(`Error fetching data: ${error.message || error}`)
+      alert(`Error fetching data: ${error instanceof Error ? error.message : String(error)}`)
       toast({
         title: "Error",
         description: "Failed to load data",
@@ -432,7 +432,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                           
                           alert('Dialog state updated successfully')
                         } catch (error) {
-                          alert(`Error in settings button click: ${error.message || error}`)
+                          alert(`Error in settings button click: ${error instanceof Error ? error.message : String(error)}`)
                         }
                       }}
                       className="h-8 w-8 p-0"
