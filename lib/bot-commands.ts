@@ -34,8 +34,8 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     const replyMsg = isUserAdmin ? "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports." : "Welcome! 👋\n\nClick the button below to submit your daily report."
     
     const webAppUrl = isUserAdmin ? 
-      `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}?admin=true` : 
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://voip-armstrong-lot-make.trycloudflare.com"}?admin=true` : 
+      process.env.NEXT_PUBLIC_APP_URL || "https://voip-armstrong-lot-make.trycloudflare.com"
 
     const buttonText = isUserAdmin ? "📊 Admin Dashboard" : "📝 Submit Report"
     const additionalText = isUserAdmin ? 
@@ -53,7 +53,7 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     
     await sendTelegramMessage(
       chatId,
-      message = replyMsg,
+      replyMsg,
       replyMarkup
     )
   } catch (error) {
