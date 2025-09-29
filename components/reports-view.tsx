@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
-import { getGoogleSheetsUrl } from "@/lib/google-sheets"
+import { getGoogleSheetsUrl } from "@/lib/google-sheets-client"
 
 export default function ReportsView() {
   const [searchTerm, setSearchTerm] = useState("")

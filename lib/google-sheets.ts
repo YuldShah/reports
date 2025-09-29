@@ -190,21 +190,7 @@ export const appendToGoogleSheet = async (
   }
 }
 
-export const getGoogleSheetsUrl = (teamName?: string): string => {
-  // Try to get from client-side env first, fallback to server-side
-  const spreadsheetId = process.env.NEXT_PUBLIC_GOOGLE_SHEETS_ID || process.env.GOOGLE_SHEETS_ID
-  if (!spreadsheetId) {
-    // Return # when not configured (same as admin dashboard)
-    return "#"
-  }
 
-  const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
-  if (teamName) {
-    const sheetName = `Team_${teamName.replace(/[^a-zA-Z0-9]/g, "_")}`
-    return `${baseUrl}/edit#gid=0&range=${sheetName}`
-  }
-  return `${baseUrl}/edit`
-}
 
 export const getAllSheetsData = async () => {
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID
@@ -220,6 +206,8 @@ export const getAllSheetsData = async () => {
       spreadsheetId,
     })
 
+    const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+    
     return {
       spreadsheetId,
       title: response.data.properties?.title || "Reports Spreadsheet",
@@ -227,7 +215,7 @@ export const getAllSheetsData = async () => {
         response.data.sheets?.map((sheet: any) => ({
           title: sheet.properties?.title || '',
           sheetId: sheet.properties?.sheetId || 0,
-          url: `${getGoogleSheetsUrl()}#gid=${sheet.properties?.sheetId || 0}`,
+          url: `${baseUrl}/edit#gid=${sheet.properties?.sheetId || 0}`,
         })) || [],
     }
   } catch (error) {
