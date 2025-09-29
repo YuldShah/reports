@@ -202,6 +202,108 @@ export const getAllUsers = async (): Promise<User[]> => {
   }))
 }
 
+// Template operations
+export const createTemplate = async (templateData: Omit<Template, "createdAt">): Promise<Template> => {
+  const { id, name, description, questions, createdBy } = templateData
+  
+  const result = await query(
+    `INSERT INTO templates (id, name, description, questions, created_by) 
+     VALUES (?, ?, ?, ?, ?) 
+     RETURNING id, name, description, questions, created_at, created_by`,
+    [id, name, description, JSON.stringify(questions), createdBy]
+  )
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    questions: JSON.parse(row.questions),
+    createdAt: row.created_at,
+    createdBy: row.created_by
+  }
+}
+
+export const getTemplateById = async (id: string): Promise<Template | null> => {
+  const result = await query(
+    'SELECT id, name, description, questions, created_at, created_by FROM templates WHERE id = ?',
+    [id]
+  )
+
+  if (result.rows.length === 0) return null
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    questions: JSON.parse(row.questions),
+    createdAt: row.created_at,
+    createdBy: row.created_by
+  }
+}
+
+export const getAllTemplates = async (): Promise<Template[]> => {
+  const result = await query(
+    'SELECT id, name, description, questions, created_at, created_by FROM templates ORDER BY created_at DESC'
+  )
+
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    questions: JSON.parse(row.questions),
+    createdAt: row.created_at,
+    createdBy: row.created_by
+  }))
+}
+
+export const updateTemplate = async (id: string, updates: Partial<Template>): Promise<Template | null> => {
+  const fields = []
+  const values = []
+  let paramCount = 1
+
+  if (updates.name !== undefined) {
+    fields.push(`name = $${paramCount++}`)
+    values.push(updates.name)
+  }
+  if (updates.description !== undefined) {
+    fields.push(`description = $${paramCount++}`)
+    values.push(updates.description)
+  }
+  if (updates.questions !== undefined) {
+    fields.push(`questions = $${paramCount++}`)
+    values.push(JSON.stringify(updates.questions))
+  }
+
+  if (fields.length === 0) return getTemplateById(id)
+
+  values.push(id)
+  const result = await query(
+    `UPDATE templates SET ${fields.join(', ')} 
+     WHERE id = $${paramCount} 
+     RETURNING id, name, description, questions, created_at, created_by`,
+    values
+  )
+
+  if (result.rows.length === 0) return null
+
+  const row = result.rows[0]
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    questions: JSON.parse(row.questions),
+    createdAt: row.created_at,
+    createdBy: row.created_by
+  }
+}
+
+export const deleteTemplate = async (id: string): Promise<boolean> => {
+  const result = await run('DELETE FROM templates WHERE id = ?', [id])
+  return result.rowsAffected > 0
+}
+
 // Team operations
 export const createTeam = async (teamData: Omit<Team, "id" | "createdAt">): Promise<Team> => {
   const teamId = `team_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -310,15 +412,15 @@ export const updateTeamTemplate = async (teamId: string, templateId: string | nu
 }
 
 // Report operations
-export const createReport = async (reportData: Omit<Report, "id" | "createdAt" | "updatedAt">): Promise<Report> => {
+export const createReport = async (reportData: Omit<Report, "id" | "createdAt">): Promise<Report> => {
   const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const { userId, teamId, title, description, priority, status, category, attachments, templateData } = reportData
+  const { userId, teamId, templateId, title, answers } = reportData
 
   const result = await query(
-    `INSERT INTO reports (id, user_id, team_id, title, description, priority, status, category, attachments, template_data) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
-     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at`,
-    [reportId, userId, teamId, title, description, priority, status, category, attachments || [], JSON.stringify(templateData || {})]
+    `INSERT INTO reports (id, user_id, team_id, template_id, title, answers) 
+     VALUES (?, ?, ?, ?, ?, ?) 
+     RETURNING id, user_id, team_id, template_id, title, answers, created_at`,
+    [reportId, userId, teamId, templateId, title, JSON.stringify(answers)]
   )
 
   const row = result.rows[0]
@@ -326,42 +428,32 @@ export const createReport = async (reportData: Omit<Report, "id" | "createdAt" |
     id: row.id,
     userId: row.user_id,
     teamId: row.team_id,
+    templateId: row.template_id,
     title: row.title,
-    description: row.description,
-    priority: row.priority,
-    status: row.status,
-    category: row.category,
-    attachments: row.attachments,
-    templateData: row.template_data ? JSON.parse(row.template_data) : {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    answers: JSON.parse(row.answers),
+    createdAt: row.created_at
   }
 }
 
 export const getAllReports = async (): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at FROM reports ORDER BY created_at DESC'
+    'SELECT id, user_id, team_id, template_id, title, answers, created_at FROM reports ORDER BY created_at DESC'
   )
 
   return result.rows.map((row: any) => ({
     id: row.id,
     userId: row.user_id,
     teamId: row.team_id,
+    templateId: row.template_id,
     title: row.title,
-    description: row.description,
-    priority: row.priority,
-    status: row.status,
-    category: row.category,
-    attachments: row.attachments,
-    templateData: row.template_data ? JSON.parse(row.template_data) : {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    answers: JSON.parse(row.answers),
+    createdAt: row.created_at
   }))
 }
 
 export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at FROM reports WHERE team_id = ? ORDER BY created_at DESC',
+    'SELECT id, user_id, team_id, template_id, title, answers, created_at FROM reports WHERE team_id = ? ORDER BY created_at DESC',
     [teamId]
   )
 
@@ -369,21 +461,16 @@ export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
     id: row.id,
     userId: row.user_id,
     teamId: row.team_id,
+    templateId: row.template_id,
     title: row.title,
-    description: row.description,
-    priority: row.priority,
-    status: row.status,
-    category: row.category,
-    attachments: row.attachments,
-    templateData: row.template_data ? JSON.parse(row.template_data) : {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    answers: JSON.parse(row.answers),
+    createdAt: row.created_at
   }))
 }
 
 export const getReportsByUser = async (userId: number): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at FROM reports WHERE user_id = ? ORDER BY created_at DESC',
+    'SELECT id, user_id, team_id, template_id, title, answers, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   )
 
@@ -391,15 +478,10 @@ export const getReportsByUser = async (userId: number): Promise<Report[]> => {
     id: row.id,
     userId: row.user_id,
     teamId: row.team_id,
+    templateId: row.template_id,
     title: row.title,
-    description: row.description,
-    priority: row.priority,
-    status: row.status,
-    category: row.category,
-    attachments: row.attachments,
-    templateData: row.template_data ? JSON.parse(row.template_data) : {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    answers: JSON.parse(row.answers),
+    createdAt: row.created_at
   }))
 }
 
@@ -412,40 +494,19 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
     fields.push(`title = $${paramCount++}`)
     values.push(updates.title)
   }
-  if (updates.description !== undefined) {
-    fields.push(`description = $${paramCount++}`)
-    values.push(updates.description)
-  }
-  if (updates.priority !== undefined) {
-    fields.push(`priority = $${paramCount++}`)
-    values.push(updates.priority)
-  }
-  if (updates.status !== undefined) {
-    fields.push(`status = $${paramCount++}`)
-    values.push(updates.status)
-  }
-  if (updates.category !== undefined) {
-    fields.push(`category = $${paramCount++}`)
-    values.push(updates.category)
-  }
-  if (updates.attachments !== undefined) {
-    fields.push(`attachments = $${paramCount++}`)
-    values.push(updates.attachments)
-  }
-  if (updates.templateData !== undefined) {
-    fields.push(`template_data = $${paramCount++}`)
-    values.push(JSON.stringify(updates.templateData))
+  if (updates.answers !== undefined) {
+    fields.push(`answers = $${paramCount++}`)
+    values.push(JSON.stringify(updates.answers))
   }
 
   if (fields.length === 0) return null
 
-  fields.push(`updated_at = CURRENT_TIMESTAMP`)
   values.push(id)
 
   const result = await query(
     `UPDATE reports SET ${fields.join(', ')} 
      WHERE id = $${paramCount} 
-     RETURNING id, user_id, team_id, title, description, priority, status, category, attachments, template_data, created_at, updated_at`,
+     RETURNING id, user_id, team_id, template_id, title, answers, created_at`,
     values
   )
 
@@ -456,14 +517,9 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
     id: row.id,
     userId: row.user_id,
     teamId: row.team_id,
+    templateId: row.template_id,
     title: row.title,
-    description: row.description,
-    priority: row.priority,
-    status: row.status,
-    category: row.category,
-    attachments: row.attachments,
-    templateData: row.template_data ? JSON.parse(row.template_data) : {},
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    answers: JSON.parse(row.answers),
+    createdAt: row.created_at
   }
 }
