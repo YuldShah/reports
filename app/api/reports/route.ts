@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllReports, createReport, updateReport, getReportsByUser, getReportsByTeam } from "@/lib/database"
+import { getAllReports, createReport, updateReport, getReportsByUser, getReportsByTeam, getTeamById, getTemplateById, getUserByTelegramId } from "@/lib/database"
 import { appendToGoogleSheet } from "@/lib/google-sheets"
 
 export async function GET(request: NextRequest) {
@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, teamId, title, description, priority, category, status = "pending" } = body
+    const { userId, teamId, templateId, title, answers } = body
 
-    if (!userId || !teamId || !title || !description || !priority || !category) {
+    if (!userId || !teamId || !templateId || !title || !answers) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -37,35 +37,35 @@ export async function POST(request: NextRequest) {
     const report = await createReport({
       userId,
       teamId,
+      templateId,
       title,
-      description,
-      priority,
-      status,
-      category,
+      answers,
     })
 
-    // Optionally sync to Google Sheets
+    // Sync to Google Sheets if enabled
     if (body.syncToSheets !== false) {
       try {
-        const sheetData = {
-          timestamp: new Date().toISOString(),
-          userName: body.userName || "Unknown User",
-          title,
-          description,
-          priority,
-          category,
-          status,
-          type: body.type || "",
-          location: body.location || "",
-          urgency: body.urgency || "",
-          affectedSystems: body.affectedSystems || "",
-          reproductionSteps: body.reproductionSteps || "",
-          expectedOutcome: body.expectedOutcome || "",
-          actualOutcome: body.actualOutcome || "",
-          additionalInfo: body.additionalInfo || "",
-        }
+        // Get related data for Google Sheets
+        const user = await getUserByTelegramId(userId)
+        const team = await getTeamById(teamId)
+        const template = await getTemplateById(templateId)
 
-        await appendToGoogleSheet(`Team_${teamId}`, sheetData)
+        if (user && team && template) {
+          // Format questions and answers for Google Sheets
+          const questionsAnswers = template.questions.map((q: any, index: number) => {
+            const answer = answers[`question_${index}`] || answers[q.id] || 'No answer'
+            return `${q.question}: ${answer}`
+          }).join(' | ')
+
+          const sheetData = {
+            timestamp: new Date().toISOString(),
+            teamName: team.name,
+            userName: `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`,
+            questionsAnswers,
+          }
+
+          await appendToGoogleSheet(template.name, sheetData)
+        }
       } catch (sheetError) {
         console.error("Failed to sync to Google Sheets:", sheetError)
         // Continue anyway - report was created successfully

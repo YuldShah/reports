@@ -1,5 +1,6 @@
 import { google } from 'googleapis'
 import path from 'path'
+import fs from 'fs'
 
 export interface GoogleSheetsConfig {
   spreadsheetId: string
@@ -9,12 +10,26 @@ export interface GoogleSheetsConfig {
 
 const getGoogleSheetsClient = async () => {
   try {
-    // Path to the service account key file
-    const serviceAccountPath = path.join(process.cwd(), 'resolute-might-473605-g5-cd8246aa7c6c.json')
+    // Get service account credentials from environment or file
+    let credentials
     
+    if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+      // Use environment variable (preferred for production)
+      credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+    } else {
+      // Fallback to file (for development)
+      const serviceAccountPath = path.join(process.cwd(), 'resolute-might-473605-g5-cd8246aa7c6c.json')
+      
+      if (fs.existsSync(serviceAccountPath)) {
+        credentials = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))
+      } else {
+        throw new Error('Google Service Account credentials not found')
+      }
+    }
+
     // Create authentication using service account
     const auth = new google.auth.GoogleAuth({
-      keyFile: serviceAccountPath,
+      credentials,
       scopes: [
         'https://www.googleapis.com/auth/spreadsheets'
       ],
@@ -30,14 +45,14 @@ const getGoogleSheetsClient = async () => {
   }
 }
 
-export const createSheetIfNotExists = async (teamName: string) => {
+export const createSheetIfNotExists = async (templateName: string) => {
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID
 
   if (!spreadsheetId) {
     throw new Error("Google Sheets spreadsheet ID not configured")
   }
 
-  const sheetName = `Team_${teamName.replace(/[^a-zA-Z0-9]/g, "_")}`
+  const sheetName = `Template_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`
 
   try {
     const { sheets } = await getGoogleSheetsClient()
@@ -48,7 +63,7 @@ export const createSheetIfNotExists = async (teamName: string) => {
     })
 
     const sheetExists = getResponse.data.sheets?.some(
-      (sheet) => sheet.properties?.title === sheetName
+      (sheet: any) => sheet.properties?.title === sheetName
     )
 
     if (!sheetExists) {
@@ -85,21 +100,10 @@ const addHeadersToSheet = async (sheetName: string) => {
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID
 
   const headers = [
-    "Timestamp",
+    "Generated At",
+    "Team Name",
     "User Name",
-    "Title",
-    "Description",
-    "Priority",
-    "Category",
-    "Status",
-    "Type",
-    "Location",
-    "Urgency",
-    "Affected Systems",
-    "Reproduction Steps",
-    "Expected Outcome",
-    "Actual Outcome",
-    "Additional Info",
+    "Questions & Answers",
   ]
 
   try {
@@ -107,7 +111,7 @@ const addHeadersToSheet = async (sheetName: string) => {
     
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A1:O1`,
+      range: `${sheetName}!A1:D1`,
       valueInputOption: 'RAW',
       requestBody: {
         values: [headers],
@@ -119,23 +123,12 @@ const addHeadersToSheet = async (sheetName: string) => {
 }
 
 export const appendToGoogleSheet = async (
-  teamName: string,
+  templateName: string,
   reportData: {
     timestamp: string
+    teamName: string
     userName: string
-    title: string
-    description: string
-    priority: string
-    category: string
-    status: string
-    type?: string
-    location?: string
-    urgency?: string
-    affectedSystems?: string
-    reproductionSteps?: string
-    expectedOutcome?: string
-    actualOutcome?: string
-    additionalInfo?: string
+    questionsAnswers: string
   },
 ) => {
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID
@@ -147,35 +140,24 @@ export const appendToGoogleSheet = async (
 
   try {
     // Ensure sheet exists
-    await createSheetIfNotExists(teamName)
+    await createSheetIfNotExists(templateName)
 
     const { sheets } = await getGoogleSheetsClient()
-    const sheetName = `Team_${teamName.replace(/[^a-zA-Z0-9]/g, "_")}`
+    const sheetName = `Template_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`
 
     // Prepare data row
     const values = [
       [
         reportData.timestamp,
+        reportData.teamName,
         reportData.userName,
-        reportData.title,
-        reportData.description,
-        reportData.priority,
-        reportData.category,
-        reportData.status,
-        reportData.type || "",
-        reportData.location || "",
-        reportData.urgency || "",
-        reportData.affectedSystems || "",
-        reportData.reproductionSteps || "",
-        reportData.expectedOutcome || "",
-        reportData.actualOutcome || "",
-        reportData.additionalInfo || "",
+        reportData.questionsAnswers,
       ],
     ]
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:O`,
+      range: `${sheetName}!A:D`,
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
