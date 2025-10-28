@@ -1,9 +1,12 @@
 import { ReportTemplate } from './types'
+import { createTemplate, getTemplateById as getDbTemplateById } from './database'
 
-// Hardcoded report templates
-export const REPORT_TEMPLATES: ReportTemplate[] = [
+type StaticReportTemplate = ReportTemplate & { key: string }
+
+const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
   {
-    id: 'student_activity_template',
+    id: '8e3a5ba8-9c30-4c1a-8ef1-0cf76e47fa94',
+    key: 'student_activity_template',
     name: 'Talabalar faoliyati hisoboti',
     description: "Chora-tadbirga talabalar jalb qilinmagan bo'lsa talabalar soniga doir bandlar to'ldirilmaydi.",
     fields: [
@@ -94,7 +97,8 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     createdAt: new Date()
   },
   {
-    id: 'youth_work_department_template',
+    id: '6f5bce60-2a10-47da-8a1f-278ade41b1a2',
+    key: 'youth_work_department_template',
     name: 'Yoshlar bilan ishlash bo\'limi',
     description: 'Talabalar bilan ishlash',
     fields: [
@@ -185,7 +189,8 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     createdAt: new Date()
   },
   {
-    id: 'general_report_template',
+    id: '4c9ec1d3-f7cc-4b53-9a47-6e6245bf86de',
+    key: 'general_report_template',
     name: 'Umumiy hisobot',
     description: 'Sarlavha va tavsif bilan asosiy hisobot shabloni',
     fields: [
@@ -213,7 +218,8 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     createdAt: new Date()
   },
   {
-    id: 'tutor_activity_template',
+    id: '29245ffb-8826-4a16-8f1f-37ec8ce6c1cf',
+    key: 'tutor_activity_template',
     name: 'Tyutorlar faoliyati',
     description: "Tyutorlar tomonidan o'tkazilgan tadbirlarni hujjatlashtirish",
     fields: [
@@ -297,7 +303,8 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
     createdAt: new Date()
   },
   {
-    id: 'manaviyat_va_marifat_bolimi_template',
+    id: 'f4d2c9f0-6e7a-4ffb-98d7-15e8880af6d1',
+    key: 'manaviyat_va_marifat_bolimi_template',
     name: "Ma'naviyat va ma'rifat bo'limi",
     description: "Chora-tadbirga talabalar jalb qilinmagan bo'lsa talabalar soniga doir bandlar to'ldirilmaydi.",
     fields: [
@@ -309,14 +316,14 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         placeholder: 'Nom'
       },
       {
-        id: 'event_date',
+        id: 'event_date_start',
         label: 'Chora tadbir sanasi (boshlangan)',
         type: 'date',
         required: true,
         placeholder: 'Month, day, year'
       },
       {
-        id: 'event_date',
+        id: 'event_date_end',
         label: 'Chora tadbir sanasi (tugagan)',
         type: 'date',
         required: true,
@@ -371,30 +378,76 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         validation: { min: 0 }
       },
       {
-        id : "boys",
-        label : "Shundan o'g'il bolalar (faqar sonda)",
-        type : "number",
-        required : false,
-        placeholder : "0",
-        validation : {min : 0}
+        id: 'boys',
+        label: "Shundan o'g'il bolalar (faqat sonda)",
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
       },
       {
-        id : "girls",
-        label : "Shundan qiz bolalar (faqar sonda)",
-        type : "number",
-        required : false,
-        placeholder : "0",
-        validation : {min : 0}
+        id: 'girls',
+        label: "Shundan qiz bolalar (faqat sonda)",
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
       }
     ],
     createdAt: new Date()
   }
 ]
 
-export const getTemplateById = (templateId: string): ReportTemplate | null => {
-  return REPORT_TEMPLATES.find(template => template.id === templateId) || null
+export const REPORT_TEMPLATES: StaticReportTemplate[] = STATIC_REPORT_TEMPLATES
+
+const cloneFields = (fields: StaticReportTemplate['fields']): any[] => JSON.parse(JSON.stringify(fields))
+
+let templatesSynced = false
+let syncPromise: Promise<void> | null = null
+
+export const ensureStaticTemplatesSynced = async (): Promise<void> => {
+  if (templatesSynced) {
+    return
+  }
+
+  if (!syncPromise) {
+    syncPromise = (async () => {
+      for (const template of STATIC_REPORT_TEMPLATES) {
+        try {
+          const existing = await getDbTemplateById(template.id)
+          if (!existing) {
+            await createTemplate({
+              id: template.id,
+              name: template.name,
+              description: template.description,
+              questions: cloneFields(template.fields),
+              createdBy: null,
+            })
+          }
+        } catch (error) {
+          console.error(`Failed to sync template ${template.key}`, error)
+          throw error
+        }
+      }
+      templatesSynced = true
+    })().finally(() => {
+      syncPromise = null
+    })
+  }
+
+  await syncPromise
+}
+
+export const getTemplateById = (identifier: string): ReportTemplate | null => {
+  return STATIC_REPORT_TEMPLATES.find(
+    (template) => template.id === identifier || template.key === identifier,
+  ) || null
+}
+
+export const getTemplateByKey = (key: string): ReportTemplate | null => {
+  return STATIC_REPORT_TEMPLATES.find((template) => template.key === key) || null
 }
 
 export const getAllTemplates = (): ReportTemplate[] => {
-  return REPORT_TEMPLATES
+  return STATIC_REPORT_TEMPLATES
 }

@@ -35,6 +35,7 @@ export interface Report {
 
 export interface ReportTemplate {
   id: string
+  key?: string
   name: string
   description?: string
   fields: TemplateField[]

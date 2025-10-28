@@ -130,33 +130,65 @@ const getEnv = (): Record<string, string | undefined> => {
   return env ?? {}
 }
 
+const ADMIN_ENV_KEYS = [
+  "ADMIN_TELEGRAM_IDS",
+  "NEXT_PUBLIC_ADMIN_TELEGRAM_IDS",
+  "ADMIN_TELEGRAM_ID",
+  "NEXT_PUBLIC_ADMIN_TELEGRAM_ID",
+] as const
+
+let cachedAdminIds: number[] | null = null
+let cachedAdminSignature: string | null = null
+
 const parseAdminTelegramIds = (): number[] => {
   const env = getEnv()
-  const raw =
-    env.ADMIN_TELEGRAM_IDS?.trim() ||
-    env.NEXT_PUBLIC_ADMIN_TELEGRAM_IDS?.trim() ||
-    env.ADMIN_TELEGRAM_ID?.trim() ||
-    env.NEXT_PUBLIC_ADMIN_TELEGRAM_ID?.trim() ||
-    ""
 
-  if (!raw) {
+  const normalizedValues = ADMIN_ENV_KEYS
+    .map((key) => env[key]?.trim())
+    .filter((value): value is string => Boolean(value && value.length > 0))
+
+  if (normalizedValues.length === 0) {
     return []
   }
 
-  return raw
-    .split(/[,\s]+/)
+  const raw = normalizedValues.join(",")
+
+  const parsedIds = raw
+    .split(/[\,\s]+/)
     .map((value: string) => value.trim())
     .filter((value: string) => Boolean(value))
     .map((value: string) => Number.parseInt(value, 10))
     .filter((value: number) => Number.isFinite(value))
+
+  return Array.from(new Set(parsedIds))
 }
 
-const ADMIN_TELEGRAM_ID_LIST = parseAdminTelegramIds()
-const ADMIN_TELEGRAM_ID_SET = new Set(ADMIN_TELEGRAM_ID_LIST)
+const getAdminIdsInternal = (): number[] => {
+  const env = getEnv()
+  const signature = ADMIN_ENV_KEYS.map((key) => env[key]?.trim() ?? "").join("|")
 
-export const getAdminTelegramIds = (): number[] => [...ADMIN_TELEGRAM_ID_LIST]
+  if (cachedAdminIds && cachedAdminSignature === signature) {
+    return cachedAdminIds
+  }
 
-export const isAdmin = (userId: number): boolean => ADMIN_TELEGRAM_ID_SET.has(Number(userId))
+  cachedAdminIds = parseAdminTelegramIds()
+  cachedAdminSignature = signature
+
+  return cachedAdminIds
+}
+
+export const getAdminTelegramIds = (): number[] => [...getAdminIdsInternal()]
+
+export const isAdmin = (userId: number): boolean => {
+  const adminIds = getAdminIdsInternal()
+  const numericId = Number(userId)
+
+  if (!Number.isFinite(numericId)) {
+    return false
+  }
+
+  return adminIds.includes(numericId)
+}
 
 // Bot API functions
 export const sendTelegramMessage = async (chatId: number, text: string, replyMarkup?: any) => {

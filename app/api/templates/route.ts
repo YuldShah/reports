@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAllTemplates, getTemplateById } from "@/lib/report-templates"
+import { ensureStaticTemplatesSynced, getAllTemplates, getTemplateById } from "@/lib/report-templates"
 import { updateTeamTemplate } from "@/lib/database"
 
 export async function GET(request: NextRequest) {
   try {
+    await ensureStaticTemplatesSynced()
+
     const { searchParams } = new URL(request.url)
     const templateId = searchParams.get("id")
 
@@ -25,6 +27,8 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    await ensureStaticTemplatesSynced()
+
     const body = await request.json()
     const { teamId, templateId } = body
 
@@ -33,11 +37,17 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Validate template exists if templateId is provided
-    if (templateId && !getTemplateById(templateId)) {
-      return NextResponse.json({ error: "Invalid template ID" }, { status: 400 })
+    let resolvedTemplateId: string | null = null
+
+    if (templateId) {
+      const template = getTemplateById(templateId)
+      if (!template) {
+        return NextResponse.json({ error: "Invalid template ID" }, { status: 400 })
+      }
+      resolvedTemplateId = template.id
     }
 
-    const updatedTeam = await updateTeamTemplate(teamId, templateId || null)
+    const updatedTeam = await updateTeamTemplate(teamId, resolvedTemplateId)
 
     if (!updatedTeam) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 })

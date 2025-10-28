@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, updateTeamTemplate } from "@/lib/database"
+import { ensureStaticTemplatesSynced, getTemplateById as getStaticTemplateById } from "@/lib/report-templates"
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,7 +78,19 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Team ID is required" }, { status: 400 })
     }
 
-    const updatedTeam = await updateTeamTemplate(teamId, templateId)
+    await ensureStaticTemplatesSynced()
+
+    let resolvedTemplateId: string | null = null
+
+    if (typeof templateId === "string" && templateId.trim().length > 0) {
+      const template = getStaticTemplateById(templateId)
+      if (!template) {
+        return NextResponse.json({ error: "Invalid template ID" }, { status: 400 })
+      }
+      resolvedTemplateId = template.id
+    }
+
+    const updatedTeam = await updateTeamTemplate(teamId, resolvedTemplateId)
     
     if (!updatedTeam) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 })
