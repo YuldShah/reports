@@ -123,7 +123,10 @@ const mapReportRow = (row: any): Report => ({
   createdAt: toDate(row.created_at),
 })
 
-const runQuery = async <T = any>(text: string, params: any[] = []): Promise<QueryResult<T>> => {
+const runQuery = async <T extends Record<string, unknown> = Record<string, unknown>>(
+  text: string,
+  params: any[] = [],
+): Promise<QueryResult<T>> => {
   const client = await getClient()
   try {
     return await client.query<T>(text, params)
