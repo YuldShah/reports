@@ -49,6 +49,8 @@ export interface Report {
 // Database connection
 let db: Database | null = null
 
+let reportsSchemaInitialized = false
+
 const getDatabase = (): Database => {
   if (!db) {
     db = new Database('./database.db')
@@ -83,6 +85,28 @@ const run = async (sql: string, params: any[] = []): Promise<any> => {
       }
     })
   })
+}
+
+const ensureReportsTableSchema = async (): Promise<void> => {
+  if (reportsSchemaInitialized) {
+    return
+  }
+
+  try {
+    const result = await query('PRAGMA table_info(reports)')
+    const hasTemplateData = result.rows.some((row: any) => row.name === 'template_data')
+
+    if (!hasTemplateData) {
+      console.warn('[db] reports.template_data column missing. Attempting to add column automatically.')
+  await run("ALTER TABLE reports ADD COLUMN template_data TEXT DEFAULT '{}'")
+      console.info('[db] Added reports.template_data column successfully.')
+    }
+
+    reportsSchemaInitialized = true
+  } catch (error) {
+    reportsSchemaInitialized = false
+    console.error('[db] Failed to ensure reports table schema:', error)
+  }
 }
 
 // User operations
@@ -414,6 +438,7 @@ export const updateTeamTemplate = async (teamId: string, templateId: string | nu
 
 // Report operations
 export const createReport = async (reportData: Omit<Report, "id" | "createdAt">): Promise<Report> => {
+  await ensureReportsTableSchema()
   const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   const { userId, teamId, templateId, title, answers, templateData } = reportData
 
@@ -438,6 +463,7 @@ export const createReport = async (reportData: Omit<Report, "id" | "createdAt">)
 }
 
 export const getAllReports = async (): Promise<Report[]> => {
+  await ensureReportsTableSchema()
   const result = await query(
     'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports ORDER BY created_at DESC'
   )
@@ -455,6 +481,7 @@ export const getAllReports = async (): Promise<Report[]> => {
 }
 
 export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
+  await ensureReportsTableSchema()
   const result = await query(
     'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports WHERE team_id = ? ORDER BY created_at DESC',
     [teamId]
@@ -473,6 +500,7 @@ export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
 }
 
 export const getReportsByUser = async (userId: number): Promise<Report[]> => {
+  await ensureReportsTableSchema()
   const result = await query(
     'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
@@ -491,6 +519,7 @@ export const getReportsByUser = async (userId: number): Promise<Report[]> => {
 }
 
 export const updateReport = async (id: string, updates: Partial<Report>): Promise<Report | null> => {
+  await ensureReportsTableSchema()
   const fields = []
   const values = []
   let paramCount = 1
