@@ -81,7 +81,7 @@ export default function SheetsIntegrationStatus() {
         {status.configured && status.sheetUrl && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              All reports are automatically saved to separate sheets for each team.
+              All reports are automatically saved to dedicated sheets per template in the linked spreadsheet.
             </p>
             <Button variant="outline" asChild>
               <a href={status.sheetUrl} target="_blank" rel="noopener noreferrer">
@@ -95,11 +95,11 @@ export default function SheetsIntegrationStatus() {
         {!status.configured && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              To enable Google Sheets integration, set the following environment variables:
+              To enable Google Sheets integration, set the spreadsheet ID and provide a Google service account key with edit access.
             </p>
             <div className="p-3 bg-muted rounded-lg font-mono text-xs">
               <div>GOOGLE_SHEETS_ID=your_spreadsheet_id</div>
-              <div>GOOGLE_SHEETS_API_KEY=your_api_key</div>
+              <div>GOOGLE_SERVICE_ACCOUNT_KEY=&lt;service_account_json&gt; (or set GOOGLE_SERVICE_ACCOUNT_KEY_PATH)</div>
             </div>
           </div>
         )}

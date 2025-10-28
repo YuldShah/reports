@@ -144,6 +144,8 @@ export const sendTelegramMessage = async (chatId: number, text: string, replyMar
   })
 
   if (!response.ok) {
+    const errorText = await response.text()
+    console.error("Telegram API error:", response.status, errorText)
     throw new Error(`Failed to send message: ${response.statusText}`)
   }
 

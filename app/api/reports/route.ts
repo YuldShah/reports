@@ -80,20 +80,44 @@ export async function POST(request: NextRequest) {
                 }))
               : []
 
-          const questionsAnswers = templateFields.map((field: { id: string; label: string }, index: number) => {
+          const answerEntries = templateFields.map((field: { id: string; label: string }, index: number) => {
             const rawAnswer = normalizedAnswers[field.id] ?? normalizedAnswers[`question_${index}`]
-            const answer =
+            const answerValue =
               rawAnswer === undefined || rawAnswer === null || (typeof rawAnswer === 'string' && rawAnswer.trim() === '')
-                ? "No answer"
+                ? 'No answer'
                 : String(rawAnswer)
-            return `${field.label}: ${answer}`
-          }).join(' | ')
+
+            return {
+              label: field.label,
+              value: answerValue,
+            }
+          })
+
+          const knownAnswerKeys = new Set(templateFields.map((field: { id: string }) => field.id))
+          for (const [key, rawAnswer] of Object.entries(normalizedAnswers)) {
+            if (knownAnswerKeys.has(key) || key.startsWith('question_')) {
+              continue
+            }
+
+            const additionalValue =
+              rawAnswer === undefined || rawAnswer === null || (typeof rawAnswer === 'string' && rawAnswer.trim() === '')
+                ? 'No answer'
+                : String(rawAnswer)
+
+            answerEntries.push({
+              label: key,
+              value: additionalValue,
+            })
+          }
+
+          const createdAt = report.createdAt ? new Date(report.createdAt).toISOString() : new Date().toISOString()
 
           const sheetData = {
-            timestamp: new Date().toISOString(),
+            reportId: report.id,
+            timestamp: createdAt,
             teamName: team.name,
             userName: `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`,
-            questionsAnswers,
+            answers: answerEntries,
           }
 
           await appendToGoogleSheet(template.name, sheetData)

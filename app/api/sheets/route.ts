@@ -1,16 +1,36 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { appendToGoogleSheet } from "@/lib/google-sheets"
+import { appendToGoogleSheet, getAllSheetsData } from "@/lib/google-sheets"
+
+const getEnvVar = (key: string): string | undefined => (globalThis as any)?.process?.env?.[key]
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { teamName, reportData } = body
+    const { teamName, templateName, reportData } = body
+    const resolvedTemplateName = templateName || teamName
 
-    if (!teamName || !reportData) {
-      return NextResponse.json({ error: "Team name and report data are required" }, { status: 400 })
+    if (!resolvedTemplateName || !reportData) {
+      return NextResponse.json({ error: "Template name and report data are required" }, { status: 400 })
     }
 
-    const result = await appendToGoogleSheet(teamName, reportData)
+    const normalizedReportData = "answers" in reportData
+      ? reportData
+      : {
+          reportId: reportData.reportId || `manual_${Date.now()}`,
+          timestamp: reportData.timestamp || new Date().toISOString(),
+          teamName: reportData.teamName || "",
+          userName: reportData.userName || "",
+          answers: Array.isArray(reportData.questionsAnswers)
+            ? reportData.questionsAnswers
+            : [
+                {
+                  label: "Questions & Answers",
+                  value: reportData.questionsAnswers || "",
+                },
+              ],
+        }
+
+    const result = await appendToGoogleSheet(resolvedTemplateName, normalizedReportData)
 
     return NextResponse.json({ success: true, result })
   } catch (error) {
@@ -22,40 +42,49 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const teamName = searchParams.get("team")
+    const templateName = searchParams.get("template") ?? searchParams.get("team")
 
-    const spreadsheetId = process.env.GOOGLE_SHEETS_ID
-    const apiKey = process.env.GOOGLE_SHEETS_API_KEY
+    const spreadsheetId = getEnvVar("GOOGLE_SHEETS_ID")
 
-    if (!spreadsheetId || !apiKey) {
-      return NextResponse.json({ 
-        error: "Google Sheets not configured", 
-        url: "#",
-        configured: false
+    if (!spreadsheetId) {
+      return NextResponse.json({
+        error: "Google Sheets not configured",
+        sheetUrl: "#",
+        configured: false,
       }, { status: 200 })
     }
 
-    // Return the Google Sheets URL
+    try {
+      await getAllSheetsData()
+    } catch (error) {
+      console.error("Google Sheets status check failed:", error)
+      return NextResponse.json({
+        error: "Unable to access spreadsheet with current service account",
+        sheetUrl: "#",
+        configured: false,
+      }, { status: 200 })
+    }
+
     const baseUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
-    let url = `${baseUrl}/edit`
-    
-    if (teamName) {
-      const sheetName = `Team_${teamName.replace(/[^a-zA-Z0-9]/g, "_")}`
-      url = `${baseUrl}/edit#gid=0&range=${sheetName}`
+    let sheetUrl = `${baseUrl}/edit`
+
+    if (templateName) {
+      const sheetName = `Template_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`
+      sheetUrl = `${baseUrl}/edit#gid=0&range=${sheetName}`
     }
 
-    // If client wants to redirect directly
     if (searchParams.get("redirect") === "true") {
-      return NextResponse.redirect(url)
+      return NextResponse.redirect(sheetUrl)
     }
 
-    return NextResponse.json({ 
-      url, 
+    return NextResponse.json({
+      sheetUrl,
+      url: sheetUrl,
       configured: true,
-      spreadsheetId 
+      spreadsheetId,
     })
   } catch (error) {
     console.error("Google Sheets URL error:", error)
-    return NextResponse.json({ error: "Failed to get Google Sheets URL", url: "#", configured: false }, { status: 500 })
+    return NextResponse.json({ error: "Failed to get Google Sheets URL", sheetUrl: "#", configured: false }, { status: 500 })
   }
 }

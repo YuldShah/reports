@@ -2,6 +2,47 @@ import { google } from 'googleapis'
 import path from 'path'
 import fs from 'fs'
 
+interface SheetAnswer {
+  label: string
+  value: string
+}
+
+interface SheetRowData {
+  reportId: string
+  timestamp: string
+  teamName: string
+  userName: string
+  answers: SheetAnswer[]
+}
+
+const BASE_HEADERS = [
+  'Report ID',
+  'Submitted At',
+  'Team Name',
+  'User Name',
+]
+
+type MaybeProcess = {
+  env?: Record<string, string | undefined>
+  cwd?: () => string
+}
+
+const getProcess = (): MaybeProcess | undefined => (globalThis as any)?.process as MaybeProcess | undefined
+
+const getEnvVar = (key: string): string | undefined => getProcess()?.env?.[key]
+
+const getCwd = (): string => {
+  const proc = getProcess()
+  if (proc?.cwd) {
+    try {
+      return proc.cwd()
+    } catch (error) {
+      console.error('Unable to resolve current working directory:', error)
+    }
+  }
+  return ''
+}
+
 export interface GoogleSheetsConfig {
   spreadsheetId: string
   serviceAccountPath: string
@@ -13,12 +54,12 @@ const getGoogleSheetsClient = async () => {
     // Get service account credentials from environment or file
     let credentials
     
-    if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    if (getEnvVar('GOOGLE_SERVICE_ACCOUNT_KEY')) {
       // Use environment variable (preferred for production)
-      credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
+      credentials = JSON.parse(getEnvVar('GOOGLE_SERVICE_ACCOUNT_KEY') as string)
     } else {
       // Fallback to file (for development)
-      const keyPathFromEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH
+      const keyPathFromEnv = getEnvVar('GOOGLE_SERVICE_ACCOUNT_KEY_PATH')
       const candidatePaths = [
         keyPathFromEnv,
         'resolute-might-473605-g5-fd1f52ec44b3.json',
@@ -26,7 +67,14 @@ const getGoogleSheetsClient = async () => {
       ].filter(Boolean) as string[]
 
       const resolvedPath = candidatePaths
-        .map((relativePath) => (path.isAbsolute(relativePath) ? relativePath : path.join(process.cwd(), relativePath)))
+        .map((relativePath) => {
+          if (!relativePath) return ''
+          if (path.isAbsolute(relativePath)) {
+            return relativePath
+          }
+          const cwd = getCwd()
+          return cwd ? path.join(cwd, relativePath) : relativePath
+        })
         .find((candidate) => fs.existsSync(candidate))
 
       if (!resolvedPath) {
@@ -54,8 +102,68 @@ const getGoogleSheetsClient = async () => {
   }
 }
 
+const ensureSheetHeaders = async (sheetName: string, requiredHeaders: string[]) => {
+  const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
+
+  if (!spreadsheetId) {
+    throw new Error('Google Sheets spreadsheet ID not configured')
+  }
+
+  const { sheets } = await getGoogleSheetsClient()
+
+  const headerResponse = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetName}!1:1`,
+  })
+
+  const currentHeaders = headerResponse.data.values?.[0] ?? []
+
+  // Start with existing headers or base headers if the row is blank
+  const finalHeaders = currentHeaders.length > 0 ? [...currentHeaders] : [...BASE_HEADERS]
+  let headersChanged = false
+
+  // Ensure base headers are present and ordered correctly
+  BASE_HEADERS.forEach((header, index) => {
+    const existingIndex = finalHeaders.indexOf(header)
+    if (existingIndex === -1) {
+      finalHeaders.splice(index, 0, header)
+      headersChanged = true
+    } else if (existingIndex !== index) {
+      finalHeaders.splice(existingIndex, 1)
+      finalHeaders.splice(index, 0, header)
+      headersChanged = true
+    }
+  })
+
+  const headerSet = new Set(finalHeaders)
+  if (!headersChanged) {
+    headersChanged = finalHeaders.length !== currentHeaders.length || finalHeaders.some((header, index) => header !== currentHeaders[index])
+  }
+
+  for (const header of requiredHeaders) {
+    if (!headerSet.has(header)) {
+      finalHeaders.push(header)
+      headerSet.add(header)
+      headersChanged = true
+    }
+  }
+
+  if (headersChanged) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${sheetName}!1:1`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [finalHeaders],
+      },
+    })
+  }
+
+  return finalHeaders
+}
+
 export const createSheetIfNotExists = async (templateName: string) => {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_ID
+  const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
     throw new Error("Google Sheets spreadsheet ID not configured")
@@ -95,52 +203,19 @@ export const createSheetIfNotExists = async (templateName: string) => {
           ],
         },
       })
-
-      // Add headers to the new sheet
-      await addHeadersToSheet(sheetName)
     }
+    await ensureSheetHeaders(sheetName, BASE_HEADERS)
   } catch (error) {
     console.error("Error creating sheet:", error)
     // Continue anyway - the append operation might still work
   }
 }
 
-const addHeadersToSheet = async (sheetName: string) => {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_ID
-
-  const headers = [
-    "Generated At",
-    "Team Name",
-    "User Name",
-    "Questions & Answers",
-  ]
-
-  try {
-    const { sheets } = await getGoogleSheetsClient()
-    
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${sheetName}!A1:D1`,
-      valueInputOption: 'RAW',
-      requestBody: {
-        values: [headers],
-      },
-    })
-  } catch (error) {
-    console.error("Error adding headers:", error)
-  }
-}
-
 export const appendToGoogleSheet = async (
   templateName: string,
-  reportData: {
-    timestamp: string
-    teamName: string
-    userName: string
-    questionsAnswers: string
-  },
+  reportData: SheetRowData,
 ) => {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_ID
+  const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
     console.error("Google Sheets spreadsheet ID not configured")
@@ -154,23 +229,40 @@ export const appendToGoogleSheet = async (
     const { sheets } = await getGoogleSheetsClient()
     const sheetName = `Template_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`
 
-    // Prepare data row
-    const values = [
-      [
-        reportData.timestamp,
-        reportData.teamName,
-        reportData.userName,
-        reportData.questionsAnswers,
-      ],
-    ]
+    const requiredHeaders = Array.from(
+      new Set(
+        reportData.answers
+          .map((answer) => answer.label)
+          .filter((label): label is string => typeof label === 'string' && label.trim().length > 0),
+      ),
+    )
+    const finalHeaders = await ensureSheetHeaders(sheetName, requiredHeaders)
+
+    const baseValueMap: Record<string, string> = {
+      'Report ID': reportData.reportId,
+      'Submitted At': reportData.timestamp,
+      'Team Name': reportData.teamName,
+      'User Name': reportData.userName,
+    }
+
+    const answerMap = new Map(
+      reportData.answers.map((answer) => [answer.label, answer.value === undefined || answer.value === null ? '' : String(answer.value)]),
+    )
+
+    const rowValues = finalHeaders.map((header) => {
+      if (baseValueMap[header] !== undefined) {
+        return baseValueMap[header]
+      }
+      return answerMap.get(header) ?? ''
+    })
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:D`,
+      range: `${sheetName}!A:ZZ`,
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
-        values,
+        values: [rowValues],
       },
     })
 
@@ -184,7 +276,7 @@ export const appendToGoogleSheet = async (
 
 
 export const getAllSheetsData = async () => {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_ID
+  const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
     throw new Error("Google Sheets spreadsheet ID not configured")
