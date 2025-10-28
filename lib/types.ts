@@ -13,9 +13,9 @@ export interface Team {
   id: string
   name: string
   description?: string
-  templateId?: string
+  templateId?: string | null
   createdAt: Date
-  createdBy: number
+  createdBy: number | null
 }
 
 export interface Report {

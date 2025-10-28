@@ -1,10 +1,5 @@
-import { Database, RunResult } from 'sqlite3'
-import { promisify } from 'util'
-
-// Type definitions for callback parameters
-type SQLiteError = Error | null
-type SQLiteRows = any[]
-type SQLiteCallback = (err: SQLiteError, rows: SQLiteRows) => void
+import { Pool, PoolClient, QueryResult } from 'pg'
+import { randomUUID } from 'crypto'
 
 export interface User {
   telegramId: number
@@ -23,16 +18,16 @@ export interface Template {
   description?: string
   questions: any[]
   createdAt: Date
-  createdBy: number
+  createdBy: number | null
 }
 
 export interface Team {
   id: string
   name: string
   description?: string
-  templateId?: string
+  templateId?: string | null
   createdAt: Date
-  createdBy: number
+  createdBy: number | null
 }
 
 export interface Report {
@@ -46,519 +41,430 @@ export interface Report {
   createdAt: Date
 }
 
-// Database connection
-let db: Database | null = null
-
-let reportsSchemaInitialized = false
-
-const getDatabase = (): Database => {
-  if (!db) {
-    db = new Database('./database.db')
-  }
-  return db
+const databaseUrl = process.env.DATABASE_URL
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is required')
 }
 
-// Helper function to run queries
-const query = async (sql: string, params: any[] = []): Promise<any> => {
-  const database = getDatabase()
-  return new Promise((resolve, reject) => {
-    database.all(sql, params, (err: SQLiteError, rows: SQLiteRows) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve({ rows })
-      }
-    })
-  })
-}
+const shouldUseSSL = process.env.DATABASE_SSL === 'true' || process.env.NODE_ENV === 'production'
 
-// Helper function to run single queries
-const run = async (sql: string, params: any[] = []): Promise<any> => {
-  const database = getDatabase()
-  return new Promise((resolve, reject) => {
-    database.run(sql, params, function(err: SQLiteError) {
-      if (err) {
-        reject(err)
-      } else {
-        // @ts-ignore - this context has changes and lastID properties in sqlite3
-        resolve({ rowsAffected: this.changes, insertId: this.lastID })
-      }
-    })
-  })
-}
+const pool = new Pool({
+  connectionString: databaseUrl,
+  ssl: shouldUseSSL ? { rejectUnauthorized: false } : undefined,
+})
 
-const ensureReportsTableSchema = async (): Promise<void> => {
-  if (reportsSchemaInitialized) {
-    return
+const parseJsonField = <T>(value: unknown, fallback: T): T => {
+  if (value == null) {
+    return fallback
   }
 
-  try {
-    const result = await query('PRAGMA table_info(reports)')
-    const hasTemplateData = result.rows.some((row: any) => row.name === 'template_data')
-
-    if (!hasTemplateData) {
-      console.warn('[db] reports.template_data column missing. Attempting to add column automatically.')
-  await run("ALTER TABLE reports ADD COLUMN template_data TEXT DEFAULT '{}'")
-      console.info('[db] Added reports.template_data column successfully.')
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T
+    } catch (error) {
+      console.error('Failed to parse JSON field from string', error)
+      return fallback
     }
+  }
 
-    reportsSchemaInitialized = true
-  } catch (error) {
-    reportsSchemaInitialized = false
-    console.error('[db] Failed to ensure reports table schema:', error)
+  return value as T
+}
+
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') return Number(value)
+  return value as number
+}
+
+const toDate = (value: unknown): Date => {
+  if (value instanceof Date) return value
+  return new Date(value as string)
+}
+
+const getClient = async (): Promise<PoolClient> => pool.connect()
+
+const mapUserRow = (row: any): User => ({
+  telegramId: toNumber(row.telegram_id),
+  firstName: row.first_name,
+  lastName: row.last_name ?? undefined,
+  username: row.username ?? undefined,
+  photoUrl: row.photo_url ?? undefined,
+  teamId: row.team_id ?? undefined,
+  role: row.role,
+  createdAt: toDate(row.created_at),
+})
+
+const mapTemplateRow = (row: any): Template => ({
+  id: row.id,
+  name: row.name,
+  description: row.description ?? undefined,
+  questions: parseJsonField<any[]>(row.questions, []),
+  createdAt: toDate(row.created_at),
+  createdBy: row.created_by !== null ? toNumber(row.created_by) : null,
+})
+
+const mapTeamRow = (row: any): Team => ({
+  id: row.id,
+  name: row.name,
+  description: row.description ?? undefined,
+  templateId: row.template_id ?? null,
+  createdAt: toDate(row.created_at),
+  createdBy: row.created_by !== null ? toNumber(row.created_by) : null,
+})
+
+const mapReportRow = (row: any): Report => ({
+  id: row.id,
+  userId: toNumber(row.user_id),
+  teamId: row.team_id,
+  templateId: row.template_id,
+  title: row.title,
+  answers: parseJsonField<Record<string, any>>(row.answers, {}),
+  templateData: parseJsonField<Record<string, any>>(row.template_data, {}),
+  createdAt: toDate(row.created_at),
+})
+
+const runQuery = async <T = any>(text: string, params: any[] = []): Promise<QueryResult<T>> => {
+  const client = await getClient()
+  try {
+    return await client.query<T>(text, params)
+  } finally {
+    client.release()
   }
 }
 
 // User operations
-export const createUser = async (userData: Omit<User, "createdAt">): Promise<User> => {
+export const createUser = async (userData: Omit<User, 'createdAt'>): Promise<User> => {
   const { telegramId, firstName, lastName, username, photoUrl, teamId, role } = userData
-  
-  const result = await query(
-    `INSERT INTO users (telegram_id, first_name, last_name, username, photo_url, team_id, role) 
-     VALUES (?, ?, ?, ?, ?, ?, ?) 
+
+  const result = await runQuery(
+    `INSERT INTO users (telegram_id, first_name, last_name, username, photo_url, team_id, role)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at`,
-    [telegramId, firstName, lastName, username, photoUrl, teamId, role]
+    [telegramId, firstName, lastName ?? null, username ?? null, photoUrl ?? null, teamId ?? null, role],
   )
 
-  const row = result.rows[0]
-  return {
-    telegramId: row.telegram_id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    username: row.username,
-    photoUrl: row.photo_url,
-    teamId: row.team_id,
-    role: row.role,
-    createdAt: row.created_at
-  }
+  return mapUserRow(result.rows[0])
 }
 
 export const getUserByTelegramId = async (telegramId: number): Promise<User | null> => {
-  const result = await query(
-    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE telegram_id = ?',
-    [telegramId]
+  const result = await runQuery(
+    `SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at
+     FROM users
+     WHERE telegram_id = $1`,
+    [telegramId],
   )
 
   if (result.rows.length === 0) return null
-
-  const row = result.rows[0]
-  return {
-    telegramId: row.telegram_id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    username: row.username,
-    photoUrl: row.photo_url,
-    teamId: row.team_id,
-    role: row.role,
-    createdAt: row.created_at
-  }
+  return mapUserRow(result.rows[0])
 }
 
 export const updateUser = async (telegramId: number, updates: Partial<User>): Promise<User | null> => {
-  const fields = []
-  const values = []
-  let paramCount = 1
+  const fields: string[] = []
+  const values: any[] = []
+  let paramIndex = 1
 
   if (updates.firstName !== undefined) {
-    fields.push(`first_name = $${paramCount++}`)
+    fields.push(`first_name = $${paramIndex++}`)
     values.push(updates.firstName)
   }
   if (updates.lastName !== undefined) {
-    fields.push(`last_name = $${paramCount++}`)
+    fields.push(`last_name = $${paramIndex++}`)
     values.push(updates.lastName)
   }
   if (updates.username !== undefined) {
-    fields.push(`username = $${paramCount++}`)
+    fields.push(`username = $${paramIndex++}`)
     values.push(updates.username)
   }
   if (updates.photoUrl !== undefined) {
-    fields.push(`photo_url = $${paramCount++}`)
+    fields.push(`photo_url = $${paramIndex++}`)
     values.push(updates.photoUrl)
   }
   if (updates.teamId !== undefined) {
-    fields.push(`team_id = $${paramCount++}`)
+    fields.push(`team_id = $${paramIndex++}`)
     values.push(updates.teamId)
   }
   if (updates.role !== undefined) {
-    fields.push(`role = $${paramCount++}`)
+    fields.push(`role = $${paramIndex++}`)
     values.push(updates.role)
   }
 
-  if (fields.length === 0) return null
+  if (fields.length === 0) {
+    return getUserByTelegramId(telegramId)
+  }
 
   values.push(telegramId)
-
-  const result = await query(
-    `UPDATE users SET ${fields.join(', ')} 
-     WHERE telegram_id = $${paramCount} 
+  const result = await runQuery(
+    `UPDATE users SET ${fields.join(', ')}
+     WHERE telegram_id = $${paramIndex}
      RETURNING telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at`,
-    values
+    values,
   )
 
   if (result.rows.length === 0) return null
-
-  const row = result.rows[0]
-  return {
-    telegramId: row.telegram_id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    username: row.username,
-    photoUrl: row.photo_url,
-    teamId: row.team_id,
-    role: row.role,
-    createdAt: row.created_at
-  }
+  return mapUserRow(result.rows[0])
 }
 
 export const getAllUsers = async (): Promise<User[]> => {
-  const result = await query(
-    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users ORDER BY created_at DESC'
+  const result = await runQuery(
+    `SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at
+     FROM users
+     ORDER BY created_at DESC`,
   )
 
-  return result.rows.map((row: any) => ({
-    telegramId: row.telegram_id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    username: row.username,
-    photoUrl: row.photo_url,
-    teamId: row.team_id,
-    role: row.role,
-    createdAt: row.created_at
-  }))
+  return result.rows.map(mapUserRow)
 }
 
 // Template operations
-export const createTemplate = async (templateData: Omit<Template, "createdAt">): Promise<Template> => {
+export const createTemplate = async (templateData: Omit<Template, 'createdAt'>): Promise<Template> => {
   const { id, name, description, questions, createdBy } = templateData
-  
-  const result = await query(
-    `INSERT INTO templates (id, name, description, questions, created_by) 
-     VALUES (?, ?, ?, ?, ?) 
+
+  const result = await runQuery(
+    `INSERT INTO templates (id, name, description, questions, created_by)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id, name, description, questions, created_at, created_by`,
-    [id, name, description, JSON.stringify(questions), createdBy]
+    [id, name, description ?? null, JSON.stringify(questions), createdBy ?? null],
   )
 
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    questions: JSON.parse(row.questions),
-    createdAt: row.created_at,
-    createdBy: row.created_by
-  }
+  return mapTemplateRow(result.rows[0])
 }
 
 export const getTemplateById = async (id: string): Promise<Template | null> => {
-  const result = await query(
-    'SELECT id, name, description, questions, created_at, created_by FROM templates WHERE id = ?',
-    [id]
+  const result = await runQuery(
+    `SELECT id, name, description, questions, created_at, created_by
+     FROM templates
+     WHERE id = $1`,
+    [id],
   )
 
   if (result.rows.length === 0) return null
-
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    questions: JSON.parse(row.questions),
-    createdAt: row.created_at,
-    createdBy: row.created_by
-  }
+  return mapTemplateRow(result.rows[0])
 }
 
 export const getAllTemplates = async (): Promise<Template[]> => {
-  const result = await query(
-    'SELECT id, name, description, questions, created_at, created_by FROM templates ORDER BY created_at DESC'
+  const result = await runQuery(
+    `SELECT id, name, description, questions, created_at, created_by
+     FROM templates
+     ORDER BY created_at DESC`,
   )
 
-  return result.rows.map((row: any) => ({
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    questions: JSON.parse(row.questions),
-    createdAt: row.created_at,
-    createdBy: row.created_by
-  }))
+  return result.rows.map(mapTemplateRow)
 }
 
 export const updateTemplate = async (id: string, updates: Partial<Template>): Promise<Template | null> => {
-  const fields = []
-  const values = []
-  let paramCount = 1
+  const fields: string[] = []
+  const values: any[] = []
+  let paramIndex = 1
 
   if (updates.name !== undefined) {
-    fields.push(`name = $${paramCount++}`)
+    fields.push(`name = $${paramIndex++}`)
     values.push(updates.name)
   }
   if (updates.description !== undefined) {
-    fields.push(`description = $${paramCount++}`)
+    fields.push(`description = $${paramIndex++}`)
     values.push(updates.description)
   }
   if (updates.questions !== undefined) {
-    fields.push(`questions = $${paramCount++}`)
+    fields.push(`questions = $${paramIndex++}`)
     values.push(JSON.stringify(updates.questions))
   }
 
-  if (fields.length === 0) return getTemplateById(id)
+  if (fields.length === 0) {
+    return getTemplateById(id)
+  }
 
   values.push(id)
-  const result = await query(
-    `UPDATE templates SET ${fields.join(', ')} 
-     WHERE id = $${paramCount} 
+  const result = await runQuery(
+    `UPDATE templates SET ${fields.join(', ')}
+     WHERE id = $${paramIndex}
      RETURNING id, name, description, questions, created_at, created_by`,
-    values
+    values,
   )
 
   if (result.rows.length === 0) return null
-
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    questions: JSON.parse(row.questions),
-    createdAt: row.created_at,
-    createdBy: row.created_by
-  }
+  return mapTemplateRow(result.rows[0])
 }
 
 export const deleteTemplate = async (id: string): Promise<boolean> => {
-  const result = await run('DELETE FROM templates WHERE id = ?', [id])
-  return result.rowsAffected > 0
+  const result = await runQuery('DELETE FROM templates WHERE id = $1', [id])
+  return result.rowCount > 0
 }
 
 // Team operations
-export const createTeam = async (teamData: Omit<Team, "id" | "createdAt">): Promise<Team> => {
-  const teamId = `team_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+export const createTeam = async (teamData: Omit<Team, 'id' | 'createdAt'>): Promise<Team> => {
+  const teamId = randomUUID()
   const { name, description, templateId, createdBy } = teamData
 
-  const result = await query(
-    'INSERT INTO teams (id, name, description, template_id, created_by) VALUES (?, ?, ?, ?, ?) RETURNING id, name, description, template_id, created_by, created_at',
-    [teamId, name, description, templateId, createdBy]
+  const result = await runQuery(
+    `INSERT INTO teams (id, name, description, template_id, created_by)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, name, description, template_id, created_by, created_at`,
+    [teamId, name, description ?? null, templateId ?? null, createdBy ?? null],
   )
 
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    templateId: row.template_id,
-    createdBy: row.created_by,
-    createdAt: row.created_at
-  }
+  return mapTeamRow(result.rows[0])
 }
 
 export const getAllTeams = async (): Promise<Team[]> => {
-  const result = await query(
-    'SELECT id, name, description, template_id, created_by, created_at FROM teams ORDER BY created_at DESC'
+  const result = await runQuery(
+    `SELECT id, name, description, template_id, created_by, created_at
+     FROM teams
+     ORDER BY created_at DESC`,
   )
 
-  return result.rows.map((row: any) => ({
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    templateId: row.template_id,
-    createdBy: row.created_by,
-    createdAt: row.created_at
-  }))
+  return result.rows.map(mapTeamRow)
 }
 
 export const getTeamById = async (id: string): Promise<Team | null> => {
-  const result = await query(
-    'SELECT id, name, description, template_id, created_by, created_at FROM teams WHERE id = ?',
-    [id]
+  const result = await runQuery(
+    `SELECT id, name, description, template_id, created_by, created_at
+     FROM teams
+     WHERE id = $1`,
+    [id],
   )
 
   if (result.rows.length === 0) return null
-
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    templateId: row.template_id,
-    createdBy: row.created_by,
-    createdAt: row.created_at
-  }
-}
-
-export const deleteTeam = async (id: string): Promise<boolean> => {
-  try {
-    // Unassign all users from this team
-    await run('UPDATE users SET team_id = NULL WHERE team_id = ?', [id])
-    
-    // Delete the team
-    const result = await run('DELETE FROM teams WHERE id = ?', [id])
-    
-    return result.rowsAffected > 0
-  } catch (error) {
-    console.error('Error deleting team:', error)
-    throw error
-  }
+  return mapTeamRow(result.rows[0])
 }
 
 export const getUsersByTeam = async (teamId: string): Promise<User[]> => {
-  const result = await query(
-    'SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at FROM users WHERE team_id = ? ORDER BY first_name',
-    [teamId]
+  const result = await runQuery(
+    `SELECT telegram_id, first_name, last_name, username, photo_url, team_id, role, created_at
+     FROM users
+     WHERE team_id = $1
+     ORDER BY first_name`,
+    [teamId],
   )
 
-  return result.rows.map((row: any) => ({
-    telegramId: row.telegram_id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    username: row.username,
-    photoUrl: row.photo_url,
-    teamId: row.team_id,
-    role: row.role,
-    createdAt: row.created_at
-  }))
+  return result.rows.map(mapUserRow)
 }
 
 export const updateTeamTemplate = async (teamId: string, templateId: string | null): Promise<Team | null> => {
-  const result = await query(
-    'UPDATE teams SET template_id = ? WHERE id = ? RETURNING id, name, description, template_id, created_by, created_at',
-    [templateId, teamId]
+  const result = await runQuery(
+    `UPDATE teams
+     SET template_id = $1
+     WHERE id = $2
+     RETURNING id, name, description, template_id, created_by, created_at`,
+    [templateId, teamId],
   )
 
   if (result.rows.length === 0) return null
+  return mapTeamRow(result.rows[0])
+}
 
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    templateId: row.template_id,
-    createdBy: row.created_by,
-    createdAt: row.created_at
+export const deleteTeam = async (id: string): Promise<boolean> => {
+  const client = await getClient()
+
+  try {
+    await client.query('BEGIN')
+    await client.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [id])
+    const result = await client.query('DELETE FROM teams WHERE id = $1', [id])
+    await client.query('COMMIT')
+    return result.rowCount > 0
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
   }
 }
 
 // Report operations
-export const createReport = async (reportData: Omit<Report, "id" | "createdAt">): Promise<Report> => {
-  await ensureReportsTableSchema()
-  const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+export const createReport = async (reportData: Omit<Report, 'id' | 'createdAt'>): Promise<Report> => {
+  const reportId = randomUUID()
   const { userId, teamId, templateId, title, answers, templateData } = reportData
 
-  const result = await query(
-    `INSERT INTO reports (id, user_id, team_id, template_id, title, answers, template_data) 
-     VALUES (?, ?, ?, ?, ?, ?, ?) 
+  const result = await runQuery(
+    `INSERT INTO reports (id, user_id, team_id, template_id, title, answers, template_data)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at`,
-    [reportId, userId, teamId, templateId, title, JSON.stringify(answers), JSON.stringify(templateData || {})]
+    [
+      reportId,
+      userId,
+      teamId,
+      templateId,
+      title,
+      JSON.stringify(answers),
+      JSON.stringify(templateData ?? {}),
+    ],
   )
 
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    userId: row.user_id,
-    teamId: row.team_id,
-    templateId: row.template_id,
-    title: row.title,
-    answers: JSON.parse(row.answers),
-    templateData: JSON.parse(row.template_data || '{}'),
-    createdAt: row.created_at
-  }
+  return mapReportRow(result.rows[0])
 }
 
 export const getAllReports = async (): Promise<Report[]> => {
-  await ensureReportsTableSchema()
-  const result = await query(
-    'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports ORDER BY created_at DESC'
+  const result = await runQuery(
+    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+     FROM reports
+     ORDER BY created_at DESC`,
   )
 
-  return result.rows.map((row: any) => ({
-    id: row.id,
-    userId: row.user_id,
-    teamId: row.team_id,
-    templateId: row.template_id,
-    title: row.title,
-    answers: JSON.parse(row.answers),
-    templateData: JSON.parse(row.template_data || '{}'),
-    createdAt: row.created_at
-  }))
+  return result.rows.map(mapReportRow)
 }
 
 export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
-  await ensureReportsTableSchema()
-  const result = await query(
-    'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports WHERE team_id = ? ORDER BY created_at DESC',
-    [teamId]
+  const result = await runQuery(
+    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+     FROM reports
+     WHERE team_id = $1
+     ORDER BY created_at DESC`,
+    [teamId],
   )
 
-  return result.rows.map((row: any) => ({
-    id: row.id,
-    userId: row.user_id,
-    teamId: row.team_id,
-    templateId: row.template_id,
-    title: row.title,
-    answers: JSON.parse(row.answers),
-    templateData: JSON.parse(row.template_data || '{}'),
-    createdAt: row.created_at
-  }))
+  return result.rows.map(mapReportRow)
 }
 
 export const getReportsByUser = async (userId: number): Promise<Report[]> => {
-  await ensureReportsTableSchema()
-  const result = await query(
-    'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC',
-    [userId]
+  const result = await runQuery(
+    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+     FROM reports
+     WHERE user_id = $1
+     ORDER BY created_at DESC`,
+    [userId],
   )
 
-  return result.rows.map((row: any) => ({
-    id: row.id,
-    userId: row.user_id,
-    teamId: row.team_id,
-    templateId: row.template_id,
-    title: row.title,
-    answers: JSON.parse(row.answers),
-    templateData: JSON.parse(row.template_data || '{}'),
-    createdAt: row.created_at
-  }))
+  return result.rows.map(mapReportRow)
 }
 
 export const updateReport = async (id: string, updates: Partial<Report>): Promise<Report | null> => {
-  await ensureReportsTableSchema()
-  const fields = []
-  const values = []
-  let paramCount = 1
+  const fields: string[] = []
+  const values: any[] = []
+  let paramIndex = 1
 
   if (updates.title !== undefined) {
-    fields.push(`title = $${paramCount++}`)
+    fields.push(`title = $${paramIndex++}`)
     values.push(updates.title)
   }
   if (updates.answers !== undefined) {
-    fields.push(`answers = $${paramCount++}`)
+    fields.push(`answers = $${paramIndex++}`)
     values.push(JSON.stringify(updates.answers))
   }
   if (updates.templateData !== undefined) {
-    fields.push(`template_data = $${paramCount++}`)
+    fields.push(`template_data = $${paramIndex++}`)
     values.push(JSON.stringify(updates.templateData))
   }
 
-  if (fields.length === 0) return null
+  if (fields.length === 0) {
+    const result = await runQuery(
+      `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+       FROM reports
+       WHERE id = $1`,
+      [id],
+    )
+    return result.rows.length ? mapReportRow(result.rows[0]) : null
+  }
 
   values.push(id)
-
-  const result = await query(
-    `UPDATE reports SET ${fields.join(', ')} 
-     WHERE id = $${paramCount} 
+  const result = await runQuery(
+    `UPDATE reports SET ${fields.join(', ')}
+     WHERE id = $${paramIndex}
      RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at`,
-    values
+    values,
   )
 
   if (result.rows.length === 0) return null
+  return mapReportRow(result.rows[0])
+}
 
-  const row = result.rows[0]
-  return {
-    id: row.id,
-    userId: row.user_id,
-    teamId: row.team_id,
-    templateId: row.template_id,
-    title: row.title,
-    answers: JSON.parse(row.answers),
-    templateData: JSON.parse(row.template_data || '{}'),
-    createdAt: row.created_at
-  }
+export const closeDatabase = async (): Promise<void> => {
+  await pool.end()
 }

@@ -295,6 +295,99 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
       }
     ],
     createdAt: new Date()
+  },
+  {
+    id: 'manaviyat_va_marifat_bolimi_template',
+    name: "Ma'naviyat va ma'rifat bo'limi",
+    description: "Chora-tadbirga talabalar jalb qilinmagan bo'lsa talabalar soniga doir bandlar to'ldirilmaydi.",
+    fields: [
+      {
+        id: 'event_name',
+        label: 'Chora tadbir nomi*',
+        type: 'text',
+        required: true,
+        placeholder: 'Nom'
+      },
+      {
+        id: 'event_date',
+        label: 'Chora tadbir sanasi (boshlangan)',
+        type: 'date',
+        required: true,
+        placeholder: 'Month, day, year'
+      },
+      {
+        id: 'event_date',
+        label: 'Chora tadbir sanasi (tugagan)',
+        type: 'date',
+        required: true,
+        placeholder: 'Month, day, year'
+      },
+      {
+        id: 'total_students',
+        label: 'Chora tadbirga jalb qilingan talabalar soni (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'first_year',
+        label: 'Shundan birinchi bosqich (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'second_year',
+        label: 'Shundan ikkinchi bosqich (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'third_year',
+        label: 'Shundan uchinchi bosqich  (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'fourth_year',
+        label: "Shundan to'rtinchi bosqich  (faqat sonda)",
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'masters',
+        label: 'Shundan magistrantlar  (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id : "boys",
+        label : "Shundan o'g'il bolalar (faqar sonda)",
+        type : "number",
+        required : false,
+        placeholder : "0",
+        validation : {min : 0}
+      },
+      {
+        id : "girls",
+        label : "Shundan qiz bolalar (faqar sonda)",
+        type : "number",
+        required : false,
+        placeholder : "0",
+        validation : {min : 0}
+      }
+    ],
+    createdAt: new Date()
   }
 ]
 

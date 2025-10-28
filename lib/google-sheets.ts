@@ -67,11 +67,7 @@ const getGoogleSheetsClient = async () => {
     } else {
       // Fallback to file (for development)
       const keyPathFromEnv = getEnvVar('GOOGLE_SERVICE_ACCOUNT_KEY_PATH')
-      const candidatePaths = [
-        keyPathFromEnv,
-        'resolute-might-473605-g5-fd1f52ec44b3.json',
-        'resolute-might-473605-g5-cd8246aa7c6c.json',
-      ].filter(Boolean) as string[]
+      const candidatePaths = [keyPathFromEnv].filter(Boolean) as string[]
 
       const resolvedPath = candidatePaths
         .map((relativePath) => {

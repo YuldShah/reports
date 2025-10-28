@@ -74,7 +74,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       const teamsWithDates = (teamsData.teams || []).map((team: any) => {
         let parsedDate: Date
         try {
-          // Handle various date formats from SQLite
+          // Normalize date strings coming from API responses
           parsedDate = new Date(team.createdAt)
           if (isNaN(parsedDate.getTime())) {
             // If parsing fails, use current date as fallback
