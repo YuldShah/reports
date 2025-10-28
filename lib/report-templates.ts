@@ -4,7 +4,7 @@ import { ReportTemplate } from './types'
 export const REPORT_TEMPLATES: ReportTemplate[] = [
   {
     id: 'student_activity_template',
-    name: 'Student Activity Report',
+    name: 'Talabalar faoliyati hisoboti',
     description: "Chora-tadbirga talabalar jalb qilinmagan bo'lsa talabalar soniga doir bandlar to'ldirilmaydi.",
     fields: [
       {
@@ -12,7 +12,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Chora tadbir nomi*',
         type: 'text',
         required: true,
-        placeholder: 'Enter event name'
+        placeholder: 'Nom'
       },
       {
         id: 'start_date',
@@ -31,7 +31,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Chora-tadbirga jalb qilingan talabalar soni (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Enter total number of students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -39,7 +39,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan birinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of first year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -47,7 +47,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan ikkinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of second year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -55,7 +55,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan uchinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of third year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -63,7 +63,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan to\'rtinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of fourth year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -71,7 +71,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan magistrantlar (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of master\'s students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -79,7 +79,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan o\'g\'il bolalar (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of male students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -87,7 +87,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan qiz bolalar (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of female students',
+        placeholder: '0',
         validation: { min: 0 }
       }
     ],
@@ -96,14 +96,14 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
   {
     id: 'youth_work_department_template',
     name: 'Yoshlar bilan ishlash bo\'limi',
-    description: 'Talabalar bilan ishlashni taqozo etmagan chora-tadbirlarga talabalar soni kiritilmaydi.',
+    description: 'Talabalar bilan ishlash',
     fields: [
       {
         id: 'event_name',
         label: 'Chora tadbir nomi*',
         type: 'text',
         required: true,
-        placeholder: 'Enter event name'
+        placeholder: 'Nom'
       },
       {
         id: 'start_date',
@@ -122,7 +122,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Chora-tadbirga jalb qilingan talabalar soni (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Enter total number of students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -130,7 +130,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan birinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of first year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -138,7 +138,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan ikkinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of second year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -146,7 +146,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan uchinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of third year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -154,7 +154,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan to\'rtinchi bosqich (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of fourth year students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -162,7 +162,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan magistrantlar (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of master\'s students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -170,7 +170,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan o\'g\'il bolalar (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of male students',
+        placeholder: '0',
         validation: { min: 0 }
       },
       {
@@ -178,7 +178,7 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
         label: 'Shundan qiz bolalar (faqat son kiritiladi)',
         type: 'number',
         required: true,
-        placeholder: 'Number of female students',
+        placeholder: '0',
         validation: { min: 0 }
       }
     ],
@@ -186,28 +186,112 @@ export const REPORT_TEMPLATES: ReportTemplate[] = [
   },
   {
     id: 'general_report_template',
-    name: 'General Report',
-    description: 'Basic report template with title and description',
+    name: 'Umumiy hisobot',
+    description: 'Sarlavha va tavsif bilan asosiy hisobot shabloni',
     fields: [
       {
         id: 'title',
-        label: 'Report Title*',
+        label: 'Hisobot nomi*',
         type: 'text',
         required: true,
-        placeholder: 'Enter report title'
+        placeholder: 'Nom'
       },
       {
         id: 'description',
-        label: 'Description*',
+        label: 'Tavsif*',
         type: 'textarea',
         required: true,
-        placeholder: 'Describe the report details'
+        placeholder: 'Tafsilot'
       },
       {
         id: 'date',
-        label: 'Report Date*',
+        label: 'Hisobot sanasi*',
         type: 'date',
         required: true
+      }
+    ],
+    createdAt: new Date()
+  },
+  {
+    id: 'tutor_activity_template',
+    name: 'Tyutorlar faoliyati',
+    description: "Tyutorlar tomonidan o'tkazilgan tadbirlarni hujjatlashtirish",
+    fields: [
+      {
+        id: 'tutor_full_name',
+        label: 'Xodimning ism-sharifi*',
+        type: 'text',
+        required: true,
+        placeholder: 'Ism sharif'
+      },
+      {
+        id: 'event_name',
+        label: 'Chora tadbir nomi*',
+        type: 'text',
+        required: true,
+        placeholder: 'Nom'
+      },
+      {
+        id: 'event_date',
+        label: 'Chora tadbir sanasi*',
+        type: 'date',
+        required: true,
+        placeholder: 'Month, day, year'
+      },
+      {
+        id: 'event_type',
+        label: "Chora tadbir turi (nomenklatura bo'yicha)*",
+        type: 'text',
+        required: true,
+        placeholder: "Tadbir turi"
+      },
+      {
+        id: 'total_students',
+        label: 'Chora tadbirga jalb qilingan talabalar soni (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'first_year',
+        label: 'Shundan birinchi bosqich (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'second_year',
+        label: 'Shundan ikkinchi bosqich (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'third_year',
+        label: 'Shundan uchinchi bosqich  (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'fourth_year',
+        label: "Shundan to'rtinchi bosqich  (faqat sonda)",
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
+      },
+      {
+        id: 'masters',
+        label: 'Shundan magistrantlar  (faqat sonda)',
+        type: 'number',
+        required: false,
+        placeholder: '0',
+        validation: { min: 0 }
       }
     ],
     createdAt: new Date()
