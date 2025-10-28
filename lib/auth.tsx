@@ -188,12 +188,21 @@ export const useAuth = (): AuthState => {
         const telegramUser = webApp.initDataUnsafe?.user
 
         if (!telegramUser) {
-          console.log("[v0] No user data available")
-          setAuthState((prev) => ({
-            ...prev,
-            isLoading: false,
-            error: "No user data available",
-          }))
+          console.log("[v0] No user data available - falling back to debug mode")
+
+          const debugId = Number(process.env.NEXT_PUBLIC_DEBUG_TELEGRAM_ID || "999999")
+          const debugFirstName = process.env.NEXT_PUBLIC_DEBUG_FIRST_NAME || "Browser"
+          const debugLastName = process.env.NEXT_PUBLIC_DEBUG_LAST_NAME || "Debug"
+          const debugUsername = process.env.NEXT_PUBLIC_DEBUG_USERNAME || "browser_debug"
+
+          const debugUser: TelegramUser = {
+            id: debugId,
+            first_name: debugFirstName,
+            last_name: debugLastName,
+            username: debugUsername,
+          }
+
+          await authenticateWithTelegramUser(debugUser, { isDebugFallback: true })
           return
         }
 
