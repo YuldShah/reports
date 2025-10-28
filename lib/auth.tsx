@@ -113,11 +113,11 @@ export const useAuth = (): AuthState => {
                 username: telegramUser.username,
                 photoUrl: telegramUser.photo_url,
                 teamId: undefined,
-                role: 'admin',
+                role: 'employee',
                 createdAt: new Date(),
               }
             : null),
-          isAdmin: isDebugFallback ? true : isAdmin(telegramUser.id),
+          isAdmin: isAdmin(telegramUser.id),
           error: null,
         })
       } catch (apiError) {
@@ -136,10 +136,10 @@ export const useAuth = (): AuthState => {
               username: telegramUser.username,
               photoUrl: telegramUser.photo_url,
               teamId: undefined,
-              role: 'admin',
+              role: 'employee',
               createdAt: new Date(),
             },
-            isAdmin: true,
+            isAdmin: isAdmin(telegramUser.id),
             error: null,
           })
           return
