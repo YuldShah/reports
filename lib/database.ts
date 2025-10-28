@@ -42,6 +42,7 @@ export interface Report {
   templateId: string
   title: string
   answers: Record<string, any>
+  templateData: Record<string, any>
   createdAt: Date
 }
 
@@ -414,13 +415,13 @@ export const updateTeamTemplate = async (teamId: string, templateId: string | nu
 // Report operations
 export const createReport = async (reportData: Omit<Report, "id" | "createdAt">): Promise<Report> => {
   const reportId = `report_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  const { userId, teamId, templateId, title, answers } = reportData
+  const { userId, teamId, templateId, title, answers, templateData } = reportData
 
   const result = await query(
-    `INSERT INTO reports (id, user_id, team_id, template_id, title, answers) 
-     VALUES (?, ?, ?, ?, ?, ?) 
-     RETURNING id, user_id, team_id, template_id, title, answers, created_at`,
-    [reportId, userId, teamId, templateId, title, JSON.stringify(answers)]
+    `INSERT INTO reports (id, user_id, team_id, template_id, title, answers, template_data) 
+     VALUES (?, ?, ?, ?, ?, ?, ?) 
+     RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at`,
+    [reportId, userId, teamId, templateId, title, JSON.stringify(answers), JSON.stringify(templateData || {})]
   )
 
   const row = result.rows[0]
@@ -431,13 +432,14 @@ export const createReport = async (reportData: Omit<Report, "id" | "createdAt">)
     templateId: row.template_id,
     title: row.title,
     answers: JSON.parse(row.answers),
+    templateData: JSON.parse(row.template_data || '{}'),
     createdAt: row.created_at
   }
 }
 
 export const getAllReports = async (): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, template_id, title, answers, created_at FROM reports ORDER BY created_at DESC'
+    'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports ORDER BY created_at DESC'
   )
 
   return result.rows.map((row: any) => ({
@@ -447,13 +449,14 @@ export const getAllReports = async (): Promise<Report[]> => {
     templateId: row.template_id,
     title: row.title,
     answers: JSON.parse(row.answers),
+    templateData: JSON.parse(row.template_data || '{}'),
     createdAt: row.created_at
   }))
 }
 
 export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, template_id, title, answers, created_at FROM reports WHERE team_id = ? ORDER BY created_at DESC',
+    'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports WHERE team_id = ? ORDER BY created_at DESC',
     [teamId]
   )
 
@@ -464,13 +467,14 @@ export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
     templateId: row.template_id,
     title: row.title,
     answers: JSON.parse(row.answers),
+    templateData: JSON.parse(row.template_data || '{}'),
     createdAt: row.created_at
   }))
 }
 
 export const getReportsByUser = async (userId: number): Promise<Report[]> => {
   const result = await query(
-    'SELECT id, user_id, team_id, template_id, title, answers, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC',
+    'SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at FROM reports WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   )
 
@@ -481,6 +485,7 @@ export const getReportsByUser = async (userId: number): Promise<Report[]> => {
     templateId: row.template_id,
     title: row.title,
     answers: JSON.parse(row.answers),
+    templateData: JSON.parse(row.template_data || '{}'),
     createdAt: row.created_at
   }))
 }
@@ -498,6 +503,10 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
     fields.push(`answers = $${paramCount++}`)
     values.push(JSON.stringify(updates.answers))
   }
+  if (updates.templateData !== undefined) {
+    fields.push(`template_data = $${paramCount++}`)
+    values.push(JSON.stringify(updates.templateData))
+  }
 
   if (fields.length === 0) return null
 
@@ -506,7 +515,7 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
   const result = await query(
     `UPDATE reports SET ${fields.join(', ')} 
      WHERE id = $${paramCount} 
-     RETURNING id, user_id, team_id, template_id, title, answers, created_at`,
+     RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at`,
     values
   )
 
@@ -520,6 +529,7 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
     templateId: row.template_id,
     title: row.title,
     answers: JSON.parse(row.answers),
+    templateData: JSON.parse(row.template_data || '{}'),
     createdAt: row.created_at
   }
 }

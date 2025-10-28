@@ -18,13 +18,22 @@ const getGoogleSheetsClient = async () => {
       credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY)
     } else {
       // Fallback to file (for development)
-      const serviceAccountPath = path.join(process.cwd(), 'resolute-might-473605-g5-cd8246aa7c6c.json')
-      
-      if (fs.existsSync(serviceAccountPath)) {
-        credentials = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))
-      } else {
+      const keyPathFromEnv = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH
+      const candidatePaths = [
+        keyPathFromEnv,
+        'resolute-might-473605-g5-fd1f52ec44b3.json',
+        'resolute-might-473605-g5-cd8246aa7c6c.json',
+      ].filter(Boolean) as string[]
+
+      const resolvedPath = candidatePaths
+        .map((relativePath) => (path.isAbsolute(relativePath) ? relativePath : path.join(process.cwd(), relativePath)))
+        .find((candidate) => fs.existsSync(candidate))
+
+      if (!resolvedPath) {
         throw new Error('Google Service Account credentials not found')
       }
+
+      credentials = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'))
     }
 
     // Create authentication using service account

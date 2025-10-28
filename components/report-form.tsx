@@ -167,24 +167,33 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
         reportData = {
           userId: user.telegramId,
           teamId: user.teamId,
+          templateId: template.id,
           title: titleField ? formData[titleField.id] || 'Template Report' : 'Template Report',
           description: descriptionField ? formData[descriptionField.id] || JSON.stringify(formData, null, 2) : JSON.stringify(formData, null, 2),
           priority: "medium",
           status: "pending",
           category: "Template Report",
           templateData: formData,
+          answers: formData,
         }
       } else {
         // For default forms
         reportData = {
           userId: user.telegramId,
           teamId: user.teamId,
+          templateId: team?.templateId,
           title: defaultFormData.title,
           description: defaultFormData.description,
           priority: defaultFormData.priority,
           status: "pending",
           category: defaultFormData.category,
           templateData: defaultFormData,
+          answers: {
+            title: defaultFormData.title,
+            description: defaultFormData.description,
+            category: defaultFormData.category,
+            priority: defaultFormData.priority,
+          },
         }
       }
 
@@ -375,7 +384,7 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
         {template ? (
           /* Template-based form */
           <Card>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               {template.fields.map(field => renderTemplateField(field))}
             </CardContent>
           </Card>

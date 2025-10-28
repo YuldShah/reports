@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllReports, createReport, updateReport, getReportsByUser, getReportsByTeam, getTeamById, getTemplateById, getUserByTelegramId } from "@/lib/database"
+import { getAllReports, createReport, updateReport, getReportsByUser, getReportsByTeam, getTeamById, getTemplateById as getDbTemplateById, getUserByTelegramId } from "@/lib/database"
+import { getTemplateById as getStaticTemplateById } from "@/lib/report-templates"
 import { appendToGoogleSheet } from "@/lib/google-sheets"
 
 export async function GET(request: NextRequest) {
@@ -27,19 +28,35 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, teamId, templateId, title, answers } = body
+    const { userId, teamId, templateId, title, answers, templateData } = body
 
-    if (!userId || !teamId || !templateId || !title || !answers) {
+    if (!userId || !teamId || !title) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    const team = await getTeamById(teamId)
+    if (!team) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 })
+    }
+    const resolvedTemplateId = templateId || team?.templateId
+    const normalizedAnswers = answers || templateData
+
+    if (!resolvedTemplateId) {
+      return NextResponse.json({ error: "Template not specified for this report" }, { status: 400 })
+    }
+
+    if (!normalizedAnswers || Object.keys(normalizedAnswers).length === 0) {
+      return NextResponse.json({ error: "No answers provided for the report" }, { status: 400 })
     }
 
     // Create report in database
     const report = await createReport({
       userId,
       teamId,
-      templateId,
+      templateId: resolvedTemplateId,
       title,
-      answers,
+      answers: normalizedAnswers,
+      templateData: templateData ?? normalizedAnswers,
     })
 
     // Sync to Google Sheets if enabled
@@ -47,14 +64,29 @@ export async function POST(request: NextRequest) {
       try {
         // Get related data for Google Sheets
         const user = await getUserByTelegramId(userId)
-        const team = await getTeamById(teamId)
-        const template = await getTemplateById(templateId)
+        const template = await getDbTemplateById(resolvedTemplateId) || getStaticTemplateById(resolvedTemplateId)
 
         if (user && team && template) {
           // Format questions and answers for Google Sheets
-          const questionsAnswers = template.questions.map((q: any, index: number) => {
-            const answer = answers[`question_${index}`] || answers[q.id] || 'No answer'
-            return `${q.question}: ${answer}`
+          const templateFields = Array.isArray((template as any).questions)
+            ? (template as any).questions.map((q: any, index: number) => ({
+                id: q.id || `question_${index}`,
+                label: q.question || q.label || `Question ${index + 1}`,
+              }))
+            : Array.isArray((template as any).fields)
+              ? (template as any).fields.map((field: any, index: number) => ({
+                  id: field.id || `field_${index}`,
+                  label: field.label || field.question || `Field ${index + 1}`,
+                }))
+              : []
+
+          const questionsAnswers = templateFields.map((field: { id: string; label: string }, index: number) => {
+            const rawAnswer = normalizedAnswers[field.id] ?? normalizedAnswers[`question_${index}`]
+            const answer =
+              rawAnswer === undefined || rawAnswer === null || (typeof rawAnswer === 'string' && rawAnswer.trim() === '')
+                ? "No answer"
+                : String(rawAnswer)
+            return `${field.label}: ${answer}`
           }).join(' | ')
 
           const sheetData = {
