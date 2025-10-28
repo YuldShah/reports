@@ -209,9 +209,11 @@ const ensureTemplateSheet = async (templateKey: string, templateName: string): P
         metadata.location?.sheetId !== undefined,
     )
 
-    const sheetFromMetadata = metadataMatch?.location?.sheetId
-      ? spreadsheet.data.sheets?.find((sheet: any) => sheet.properties?.sheetId === metadataMatch.location.sheetId)
-      : undefined
+    const metadataSheetId = metadataMatch?.location?.sheetId
+    const sheetFromMetadata =
+      typeof metadataSheetId === 'number'
+        ? spreadsheet.data.sheets?.find((sheet: any) => sheet.properties?.sheetId === metadataSheetId)
+        : undefined
 
     if (sheetFromMetadata?.properties?.sheetId && sheetFromMetadata.properties.title) {
       return {
