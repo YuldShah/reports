@@ -120,7 +120,10 @@ export async function POST(request: NextRequest) {
             answers: answerEntries,
           }
 
-          await appendToGoogleSheet(template.name, sheetData)
+          await appendToGoogleSheet({
+            templateKey: resolvedTemplateId,
+            templateName: template.name,
+          }, sheetData)
         }
       } catch (sheetError) {
         console.error("Failed to sync to Google Sheets:", sheetError)

@@ -30,7 +30,13 @@ export async function POST(request: NextRequest) {
               ],
         }
 
-    const result = await appendToGoogleSheet(resolvedTemplateName, normalizedReportData)
+    const result = await appendToGoogleSheet(
+      {
+        templateKey: resolvedTemplateName,
+        templateName: resolvedTemplateName,
+      },
+      normalizedReportData,
+    )
 
     return NextResponse.json({ success: true, result })
   } catch (error) {

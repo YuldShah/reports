@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, FileText, Clock, CheckCircle, TrendingUp, Calendar } from "lucide-react"
+import { Plus, FileText, TrendingUp, Calendar } from "lucide-react"
 import ReportForm from "@/components/report-form"
 import type { User } from "@/lib/types"
 
@@ -125,9 +125,6 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
 
   const stats = {
     totalReports: userReports.length,
-    pendingReports: userReports.filter((r: any) => r.status === "pending").length,
-    inProgressReports: userReports.filter((r: any) => r.status === "in-progress").length,
-    completedReports: userReports.filter((r: any) => r.status === "completed").length,
   }
 
   if (loading) {
@@ -191,7 +188,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
           </Card>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card className="border border-white/20">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
@@ -201,42 +198,6 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="text-2xl font-bold">{stats.totalReports}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-white/20">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
-                  <Clock className="w-4 h-4 text-yellow-500" />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-bold">{stats.pendingReports}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-white/20">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">In Progress</CardTitle>
-                  <TrendingUp className="w-4 h-4 text-blue-500" />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-bold">{stats.inProgressReports}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-white/20">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-bold">{stats.completedReports}</div>
               </CardContent>
             </Card>
           </div>

@@ -15,12 +15,19 @@ interface SheetRowData {
   answers: SheetAnswer[]
 }
 
+interface TemplateSheetInfo {
+  sheetId: number
+  title: string
+}
+
 const BASE_HEADERS = [
   'Report ID',
   'Submitted At',
   'Team Name',
   'User Name',
 ]
+
+const TEMPLATE_METADATA_KEY = 'templateKey'
 
 type MaybeProcess = {
   env?: Record<string, string | undefined>
@@ -102,7 +109,22 @@ const getGoogleSheetsClient = async () => {
   }
 }
 
-const ensureSheetHeaders = async (sheetName: string, requiredHeaders: string[]) => {
+const sanitizeIdentifier = (value: string): string => {
+  const sanitized = value.replace(/[^a-zA-Z0-9_-]/g, '_')
+  return sanitized.length > 0 ? sanitized : 'template'
+}
+
+const buildSheetTitle = (templateName: string): string => {
+  const withSpaces = templateName
+    .replace(/_/g, ' ')
+    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return withSpaces.length > 0 ? withSpaces : 'Template'
+}
+
+const ensureSheetHeaders = async (sheetTitle: string, requiredHeaders: string[]) => {
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
@@ -113,7 +135,7 @@ const ensureSheetHeaders = async (sheetName: string, requiredHeaders: string[]) 
 
   const headerResponse = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!1:1`,
+    range: `${sheetTitle}!1:1`,
   })
 
   const currentHeaders = headerResponse.data.values?.[0] ?? []
@@ -151,7 +173,7 @@ const ensureSheetHeaders = async (sheetName: string, requiredHeaders: string[]) 
   if (headersChanged) {
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!1:1`,
+      range: `${sheetTitle}!1:1`,
       valueInputOption: 'RAW',
       requestBody: {
         values: [finalHeaders],
@@ -162,57 +184,135 @@ const ensureSheetHeaders = async (sheetName: string, requiredHeaders: string[]) 
   return finalHeaders
 }
 
-export const createSheetIfNotExists = async (templateName: string) => {
+const ensureTemplateSheet = async (templateKey: string, templateName: string): Promise<TemplateSheetInfo> => {
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
-    throw new Error("Google Sheets spreadsheet ID not configured")
+    throw new Error('Google Sheets spreadsheet ID not configured')
   }
 
-  const sheetName = `Template_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`
+  const normalizedKey = sanitizeIdentifier(templateKey)
+  const defaultTitle = buildSheetTitle(templateName)
+
+  const { sheets } = await getGoogleSheetsClient()
 
   try {
-    const { sheets } = await getGoogleSheetsClient()
-
-    // First, try to get the spreadsheet to see existing sheets
-    const getResponse = await sheets.spreadsheets.get({
+    const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId,
+      fields: 'sheets(properties(sheetId,title)),developerMetadata(metadataKey,metadataValue,location(sheetId))',
     })
 
-    const sheetExists = getResponse.data.sheets?.some(
-      (sheet: any) => sheet.properties?.title === sheetName
+    const metadataMatch = spreadsheet.data.developerMetadata?.find(
+      (metadata: any) =>
+        metadata.metadataKey === TEMPLATE_METADATA_KEY &&
+        metadata.metadataValue === normalizedKey &&
+        metadata.location?.sheetId !== undefined,
     )
 
-    if (!sheetExists) {
-      // Create the sheet
+    const sheetFromMetadata = metadataMatch?.location?.sheetId
+      ? spreadsheet.data.sheets?.find((sheet: any) => sheet.properties?.sheetId === metadataMatch.location.sheetId)
+      : undefined
+
+    if (sheetFromMetadata?.properties?.sheetId && sheetFromMetadata.properties.title) {
+      return {
+        sheetId: sheetFromMetadata.properties.sheetId,
+        title: sheetFromMetadata.properties.title,
+      }
+    }
+
+    const sheetByTitle = spreadsheet.data.sheets?.find(
+      (sheet: any) => sheet.properties?.title === defaultTitle,
+    )
+
+    if (sheetByTitle?.properties?.sheetId && sheetByTitle.properties.title) {
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
         requestBody: {
           requests: [
             {
-              addSheet: {
-                properties: {
-                  title: sheetName,
-                  gridProperties: {
-                    rowCount: 1000,
-                    columnCount: 20,
+              createDeveloperMetadata: {
+                developerMetadata: {
+                  metadataKey: TEMPLATE_METADATA_KEY,
+                  metadataValue: normalizedKey,
+                  location: {
+                    sheetId: sheetByTitle.properties.sheetId,
+                    locationType: 'SHEET',
                   },
+                  visibility: 'DOCUMENT',
                 },
               },
             },
           ],
         },
+      }).catch(() => {
+        // Ignore metadata creation errors (duplicate, permissions, etc.)
       })
+
+      return {
+        sheetId: sheetByTitle.properties.sheetId,
+        title: sheetByTitle.properties.title,
+      }
     }
-    await ensureSheetHeaders(sheetName, BASE_HEADERS)
+
+    const createResponse = await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            addSheet: {
+              properties: {
+                title: defaultTitle,
+                gridProperties: {
+                  rowCount: 1000,
+                  columnCount: 26,
+                },
+              },
+            },
+          },
+        ],
+      },
+    })
+
+    const newSheet = createResponse.data.replies?.[0]?.addSheet?.properties
+    if (!newSheet?.sheetId || !newSheet.title) {
+      throw new Error('Failed to create new sheet for template')
+    }
+
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [
+          {
+            createDeveloperMetadata: {
+              developerMetadata: {
+                metadataKey: TEMPLATE_METADATA_KEY,
+                metadataValue: normalizedKey,
+                location: {
+                  sheetId: newSheet.sheetId,
+                  locationType: 'SHEET',
+                },
+                visibility: 'DOCUMENT',
+              },
+            },
+          },
+        ],
+      },
+    }).catch(() => {
+      // Ignore metadata creation errors for newly created sheet
+    })
+
+    return {
+      sheetId: newSheet.sheetId,
+      title: newSheet.title,
+    }
   } catch (error) {
-    console.error("Error creating sheet:", error)
-    // Continue anyway - the append operation might still work
+    console.error('Error ensuring template sheet:', error)
+    throw error
   }
 }
 
 export const appendToGoogleSheet = async (
-  templateName: string,
+  templateInfo: { templateKey: string; templateName: string },
   reportData: SheetRowData,
 ) => {
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
@@ -223,11 +323,10 @@ export const appendToGoogleSheet = async (
   }
 
   try {
-    // Ensure sheet exists
-    await createSheetIfNotExists(templateName)
-
+    const { templateKey, templateName } = templateInfo
+    const sheetInfo = await ensureTemplateSheet(templateKey, templateName)
     const { sheets } = await getGoogleSheetsClient()
-    const sheetName = `Template_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`
+    const sheetTitle = sheetInfo.title
 
     const requiredHeaders = Array.from(
       new Set(
@@ -236,7 +335,7 @@ export const appendToGoogleSheet = async (
           .filter((label): label is string => typeof label === 'string' && label.trim().length > 0),
       ),
     )
-    const finalHeaders = await ensureSheetHeaders(sheetName, requiredHeaders)
+    const finalHeaders = await ensureSheetHeaders(sheetTitle, requiredHeaders)
 
     const baseValueMap: Record<string, string> = {
       'Report ID': reportData.reportId,
@@ -258,7 +357,7 @@ export const appendToGoogleSheet = async (
 
     const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:ZZ`,
+      range: `${sheetTitle}!A:ZZ`,
       valueInputOption: 'RAW',
       insertDataOption: 'INSERT_ROWS',
       requestBody: {
