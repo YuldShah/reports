@@ -289,7 +289,7 @@ export const updateTemplate = async (id: string, updates: Partial<Template>): Pr
 
 export const deleteTemplate = async (id: string): Promise<boolean> => {
   const result = await runQuery('DELETE FROM templates WHERE id = $1', [id])
-  return result.rowCount > 0
+  return (result.rowCount ?? 0) > 0
 }
 
 // Team operations
@@ -362,7 +362,7 @@ export const deleteTeam = async (id: string): Promise<boolean> => {
     await client.query('UPDATE users SET team_id = NULL WHERE team_id = $1', [id])
     const result = await client.query('DELETE FROM teams WHERE id = $1', [id])
     await client.query('COMMIT')
-    return result.rowCount > 0
+  return (result.rowCount ?? 0) > 0
   } catch (error) {
     await client.query('ROLLBACK')
     throw error
