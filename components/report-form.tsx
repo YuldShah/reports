@@ -375,10 +375,6 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
         {template ? (
           /* Template-based form */
           <Card>
-            <CardHeader>
-              <CardTitle>{template.name}</CardTitle>
-              <CardDescription>{template.description || "Please fill in all required fields"}</CardDescription>
-            </CardHeader>
             <CardContent className="space-y-4">
               {template.fields.map(field => renderTemplateField(field))}
             </CardContent>
