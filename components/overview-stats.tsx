@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, Clock, CheckCircle, TrendingUp } from "lucide-react"
+import { Users, FileText, TrendingUp } from "lucide-react"
 import AnimatedCounter from "@/components/animated-counter"
 // Note: Removed import EnhancedCard as we are now using the standard Card
 
@@ -8,8 +8,6 @@ interface OverviewStatsProps {
     totalUsers: number
     totalTeams: number
     totalReports: number
-    pendingReports: number
-    completedReports: number
   }
 }
 
@@ -39,26 +37,10 @@ export default function OverviewStats({ stats }: OverviewStatsProps) {
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
     },
-    {
-      title: "Pending",
-      value: stats.pendingReports,
-      icon: Clock,
-      description: "Awaiting review",
-      color: "text-yellow-500",
-      bgColor: "bg-yellow-500/10",
-    },
-    {
-      title: "Completed",
-      value: stats.completedReports,
-      icon: CheckCircle,
-      description: "Resolved reports",
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
-    },
   ]
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 animate-stagger">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-stagger">
       {statCards.map((stat, index) => {
         const Icon = stat.icon
         return (

@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Users, FileText, TrendingUp, ExternalLink, Zap, UserCheck, Building2 } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
-import { getGoogleSheetsUrl } from "@/lib/google-sheets-client"
 import TeamManagement from "@/components/team-management"
 import ReportsView from "@/components/reports-view"
 import UserManagement from "@/components/user-management"
@@ -67,8 +66,6 @@ export default function AdminDashboard() {
     totalUsers: users.length,
     totalTeams: teams.length,
     totalReports: reports.length,
-    pendingReports: reports.filter((r) => r.status === "pending").length,
-    completedReports: reports.filter((r) => r.status === "completed").length,
   }
 
   const refreshData = async () => {

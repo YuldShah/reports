@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
-import { getGoogleSheetsUrl } from "@/lib/google-sheets-client"
 
 export default function ReportsView() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -19,9 +18,12 @@ export default function ReportsView() {
   const [users, setUsers] = useState<User[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
+  const [sheetUrl, setSheetUrl] = useState<string | null>(null)
+  const [sheetConfigured, setSheetConfigured] = useState(false)
 
   useEffect(() => {
     fetchData()
+    fetchSheetStatus()
   }, [])
 
   const fetchData = async () => {
@@ -59,6 +61,25 @@ export default function ReportsView() {
       console.error('Error fetching data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchSheetStatus = async () => {
+    try {
+      const response = await fetch("/api/sheets")
+      const data = await response.json()
+
+      if (response.ok && data.sheetUrl) {
+        setSheetUrl(data.sheetUrl)
+        setSheetConfigured(Boolean(data.configured))
+      } else {
+        setSheetUrl(null)
+        setSheetConfigured(false)
+      }
+    } catch (error) {
+      console.error("Error fetching sheet status:", error)
+      setSheetUrl(null)
+      setSheetConfigured(false)
     }
   }
 
@@ -125,12 +146,23 @@ export default function ReportsView() {
           <h2 className="text-xl font-semibold">Reports Management</h2>
           <p className="text-sm text-muted-foreground">View and manage all submitted reports</p>
         </div>
-        <Button asChild variant="outline" className="bg-[#0f9d58] hover:bg-[#0d8a4e] text-black border-[#0f9d58]">
-          <a href={getGoogleSheetsUrl()} target="_blank" rel="noopener noreferrer">
+        {sheetConfigured && sheetUrl ? (
+          <Button asChild variant="outline" className="bg-[#0f9d58] hover:bg-[#0d8a4e] text-black border-[#0f9d58]">
+            <a href={sheetUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-4 h-4" />
+              Open in Sheets
+            </a>
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            className="bg-muted text-muted-foreground border-muted cursor-not-allowed"
+            disabled
+          >
             <ExternalLink className="w-4 h-4" />
             Open in Sheets
-          </a>
-        </Button>
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
