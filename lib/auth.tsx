@@ -5,6 +5,15 @@ import { useEffect, useState } from "react"
 import { isAdmin, waitForTelegram } from "@/lib/telegram"
 import type { TelegramUser, User } from "@/lib/telegram"
 
+declare global {
+  interface Window {
+    __reportsDebugAuth?: {
+      setRole: (role: "admin" | "employee") => void
+      getRole: () => "admin" | "employee"
+    }
+  }
+}
+
 export interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
@@ -25,6 +34,62 @@ export const useAuth = (): AuthState => {
   })
 
   useEffect(() => {
+    const getStoredDebugRole = (): "admin" | "employee" => {
+      if (typeof window === "undefined") return "employee"
+      return window.localStorage?.getItem("reportsDebugRole") === "admin" ? "admin" : "employee"
+    }
+
+    const persistDebugRole = (role: "admin" | "employee") => {
+      if (typeof window === "undefined") return
+      try {
+        window.localStorage?.setItem("reportsDebugRole", role)
+      } catch (error) {
+        console.warn("[v0] Unable to persist debug role:", error)
+      }
+    }
+
+    const registerDebugRoleController = (telegramUser: TelegramUser) => {
+      if (typeof window === "undefined") return
+
+      const applyRole = (role: "admin" | "employee") => {
+        persistDebugRole(role)
+        setAuthState((prev) => {
+          if (!prev) return prev
+          const updatedDbUser = prev.dbUser
+            ? { ...prev.dbUser, role }
+            : {
+                telegramId: telegramUser.id,
+                firstName: telegramUser.first_name,
+                lastName: telegramUser.last_name,
+                username: telegramUser.username,
+                photoUrl: telegramUser.photo_url,
+                teamId: undefined,
+                role,
+                createdAt: new Date(),
+              }
+          return {
+            ...prev,
+            dbUser: updatedDbUser,
+            isAdmin: role === "admin",
+          }
+        })
+      }
+
+      window.__reportsDebugAuth = {
+        setRole: (role: "admin" | "employee") => {
+          if (role !== "admin" && role !== "employee") {
+            console.warn('[v0] Debug auth: role must be "admin" or "employee"')
+            return
+          }
+          console.log(`[v0] Debug auth: switching role to ${role}`)
+          applyRole(role)
+        },
+        getRole: () =>
+          window.localStorage?.getItem("reportsDebugRole") === "admin" ? "admin" : "employee",
+      }
+
+      console.info('[v0] Debug auth ready: window.__reportsDebugAuth.setRole("admin" | "employee")')
+    }
     const authenticateWithTelegramUser = async (
       telegramUser: TelegramUser,
       { isDebugFallback = false }: { isDebugFallback?: boolean } = {},
@@ -101,30 +166,54 @@ export const useAuth = (): AuthState => {
         }
 
         console.log("[v0] Authentication successful")
-        setAuthState({
-          isAuthenticated: true,
-          isLoading: false,
-          telegramUser,
-          dbUser: dbUser || (isDebugFallback
-            ? {
+
+        if (isDebugFallback) {
+          const debugRole = getStoredDebugRole()
+          persistDebugRole(debugRole)
+          const fallbackUser: User = dbUser
+            ? { ...dbUser, role: debugRole }
+            : {
                 telegramId: telegramUser.id,
                 firstName: telegramUser.first_name,
                 lastName: telegramUser.last_name,
                 username: telegramUser.username,
                 photoUrl: telegramUser.photo_url,
                 teamId: undefined,
-                role: 'employee',
+                role: debugRole,
                 createdAt: new Date(),
               }
-            : null),
-          isAdmin: isAdmin(telegramUser.id),
-          error: null,
-        })
+
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            telegramUser,
+            dbUser: fallbackUser,
+            isAdmin: debugRole === "admin",
+            error: null,
+          })
+
+          registerDebugRoleController(telegramUser)
+        } else {
+          if (typeof window !== "undefined" && window.__reportsDebugAuth) {
+            delete window.__reportsDebugAuth
+          }
+
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            telegramUser,
+            dbUser,
+            isAdmin: isAdmin(telegramUser.id),
+            error: null,
+          })
+        }
       } catch (apiError) {
         console.error("[v0] API error during auth:", apiError)
 
         if (isDebugFallback) {
           console.log("[v0] Falling back to local debug auth state")
+          const debugRole = getStoredDebugRole()
+          persistDebugRole(debugRole)
           setAuthState({
             isAuthenticated: true,
             isLoading: false,
@@ -136,12 +225,14 @@ export const useAuth = (): AuthState => {
               username: telegramUser.username,
               photoUrl: telegramUser.photo_url,
               teamId: undefined,
-              role: 'employee',
+              role: debugRole,
               createdAt: new Date(),
             },
-            isAdmin: isAdmin(telegramUser.id),
+            isAdmin: debugRole === "admin",
             error: null,
           })
+
+          registerDebugRoleController(telegramUser)
           return
         }
 
