@@ -20,6 +20,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Users, UserPlus, Trash2, Building, FileText, Settings } from "lucide-react"
 import { type User, type Team, type ReportTemplate } from "@/lib/types"
 import { toast } from "@/hooks/use-toast"
+import { useAuthContext } from "@/components/auth-provider"
+import { getAdminTelegramIds } from "@/lib/telegram"
 
 interface TeamManagementProps {
   onDataChange?: () => void
@@ -37,6 +39,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   const [newTeam, setNewTeam] = useState({ name: "", description: "" })
   const [selectedUserId, setSelectedUserId] = useState<string>("")
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+  const { telegramUser, dbUser } = useAuthContext()
 
   const debugLog = async (message: string, data?: any) => {
     try {
@@ -127,6 +130,19 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   }
 
   const handleCreateTeam = async () => {
+    const actingAdminId = dbUser?.telegramId ?? telegramUser?.id ?? getAdminTelegramIds()[0]
+
+    if (!actingAdminId) {
+      await debugLog('Team creation failed - no admin ID available')
+      toast({
+        title: "Error",
+        description: "Unable to resolve admin account.",
+        variant: "destructive",
+        duration: 3000,
+      })
+      return
+    }
+
     await debugLog('Starting handleCreateTeam', { teamName: newTeam.name, description: newTeam.description })
     
     if (!newTeam.name.trim()) {
@@ -151,7 +167,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         body: JSON.stringify({
           name: newTeam.name,
           description: newTeam.description,
-          createdBy: 6520664733, // Admin ID
+          createdBy: actingAdminId,
         }),
       })
 

@@ -119,13 +119,48 @@ export const isRunningInTelegram = (): boolean => {
   return !!window.Telegram?.WebApp
 }
 
-export const isAdmin = (userId: number): boolean => {
-  return userId === 6520664733 // Your admin ID
+type GlobalWithProcess = typeof globalThis & {
+  process?: {
+    env?: Record<string, string | undefined>
+  }
 }
+
+const getEnv = (): Record<string, string | undefined> => {
+  const env = (globalThis as GlobalWithProcess).process?.env
+  return env ?? {}
+}
+
+const parseAdminTelegramIds = (): number[] => {
+  const env = getEnv()
+  const raw =
+    env.ADMIN_TELEGRAM_IDS?.trim() ||
+    env.NEXT_PUBLIC_ADMIN_TELEGRAM_IDS?.trim() ||
+    env.ADMIN_TELEGRAM_ID?.trim() ||
+    env.NEXT_PUBLIC_ADMIN_TELEGRAM_ID?.trim() ||
+    ""
+
+  if (!raw) {
+    return []
+  }
+
+  return raw
+    .split(/[,\s]+/)
+    .map((value: string) => value.trim())
+    .filter((value: string) => Boolean(value))
+    .map((value: string) => Number.parseInt(value, 10))
+    .filter((value: number) => Number.isFinite(value))
+}
+
+const ADMIN_TELEGRAM_ID_LIST = parseAdminTelegramIds()
+const ADMIN_TELEGRAM_ID_SET = new Set(ADMIN_TELEGRAM_ID_LIST)
+
+export const getAdminTelegramIds = (): number[] => [...ADMIN_TELEGRAM_ID_LIST]
+
+export const isAdmin = (userId: number): boolean => ADMIN_TELEGRAM_ID_SET.has(Number(userId))
 
 // Bot API functions
 export const sendTelegramMessage = async (chatId: number, text: string, replyMarkup?: any) => {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  const botToken = getEnv().TELEGRAM_BOT_TOKEN
   if (!botToken) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set")
   }
