@@ -1,6 +1,7 @@
 import { google, sheets_v4 } from 'googleapis'
 import path from 'path'
 import fs from 'fs'
+import { getTemplateSheetMapping, upsertTemplateSheetMapping, deleteTemplateSheetMapping } from './database'
 interface SheetAnswer {
   label: string
   value: string
@@ -225,26 +226,62 @@ const ensureTemplateSheet = async (
   try {
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId,
-      fields: 'sheets(properties(sheetId,title)),developerMetadata(metadataKey,metadataValue,location(sheetId))',
+      fields: 'sheets(properties(sheetId,title))',
     })
 
-    const metadataMatch = spreadsheet.data.developerMetadata?.find(
-      (metadata: any) =>
-        metadata.metadataKey === TEMPLATE_METADATA_KEY &&
-        metadata.metadataValue === normalizedKey &&
-        metadata.location?.sheetId !== undefined,
+    const existingSheetId = await getTemplateSheetMapping(normalizedKey)
+    if (existingSheetId !== null) {
+      const mappedSheet = spreadsheet.data.sheets?.find(
+        (sheet: sheets_v4.Schema$Sheet) => sheet.properties?.sheetId === existingSheetId,
+      )
+
+      if (mappedSheet?.properties?.sheetId && mappedSheet.properties.title) {
+        return {
+          sheetId: mappedSheet.properties.sheetId,
+          title: mappedSheet.properties.title,
+        }
+      }
+
+      await deleteTemplateSheetMapping(normalizedKey)
+    }
+
+    const metadataSearch = await sheets.spreadsheets.developerMetadata.search({
+      spreadsheetId,
+      requestBody: {
+        dataFilters: [
+          {
+            developerMetadataLookup: {
+              metadataKey: TEMPLATE_METADATA_KEY,
+              metadataValue: normalizedKey,
+              locationType: 'SHEET',
+            },
+          },
+        ],
+      },
+    }).catch((error: unknown) => {
+      console.warn('Failed to search developer metadata for template sheet:', error)
+      return { data: {} as sheets_v4.Schema$SearchDeveloperMetadataResponse }
+    })
+
+    const matchedMetadata = metadataSearch.data.matchedDeveloperMetadata?.find(
+      (match: sheets_v4.Schema$MatchedDeveloperMetadata) => {
+        const location = match?.developerMetadata?.location
+        return location?.locationType === 'SHEET' && typeof location.sheetId === 'number'
+      },
     )
 
-    const metadataSheetId = metadataMatch?.location?.sheetId
-    const sheetFromMetadata =
-      typeof metadataSheetId === 'number'
-        ? spreadsheet.data.sheets?.find((sheet: any) => sheet.properties?.sheetId === metadataSheetId)
-        : undefined
+    if (matchedMetadata?.developerMetadata?.location?.sheetId !== undefined) {
+      const sheetId = matchedMetadata.developerMetadata.location.sheetId
+      const sheetFromMetadata = spreadsheet.data.sheets?.find(
+        (sheet: sheets_v4.Schema$Sheet) => sheet.properties?.sheetId === sheetId,
+      )
 
-    if (sheetFromMetadata?.properties?.sheetId && sheetFromMetadata.properties.title) {
-      return {
-        sheetId: sheetFromMetadata.properties.sheetId,
-        title: sheetFromMetadata.properties.title,
+      if (sheetFromMetadata?.properties?.sheetId && sheetFromMetadata.properties.title) {
+        await upsertTemplateSheetMapping(normalizedKey, sheetFromMetadata.properties.sheetId)
+        return {
+          sheetId: sheetFromMetadata.properties.sheetId,
+          title: sheetFromMetadata.properties.title,
+        }
       }
     }
 
@@ -275,6 +312,8 @@ const ensureTemplateSheet = async (
       }).catch(() => {
         // Ignore metadata creation errors (duplicate, permissions, etc.)
       })
+
+      await upsertTemplateSheetMapping(normalizedKey, sheetByTitle.properties.sheetId)
 
       return {
         sheetId: sheetByTitle.properties.sheetId,
@@ -328,6 +367,8 @@ const ensureTemplateSheet = async (
     }).catch(() => {
       // Ignore metadata creation errors for newly created sheet
     })
+
+    await upsertTemplateSheetMapping(normalizedKey, newSheet.sheetId)
 
     return {
       sheetId: newSheet.sheetId,

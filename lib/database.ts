@@ -135,6 +135,54 @@ const runQuery = async <T extends Record<string, unknown> = Record<string, unkno
   }
 }
 
+let templateSheetRegistryInitialized = false
+
+const ensureTemplateSheetRegistry = async () => {
+  if (templateSheetRegistryInitialized) {
+    return
+  }
+
+  await runQuery(
+    `CREATE TABLE IF NOT EXISTS template_sheet_registry (
+      template_key TEXT PRIMARY KEY,
+      sheet_id BIGINT NOT NULL
+    )`
+  )
+
+  templateSheetRegistryInitialized = true
+}
+
+export const getTemplateSheetMapping = async (templateKey: string): Promise<number | null> => {
+  await ensureTemplateSheetRegistry()
+  const result = await runQuery<{ sheet_id: string | number }>(
+    `SELECT sheet_id FROM template_sheet_registry WHERE template_key = $1 LIMIT 1`,
+    [templateKey],
+  )
+
+  if (result.rows.length === 0) {
+    return null
+  }
+
+  const rawValue = result.rows[0].sheet_id
+  const numeric = typeof rawValue === 'string' ? Number(rawValue) : rawValue
+  return Number.isFinite(numeric) ? Number(numeric) : null
+}
+
+export const upsertTemplateSheetMapping = async (templateKey: string, sheetId: number): Promise<void> => {
+  await ensureTemplateSheetRegistry()
+  await runQuery(
+    `INSERT INTO template_sheet_registry (template_key, sheet_id)
+     VALUES ($1, $2)
+     ON CONFLICT (template_key) DO UPDATE SET sheet_id = EXCLUDED.sheet_id`,
+    [templateKey, sheetId],
+  )
+}
+
+export const deleteTemplateSheetMapping = async (templateKey: string): Promise<void> => {
+  await ensureTemplateSheetRegistry()
+  await runQuery(`DELETE FROM template_sheet_registry WHERE template_key = $1`, [templateKey])
+}
+
 // User operations
 export const createUser = async (userData: Omit<User, 'createdAt'>): Promise<User> => {
   const { telegramId, firstName, lastName, username, photoUrl, teamId, role } = userData
