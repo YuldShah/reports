@@ -41,8 +41,6 @@ const SelectContent = React.forwardRef<
       ref={ref}
       className={cn(
         "z-50 w-[var(--radix-select-trigger-width)] bg-popover rounded-md shadow-xl border border-border overflow-hidden",
-        "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-        "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
         className
       )}
       position={position}
