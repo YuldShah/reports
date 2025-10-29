@@ -81,8 +81,7 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
       resolve(null)
       return
     }
-
-    const DEFAULT_HEADER_COLOR = "#0f172a"
+    const DEFAULT_HEADER_COLOR = "#10161f"
 
     const normalizeColorHex = (value: string): string | null => {
       if (!value) return null

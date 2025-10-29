@@ -1,7 +1,6 @@
-import { google } from 'googleapis'
+import { google, sheets_v4 } from 'googleapis'
 import path from 'path'
 import fs from 'fs'
-
 interface SheetAnswer {
   label: string
   value: string
@@ -105,6 +104,14 @@ const getGoogleSheetsClient = async () => {
   }
 }
 
+const resolveSheetsClient = async (client?: sheets_v4.Sheets): Promise<sheets_v4.Sheets> => {
+  if (client) {
+    return client
+  }
+  const { sheets } = await getGoogleSheetsClient()
+  return sheets
+}
+
 const sanitizeIdentifier = (value: string): string => {
   const sanitized = value.replace(/[^a-zA-Z0-9_-]/g, '_')
   return sanitized.length > 0 ? sanitized : 'template'
@@ -120,21 +127,35 @@ const buildSheetTitle = (templateName: string): string => {
   return withSpaces.length > 0 ? withSpaces : 'Template'
 }
 
-const ensureSheetHeaders = async (sheetTitle: string, requiredHeaders: string[]) => {
+const ensureSheetHeaders = async (
+  sheetId: number,
+  requiredHeaders: string[],
+  sheetsClient?: sheets_v4.Sheets,
+) => {
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
     throw new Error('Google Sheets spreadsheet ID not configured')
   }
 
-  const { sheets } = await getGoogleSheetsClient()
+  const sheets = await resolveSheetsClient(sheetsClient)
 
-  const headerResponse = await sheets.spreadsheets.values.get({
+  const headerFilter: sheets_v4.Schema$DataFilter = {
+    gridRange: {
+      sheetId,
+      startRowIndex: 0,
+      endRowIndex: 1,
+    },
+  }
+
+  const headerResponse = await sheets.spreadsheets.values.batchGetByDataFilter({
     spreadsheetId,
-    range: `${sheetTitle}!1:1`,
+    requestBody: {
+      dataFilters: [headerFilter],
+    },
   })
 
-  const currentHeaders = headerResponse.data.values?.[0] ?? []
+  const currentHeaders = headerResponse.data.valueRanges?.[0]?.valueRange?.values?.[0] ?? []
 
   // Start with existing headers or base headers if the row is blank
   const finalHeaders = currentHeaders.length > 0 ? [...currentHeaders] : [...BASE_HEADERS]
@@ -167,12 +188,17 @@ const ensureSheetHeaders = async (sheetTitle: string, requiredHeaders: string[])
   }
 
   if (headersChanged) {
-    await sheets.spreadsheets.values.update({
+    await sheets.spreadsheets.values.batchUpdateByDataFilter({
       spreadsheetId,
-      range: `${sheetTitle}!1:1`,
-      valueInputOption: 'RAW',
       requestBody: {
-        values: [finalHeaders],
+        valueInputOption: 'RAW',
+        data: [
+          {
+            dataFilter: headerFilter,
+            majorDimension: 'ROWS',
+            values: [finalHeaders],
+          } as sheets_v4.Schema$DataFilterValueRange,
+        ],
       },
     })
   }
@@ -180,7 +206,11 @@ const ensureSheetHeaders = async (sheetTitle: string, requiredHeaders: string[])
   return finalHeaders
 }
 
-const ensureTemplateSheet = async (templateKey: string, templateName: string): Promise<TemplateSheetInfo> => {
+const ensureTemplateSheet = async (
+  templateKey: string,
+  templateName: string,
+  sheetsClient?: sheets_v4.Sheets,
+): Promise<TemplateSheetInfo> => {
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
@@ -190,7 +220,7 @@ const ensureTemplateSheet = async (templateKey: string, templateName: string): P
   const normalizedKey = sanitizeIdentifier(templateKey)
   const defaultTitle = buildSheetTitle(templateName)
 
-  const { sheets } = await getGoogleSheetsClient()
+  const sheets = await resolveSheetsClient(sheetsClient)
 
   try {
     const spreadsheet = await sheets.spreadsheets.get({
@@ -322,9 +352,8 @@ export const appendToGoogleSheet = async (
 
   try {
     const { templateKey, templateName } = templateInfo
-    const sheetInfo = await ensureTemplateSheet(templateKey, templateName)
     const { sheets } = await getGoogleSheetsClient()
-    const sheetTitle = sheetInfo.title
+    const sheetInfo = await ensureTemplateSheet(templateKey, templateName, sheets)
 
     const requiredHeaders = Array.from(
       new Set(
@@ -333,7 +362,7 @@ export const appendToGoogleSheet = async (
           .filter((label): label is string => typeof label === 'string' && label.trim().length > 0),
       ),
     )
-    const finalHeaders = await ensureSheetHeaders(sheetTitle, requiredHeaders)
+    const finalHeaders = await ensureSheetHeaders(sheetInfo.sheetId, requiredHeaders, sheets)
 
     const baseValueMap: Record<string, string> = {
       'Report ID': reportData.reportId,
@@ -353,13 +382,26 @@ export const appendToGoogleSheet = async (
       return answerMap.get(header) ?? ''
     })
 
-    const response = await sheets.spreadsheets.values.append({
+    const rowData: sheets_v4.Schema$RowData = {
+      values: rowValues.map((value) => ({
+        userEnteredValue: {
+          stringValue: value ?? '',
+        },
+      })),
+    }
+
+    const response = await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
-      range: `${sheetTitle}!A:ZZ`,
-      valueInputOption: 'RAW',
-      insertDataOption: 'INSERT_ROWS',
       requestBody: {
-        values: [rowValues],
+        requests: [
+          {
+            appendCells: {
+              sheetId: sheetInfo.sheetId,
+              rows: [rowData],
+              fields: 'userEnteredValue',
+            },
+          },
+        ],
       },
     })
 

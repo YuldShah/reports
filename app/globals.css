@@ -4,24 +4,24 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.05 0 0);
+  --background: #10161f;
   --foreground: oklch(0.95 0 0);
-  --card: oklch(0.08 0 0);
+  --card: #141b26;
   --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.08 0 0);
+  --popover: #141b26;
   --popover-foreground: oklch(0.95 0 0);
   --primary: oklch(0.7 0.15 220);
   --primary-foreground: oklch(0.05 0 0);
-  --secondary: oklch(0.15 0 0);
+  --secondary: #18202d;
   --secondary-foreground: oklch(0.9 0 0);
-  --muted: oklch(0.12 0 0);
+  --muted: #1b2433;
   --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.15 0 0);
+  --accent: #1b2433;
   --accent-foreground: oklch(0.9 0 0);
   --destructive: oklch(0.6 0.2 25);
   --destructive-foreground: oklch(0.95 0 0);
-  --border: oklch(0.2 0 0);
-  --input: oklch(0.15 0 0);
+  --border: #1f2a3a;
+  --input: #18202d;
   --ring: oklch(0.7 0.15 220);
   --chart-1: oklch(0.7 0.15 220);
   --chart-2: oklch(0.65 0.18 180);
@@ -29,13 +29,13 @@
   --chart-4: oklch(0.75 0.12 60);
   --chart-5: oklch(0.68 0.16 300);
   --radius: 0.75rem;
-  --sidebar: oklch(0.08 0 0);
+  --sidebar: #10161f;
   --sidebar-foreground: oklch(0.95 0 0);
   --sidebar-primary: oklch(0.7 0.15 220);
   --sidebar-primary-foreground: oklch(0.05 0 0);
-  --sidebar-accent: oklch(0.15 0 0);
+  --sidebar-accent: #1b2433;
   --sidebar-accent-foreground: oklch(0.9 0 0);
-  --sidebar-border: oklch(0.2 0 0);
+  --sidebar-border: #1f2a3a;
   --sidebar-ring: oklch(0.7 0.15 220);
 
   /* Custom colors for Telegram theme */
