@@ -75,15 +75,16 @@ const SelectContent = React.forwardRef<
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md",
+        "z-50 w-[var(--radix-select-trigger-width)] bg-popover rounded-md shadow-xl border border-border overflow-hidden",
         className
       )}
       position={position}
+      side="bottom"
       align="start"
       {...props}
     >
       <SelectScrollUpButton />
-      <SelectPrimitive.Viewport className="p-1 max-h-[var(--radix-select-content-available-height)]">
+      <SelectPrimitive.Viewport className="p-1 h-full max-h-80 overflow-y-auto">
         {children}
       </SelectPrimitive.Viewport>
       <SelectScrollDownButton />
@@ -111,15 +112,15 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-2 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex items-center rounded-sm py-2 pl-2 pr-8 text-sm outline-none cursor-pointer select-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}
   >
-    <SelectPrimitive.ItemText className="flex-1 min-w-0 text-left">
-      <span className="block whitespace-normal break-words leading-snug">{children}</span>
+    <SelectPrimitive.ItemText className="whitespace-normal leading-snug">
+      {children}
     </SelectPrimitive.ItemText>
-    <SelectPrimitive.ItemIndicator className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+    <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center justify-center">
       <Check className="h-4 w-4" />
     </SelectPrimitive.ItemIndicator>
   </SelectPrimitive.Item>
