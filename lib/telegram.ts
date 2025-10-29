@@ -62,6 +62,7 @@ export interface TelegramWebApp {
     hide: () => void
   }
   setHeaderColor?: (color: string) => void
+  setBottomBarColor?: (color: string) => void
   requestFullscreen?: () => Promise<void>
   lockOrientation?: (orientation: "portrait" | "landscape") => Promise<void> | void
   disableVerticalSwipes?: () => void

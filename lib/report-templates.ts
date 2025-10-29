@@ -265,8 +265,8 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
               "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
           },
           {
-            value: "Talabalaming qonuniy manfaatini himoya qilish",
-            label: "Talabalaming qonuniy manfaatini himoya qilish",
+            value: "Talabalarning huquqiy manfaatlarini himoya qilish bo‘yicha o‘tkaziladigan tadbirlar",
+            label: "Talabalarning huquqiy manfaatlarini himoya qilish boyicha otkaziladigan tadbirlar",
           },
           {
             value: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
@@ -384,8 +384,8 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
               "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
           },
           {
-            value: "Talabalaming qonuniy manfaatini himoya qilish",
-            label: "Talabalaming qonuniy manfaatini himoya qilish",
+            value: "Talabalarning huquqiy manfaatlarini himoya qilish bo‘yicha o‘tkaziladigan tadbirlar",
+            label: "Talabalarning huquqiy manfaatlarini himoya qilish boyicha otkaziladigan tadbirlar",
           },
           {
             value: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
