@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
-        <Script src="https://telegram.org/js/telegram-web-app.js?59" strategy="beforeInteractive" />
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       </head>
       <body className="antialiased">
         <ErrorBoundary>
