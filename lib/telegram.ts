@@ -36,6 +36,20 @@ export interface TelegramWebApp {
   headerColor: string
   backgroundColor: string
   isClosingConfirmationEnabled: boolean
+  safeAreaInset?: {
+    top: number
+    bottom: number
+    left: number
+    right: number
+  }
+  contentSafeAreaInset?: {
+    top: number
+    bottom: number
+    left: number
+    right: number
+  }
+  isFullscreen?: boolean
+  isActive?: boolean
   ready: () => void
   expand: () => void
   close: () => void
@@ -61,6 +75,8 @@ export interface TelegramWebApp {
     show: () => void
     hide: () => void
   }
+  onEvent?: (eventType: string, callback: (...args: unknown[]) => void) => void
+  offEvent?: (eventType: string, callback: (...args: unknown[]) => void) => void
   setHeaderColor?: (color: string) => void
   setBottomBarColor?: (color: string) => void
   requestFullscreen?: () => Promise<void>
