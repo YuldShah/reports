@@ -147,12 +147,7 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
           }
 
           if (typeof webApp.lockOrientation === "function") {
-            const prefersPortrait =
-              typeof window.matchMedia === "function"
-                ? window.matchMedia("(orientation: portrait)").matches
-                : true
-            const targetOrientation: "portrait" | "landscape" = prefersPortrait ? "portrait" : "landscape"
-            const lockResult = webApp.lockOrientation(targetOrientation)
+            const lockResult = webApp.lockOrientation("portrait")
             if (lockResult instanceof Promise) {
               lockResult.catch((error) => {
                 console.warn("[v0] Unable to lock orientation:", error)
