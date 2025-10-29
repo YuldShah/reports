@@ -136,6 +136,11 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
           webApp.setHeaderColor(headerColor)
           console.log("[v0] Telegram header color set to", headerColor)
         }
+        
+        if (typeof webApp.setBottomBarColor === "function") {
+          webApp.setBottomBarColor(headerColor)
+          console.log("[v0] Telegram bottom bar color set to", headerColor)
+        }
 
         const platform = webApp.platform?.toLowerCase() ?? ""
         const isMobile = platform === "android" || platform === "ios"
