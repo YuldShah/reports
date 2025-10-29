@@ -45,7 +45,7 @@ export interface ReportTemplate {
 export interface TemplateField {
   id: string
   label: string
-  type: "text" | "number" | "date" | "textarea"
+  type: "text" | "number" | "date" | "textarea" | "select"
   required: boolean
   placeholder?: string
   validation?: {
@@ -53,4 +53,8 @@ export interface TemplateField {
     max?: number
     pattern?: string
   }
+  options?: Array<{
+    value: string
+    label: string
+  }>
 }

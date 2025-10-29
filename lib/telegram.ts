@@ -64,6 +64,7 @@ export interface TelegramWebApp {
   setHeaderColor?: (color: string) => void
   requestFullscreen?: () => Promise<void>
   lockOrientation?: (orientation: "portrait" | "landscape") => Promise<void> | void
+  disableVerticalSwipes?: () => void
 }
 
 declare global {
@@ -139,6 +140,15 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
         const platform = webApp.platform?.toLowerCase() ?? ""
         const isMobile = platform === "android" || platform === "ios"
         if (isMobile) {
+          if (typeof webApp.disableVerticalSwipes === "function") {
+            try {
+              webApp.disableVerticalSwipes()
+              console.log("[v0] Telegram vertical swipes disabled")
+            } catch (error) {
+              console.warn("[v0] Unable to disable vertical swipes:", error)
+            }
+          }
+
           if (typeof webApp.requestFullscreen === "function") {
             webApp.requestFullscreen().catch((error) => {
               console.warn("[v0] Unable to request fullscreen:", error)

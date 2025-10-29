@@ -297,6 +297,21 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
             className={hasError ? "border-destructive" : ""}
           />
         )}
+
+        {field.type === 'select' && Array.isArray(field.options) && field.options.length > 0 && (
+          <Select value={value} onValueChange={handleFieldChange}>
+            <SelectTrigger id={field.id} className={hasError ? "border-destructive" : ""}>
+              <SelectValue placeholder={field.placeholder || "Tanlang"} />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         
         {hasError && (
           <p className="text-sm text-destructive flex items-center gap-1">

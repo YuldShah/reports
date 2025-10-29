@@ -247,9 +247,60 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
       {
         id: 'event_type',
         label: "Chora tadbir turi (nomenklatura bo'yicha)*",
-        type: 'text',
+        type: 'select',
         required: true,
-        placeholder: "Tadbir turi"
+        options: [
+          {
+            value: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
+            label: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
+          },
+          {
+            value: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
+            label: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
+          },
+          {
+            value:
+              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+            label:
+              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+          },
+          {
+            value: "Talabalaming qonuniy manfaatini himoya qilish",
+            label: "Talabalaming qonuniy manfaatini himoya qilish",
+          },
+          {
+            value: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
+            label: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
+          },
+          {
+            value:
+              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
+            label:
+              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
+          },
+          { value: "Bayram tadbirlari", label: "Bayram tadbirlari" },
+          { value: "Start-up tanlovlar", label: "Start-up tanlovlar" },
+          { value: "Ma'rifiy tadbirlar", label: "Ma'rifiy tadbirlar" },
+          { value: "Ilmiy konferensiyalar", label: "Ilmiy konferensiyalar" },
+          {
+            value: "Mehmon professor ishtirokida ma'ruza",
+            label: "Mehmon professor ishtirokida ma'ruza",
+          },
+          { value: "Uchrashuvlar", label: "Uchrashuvlar" },
+          { value: "Sport tadbirlari", label: "Sport tadbirlari" },
+          {
+            value:
+              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
+            label:
+              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
+          },
+          { value: "Ilmiy tadbirlar", label: "Ilmiy tadbirlar" },
+          {
+            value: "Besh tashabbus doirasidagi tanlovlar",
+            label: "Besh tashabbus doirasidagi tanlovlar",
+          },
+          { value: "Sayohatlar", label: "Sayohatlar" },
+        ],
       },
       {
         id: 'total_students',
