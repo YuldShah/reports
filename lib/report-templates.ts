@@ -225,28 +225,28 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
     fields: [
       {
         id: 'tutor_full_name',
-        label: 'Xodimning ism-sharifi*',
+        label: 'Xodimning ism-sharifi',
         type: 'text',
         required: true,
         placeholder: 'Ism sharif'
       },
       {
         id: 'event_name',
-        label: 'Chora tadbir nomi*',
+        label: 'Chora tadbir nomi',
         type: 'text',
         required: true,
         placeholder: 'Nom'
       },
       {
         id: 'event_date',
-        label: 'Chora tadbir sanasi*',
+        label: 'Chora tadbir sanasi',
         type: 'date',
         required: true,
         placeholder: 'Month, day, year'
       },
       {
         id: 'event_type',
-        label: "Chora tadbir turi (nomenklatura bo'yicha)*",
+        label: "Chora tadbir turi (nomenklatura bo'yicha)",
         type: 'select',
         required: true,
         options: [
@@ -311,40 +311,16 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
         validation: { min: 0 }
       },
       {
-        id: 'first_year',
-        label: 'Shundan birinchi bosqich (faqat sonda)',
+        id: 'boys',
+        label: "Shundan o'g'il bolalar (faqat sonda)",
         type: 'number',
         required: false,
         placeholder: '0',
         validation: { min: 0 }
       },
       {
-        id: 'second_year',
-        label: 'Shundan ikkinchi bosqich (faqat sonda)',
-        type: 'number',
-        required: false,
-        placeholder: '0',
-        validation: { min: 0 }
-      },
-      {
-        id: 'third_year',
-        label: 'Shundan uchinchi bosqich  (faqat sonda)',
-        type: 'number',
-        required: false,
-        placeholder: '0',
-        validation: { min: 0 }
-      },
-      {
-        id: 'fourth_year',
-        label: "Shundan to'rtinchi bosqich  (faqat sonda)",
-        type: 'number',
-        required: false,
-        placeholder: '0',
-        validation: { min: 0 }
-      },
-      {
-        id: 'masters',
-        label: 'Shundan magistrantlar  (faqat sonda)',
+        id: 'girls',
+        label: "Shundan qiz bolalar (faqat sonda)",
         type: 'number',
         required: false,
         placeholder: '0',
@@ -360,8 +336,15 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
     description: "Chora-tadbirga talabalar jalb qilinmagan bo'lsa talabalar soniga doir bandlar to'ldirilmaydi.",
     fields: [
       {
+        id: 'tutor_full_name',
+        label: 'Xodimning ism-sharifi',
+        type: 'text',
+        required: true,
+        placeholder: 'Ism sharif'
+      },
+      {
         id: 'event_name',
-        label: 'Chora tadbir nomi*',
+        label: 'Chora tadbir nomi',
         type: 'text',
         required: true,
         placeholder: 'Nom'
@@ -379,6 +362,64 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
         type: 'date',
         required: true,
         placeholder: 'Month, day, year'
+      },
+      {
+        id: 'event_type',
+        label: "Chora tadbir turi (nomenklatura bo'yicha)",
+        type: 'select',
+        required: true,
+        options: [
+          {
+            value: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
+            label: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
+          },
+          {
+            value: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
+            label: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
+          },
+          {
+            value:
+              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+            label:
+              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+          },
+          {
+            value: "Talabalaming qonuniy manfaatini himoya qilish",
+            label: "Talabalaming qonuniy manfaatini himoya qilish",
+          },
+          {
+            value: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
+            label: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
+          },
+          {
+            value:
+              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
+            label:
+              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
+          },
+          { value: "Bayram tadbirlari", label: "Bayram tadbirlari" },
+          { value: "Start-up tanlovlar", label: "Start-up tanlovlar" },
+          { value: "Ma'rifiy tadbirlar", label: "Ma'rifiy tadbirlar" },
+          { value: "Ilmiy konferensiyalar", label: "Ilmiy konferensiyalar" },
+          {
+            value: "Mehmon professor ishtirokida ma'ruza",
+            label: "Mehmon professor ishtirokida ma'ruza",
+          },
+          { value: "Uchrashuvlar", label: "Uchrashuvlar" },
+          { value: "Sport tadbirlari", label: "Sport tadbirlari" },
+          {
+            value:
+              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
+            label:
+              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
+          },
+          { value: "Ilmiy tadbirlar", label: "Ilmiy tadbirlar" },
+          {
+            value: "Besh tashabbus doirasidagi tanlovlar",
+            label: "Besh tashabbus doirasidagi tanlovlar",
+          },
+          { value: "Sayohatlar", label: "Sayohatlar" },
+        ],
       },
       {
         id: 'total_students',
