@@ -564,7 +564,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               <SelectTrigger>
                                 <SelectValue placeholder="Choose a user" />
                               </SelectTrigger>
-                              <SelectContent position="popper" sideOffset={4}>
+                              <SelectContent>
                                 {unassignedUsers.map((user) => (
                                   <SelectItem key={user.telegramId} value={user.telegramId.toString()}>
                                     {user.firstName} {user.lastName} 
@@ -652,7 +652,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="No template (use default form)" />
                   </SelectTrigger>
-                  <SelectContent position="popper" sideOffset={4}>
+                  <SelectContent>
                     <SelectItem value="none">No template (use default form)</SelectItem>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>

@@ -159,7 +159,7 @@ export default function ReportsView() {
               <SelectTrigger>
                 <SelectValue placeholder="Team" />
               </SelectTrigger>
-              <SelectContent position="popper" sideOffset={4}>
+              <SelectContent>
                 <SelectItem value="all">All Teams</SelectItem>
                 {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id}>

@@ -302,7 +302,7 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
             <SelectTrigger id={field.id} className={hasError ? "border-destructive" : ""}>
               <SelectValue placeholder={field.placeholder || "Tanlang"} />
             </SelectTrigger>
-            <SelectContent position="popper" sideOffset={4}>
+            <SelectContent>
               {field.options.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
