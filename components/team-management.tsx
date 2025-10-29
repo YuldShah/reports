@@ -561,7 +561,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               <SelectTrigger>
                                 <SelectValue placeholder="Choose a user" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent position="popper" sideOffset={4}>
                                 {unassignedUsers.map((user) => (
                                   <SelectItem key={user.telegramId} value={user.telegramId.toString()}>
                                     {user.firstName} {user.lastName} 
@@ -635,7 +635,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       {/* Template Assignment Dialog */}
       {isTemplateDialogOpen && (
-    <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 border">
             <div className="space-y-4">
               <div>
@@ -645,18 +645,19 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
               
               <div className="space-y-2">
                 <Label>Select Template</Label>
-                <select 
-                  value={selectedTemplateId || ""} 
-                  onChange={(e) => setSelectedTemplateId(e.target.value)}
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
-                >
-                  <option value="">No template (use default form)</option>
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="No template (use default form)" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" sideOffset={4}>
+                    <SelectItem value="">No template (use default form)</SelectItem>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="flex gap-2 pt-4">

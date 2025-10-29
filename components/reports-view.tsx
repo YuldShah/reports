@@ -11,8 +11,6 @@ import { type User, type Team, type Report } from "@/lib/types"
 
 export default function ReportsView() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [priorityFilter, setPriorityFilter] = useState("all")
   const [teamFilter, setTeamFilter] = useState("all")
   const [reports, setReports] = useState<Report[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -88,39 +86,11 @@ export default function ReportsView() {
       const matchesSearch =
         report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         report.description.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesStatus = statusFilter === "all" || report.status === statusFilter
-      const matchesPriority = priorityFilter === "all" || report.priority === priorityFilter
       const matchesTeam = teamFilter === "all" || report.teamId === teamFilter
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesTeam
+      return matchesSearch && matchesTeam
     })
-  }, [reports, searchTerm, statusFilter, priorityFilter, teamFilter])
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "destructive"
-      case "medium":
-        return "default"
-      case "low":
-        return "secondary"
-      default:
-        return "outline"
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "default"
-      case "in-progress":
-        return "secondary"
-      case "pending":
-        return "outline"
-      default:
-        return "outline"
-    }
-  }
+  }, [reports, searchTerm, teamFilter])
 
   if (loading) {
     return (
@@ -174,7 +144,7 @@ export default function ReportsView() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -185,35 +155,11 @@ export default function ReportsView() {
               />
             </div>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={teamFilter} onValueChange={setTeamFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Team" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent position="popper" sideOffset={4}>
                 <SelectItem value="all">All Teams</SelectItem>
                 {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id}>
@@ -252,10 +198,6 @@ export default function ReportsView() {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{report.title}</CardTitle>
                       <CardDescription className="line-clamp-2">{report.description}</CardDescription>
-                    </div>
-                    <div className="flex gap-2 ml-4">
-                      <Badge variant={getPriorityColor(report.priority)}>{report.priority}</Badge>
-                      <Badge variant={getStatusColor(report.status)}>{report.status}</Badge>
                     </div>
                   </div>
                 </CardHeader>

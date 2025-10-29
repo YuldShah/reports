@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { ArrowLeft, Send, AlertCircle, FileText } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
@@ -303,7 +302,7 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
             <SelectTrigger id={field.id} className={hasError ? "border-destructive" : ""}>
               <SelectValue placeholder={field.placeholder || "Tanlang"} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" sideOffset={4}>
               {field.options.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -470,7 +469,7 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
                     <SelectTrigger className={formErrors.category ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" sideOffset={4}>
                       {categories.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
@@ -480,34 +479,6 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
                   </Select>
                   {formErrors.category && <p className="text-sm text-destructive mt-1">{formErrors.category}</p>}
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Priority */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Priority Level</CardTitle>
-                <CardDescription>Help us understand the importance</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <RadioGroup
-                  value={defaultFormData.priority}
-                  onValueChange={(value) => setDefaultFormData((prev) => ({ ...prev, priority: value }))}
-                  className="flex gap-6 mt-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="low" id="low" />
-                    <Label htmlFor="low" className="text-sm">Low</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="medium" id="medium" />
-                    <Label htmlFor="medium" className="text-sm">Medium</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="high" id="high" />
-                    <Label htmlFor="high" className="text-sm">High</Label>
-                  </div>
-                </RadioGroup>
               </CardContent>
             </Card>
           </>

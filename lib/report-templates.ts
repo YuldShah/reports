@@ -224,27 +224,6 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
     description: "Tyutorlar tomonidan o'tkazilgan tadbirlarni hujjatlashtirish",
     fields: [
       {
-        id: 'tutor_full_name',
-        label: 'Xodimning ism-sharifi',
-        type: 'text',
-        required: true,
-        placeholder: 'Ism sharif'
-      },
-      {
-        id: 'event_name',
-        label: 'Chora tadbir nomi',
-        type: 'text',
-        required: true,
-        placeholder: 'Nom'
-      },
-      {
-        id: 'event_date',
-        label: 'Chora tadbir sanasi',
-        type: 'date',
-        required: true,
-        placeholder: 'Month, day, year'
-      },
-      {
         id: 'event_type',
         label: "Chora tadbir turi (nomenklatura bo'yicha)",
         type: 'select',
@@ -301,6 +280,48 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
           },
           { value: "Sayohatlar", label: "Sayohatlar" },
         ],
+      },
+      {
+        id: 'event_name',
+        label: 'Chora tadbir nomi',
+        type: 'text',
+        required: true,
+        placeholder: 'Nom'
+      },
+      {
+        id: 'tutor_full_name',
+        label: 'Xodimning ism-sharifi',
+        type: 'text',
+        required: true,
+        placeholder: 'Ism sharif'
+      },
+      {
+        id: 'event_date_start',
+        label: 'Chora tadbir sanasi (boshlangan)',
+        type: 'date',
+        required: true,
+        placeholder: 'Month, day, year'
+      },
+      {
+        id: 'event_date_end',
+        label: 'Chora tadbir sanasi (tugagan)',
+        type: 'date',
+        required: true,
+        placeholder: 'Month, day, year'
+      },
+      {
+        id: 'student_year',
+        label: 'Talaba kursi',
+        type: 'select',
+        required: false,
+        options: [
+          { value: '1-kurs', label: '1-kurs' },
+          { value: '2-kurs', label: '2-kurs' },
+          { value: '3-kurs', label: '3-kurs' },
+          { value: '4-kurs', label: '4-kurs' },
+          { value: 'Magistratura', label: 'Magistratura' }
+        ],
+        placeholder : 'Kursni tanlang'
       },
       {
         id: 'total_students',
