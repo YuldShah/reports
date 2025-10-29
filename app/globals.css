@@ -112,17 +112,34 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Fade in animation for Radix portals (popups, dropdowns, etc) */
-[data-radix-portal] {
-  animation: fadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+/* Fade transitions for Radix UI portals */
+[data-radix-portal] > *[data-state="open"] {
+  animation: radix-fade-in 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes fadeIn {
+[data-radix-portal] > *[data-state="closed"] {
+  animation: radix-fade-out 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-radix-portal] * {
+  transition: none;
+}
+
+@keyframes radix-fade-in {
   from {
     opacity: 0;
   }
   to {
     opacity: 1;
+  }
+}
+
+@keyframes radix-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
