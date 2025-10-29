@@ -159,13 +159,13 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Overview
+          <TabsTrigger value="overview" className="flex flex-col items-center gap-1 py-3">
+            <TrendingUp className="w-5 h-5" />
+            <span className="text-xs">Overview</span>
           </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            My Reports
+          <TabsTrigger value="reports" className="flex flex-col items-center gap-1 py-3">
+            <FileText className="w-5 h-5" />
+            <span className="text-xs">My Reports</span>
           </TabsTrigger>
         </TabsList>
 

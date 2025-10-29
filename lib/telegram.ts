@@ -133,14 +133,26 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
     const applyWebAppPreferences = (webApp: TelegramWebApp) => {
       try {
         const headerColor = getHeaderColor()
-        if (typeof webApp.setHeaderColor === "function") {
-          webApp.setHeaderColor(headerColor)
-          console.log("[v0] Telegram header color set to", headerColor)
-        }
         
-        if (typeof webApp.setBottomBarColor === "function") {
-          webApp.setBottomBarColor(headerColor)
-          console.log("[v0] Telegram bottom bar color set to", headerColor)
+        // Check Telegram version - header/bottom bar colors require v6.1+
+        const version = parseFloat(webApp.version || "0")
+        const supportsTheming = version >= 6.1
+        
+        if (supportsTheming) {
+          if (typeof webApp.setHeaderColor === "function") {
+            webApp.setHeaderColor(headerColor)
+            console.log("[v0] Telegram header color set to", headerColor)
+          }
+          
+          // Set bottom bar color after a short delay to ensure it applies
+          setTimeout(() => {
+            if (typeof webApp.setBottomBarColor === "function") {
+              webApp.setBottomBarColor(headerColor)
+              console.log("[v0] Telegram bottom bar color set to", headerColor)
+            }
+          }, 100)
+        } else {
+          console.log("[v0] Telegram version", webApp.version, "does not support header/bottom bar colors (requires 6.1+)")
         }
 
         const platform = webApp.platform?.toLowerCase() ?? ""

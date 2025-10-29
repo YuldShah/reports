@@ -351,6 +351,9 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     if (!selectedTeam) return
 
     try {
+      // Convert "none" to null for the API
+      const templateIdToAssign = selectedTemplateId === "none" ? null : selectedTemplateId || null
+      
       const response = await fetch('/api/teams', {
         method: 'PATCH',
         headers: {
@@ -358,7 +361,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         },
         body: JSON.stringify({
           teamId: selectedTeam,
-          templateId: selectedTemplateId || null,
+          templateId: templateIdToAssign,
         }),
       })
 
@@ -368,12 +371,12 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       // Refresh local data
       await fetchData()
-      setSelectedTemplateId("")
+      setSelectedTemplateId("none")
       setIsTemplateDialogOpen(false)
 
       toast({
         title: "Success",
-        description: selectedTemplateId ? "Template assigned successfully" : "Template removed successfully",
+        description: templateIdToAssign ? "Template assigned successfully" : "Template removed successfully",
         duration: 3000,
       })
 
@@ -506,7 +509,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       variant="outline"
                       onClick={() => {
                         setSelectedTeam(team.id)
-                        setSelectedTemplateId(team.templateId || "")
+                        setSelectedTemplateId(team.templateId || "none")
                         setIsTemplateDialogOpen(true)
                       }}
                       className="h-8 w-8 p-0"
@@ -645,12 +648,12 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
               
               <div className="space-y-2">
                 <Label>Select Template</Label>
-                <Select value={selectedTemplateId || ""} onValueChange={setSelectedTemplateId}>
+                <Select value={selectedTemplateId || "none"} onValueChange={setSelectedTemplateId}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="No template (use default form)" />
                   </SelectTrigger>
                   <SelectContent position="popper" sideOffset={4}>
-                    <SelectItem value="">No template (use default form)</SelectItem>
+                    <SelectItem value="none">No template (use default form)</SelectItem>
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.name}
@@ -668,7 +671,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   disabled={!selectedTeam}
                   className="flex-1"
                 >
-                  {selectedTemplateId ? "Assign Template" : "Remove Template"}
+                  {selectedTemplateId && selectedTemplateId !== "none" ? "Assign Template" : "Remove Template"}
                 </Button>
                 <Button 
                   variant="outline" 

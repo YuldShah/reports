@@ -127,31 +127,31 @@ export default function AdminDashboard() {
         <TabsList className="grid w-full grid-cols-4 border rounded-lg bg-muted/30">
           <TabsTrigger
             value="overview"
-            className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
+            className="flex flex-col items-center gap-1 py-3 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
           >
-            <TrendingUp className="w-4 h-4" />
-            Overview
+            <TrendingUp className="w-5 h-5" />
+            <span className="text-xs">Overview</span>
           </TabsTrigger>
           <TabsTrigger
             value="users"
-            className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
+            className="flex flex-col items-center gap-1 py-3 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
           >
-            <UserCheck className="w-4 h-4" />
-            Users
+            <UserCheck className="w-5 h-5" />
+            <span className="text-xs">Users</span>
           </TabsTrigger>
           <TabsTrigger
             value="teams"
-            className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
+            className="flex flex-col items-center gap-1 py-3 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
           >
-            <Building2 className="w-4 h-4" />
-            Teams
+            <Building2 className="w-5 h-5" />
+            <span className="text-xs">Teams</span>
           </TabsTrigger>
           <TabsTrigger
             value="reports"
-            className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
+            className="flex flex-col items-center gap-1 py-3 data-[state=active]:bg-background data-[state=active]:border-1 data-[state=active]:border-white/20 rounded-md"
           >
-            <FileText className="w-4 h-4" />
-            Reports
+            <FileText className="w-5 h-5" />
+            <span className="text-xs">Reports</span>
           </TabsTrigger>
         </TabsList>
 
