@@ -9,8 +9,8 @@ import EmployeeDashboard from "@/components/employee-dashboard"
 
 export default function HomePage() {
   const { isAdmin, dbUser } = useAuthContext()
-  const headerPaddingTop = "calc(2rem + var(--tg-safe-area-inset-top, 0px))"
-  const contentPaddingTop = "calc(11rem + var(--tg-safe-area-inset-top, 0px))"
+  const headerPaddingTop = "var(--tg-safe-area-inset-top, 0px)"
+  const contentPaddingTop = "var(--tg-safe-area-inset-top, 0px)"
 
   return (
     <ProtectedRoute>
