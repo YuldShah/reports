@@ -2,10 +2,10 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import Script from "next/script"
 import { Toaster } from "@/components/ui/toaster"
 import AuthProvider from "@/components/auth-provider"
 import ErrorBoundary from "@/components/error-boundary"
-import TelegramScript from "@/components/telegram-script"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -24,8 +24,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.className}>
+      <head>
+        <Script src="https://telegram.org/js/telegram-web-app.js?59" strategy="beforeInteractive" />
+      </head>
       <body className="antialiased">
-        <TelegramScript />
         <ErrorBoundary>
           <AuthProvider>
             {children}

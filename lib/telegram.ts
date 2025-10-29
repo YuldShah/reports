@@ -61,6 +61,9 @@ export interface TelegramWebApp {
     show: () => void
     hide: () => void
   }
+  setHeaderColor?: (color: string) => void
+  requestFullscreen?: () => Promise<void>
+  lockOrientation?: (orientation: "portrait" | "landscape") => Promise<void> | void
 }
 
 declare global {
@@ -79,6 +82,89 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
       return
     }
 
+    const DEFAULT_HEADER_COLOR = "#0f172a"
+
+    const normalizeColorHex = (value: string): string | null => {
+      if (!value) return null
+      const rgbMatch = value.match(/rgba?\s*\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i)
+      if (!rgbMatch) {
+        const hexMatch = value.match(/#([0-9a-f]{3,8})/i)
+        if (!hexMatch) return null
+
+        const hex = hexMatch[1]
+        if (hex.length === 3) {
+          return `#${hex
+            .split("")
+            .map((char) => char.repeat(2))
+            .join("")}`
+        }
+
+        return `#${hex.substring(0, 6)}`
+      }
+
+      const [, r, g, b] = rgbMatch
+      const toHex = (channel: string) => {
+        const num = Number(channel)
+        if (!Number.isFinite(num)) return "00"
+        return Math.max(0, Math.min(255, num))
+          .toString(16)
+          .padStart(2, "0")
+      }
+
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+    }
+
+    const getHeaderColor = (): string => {
+      try {
+        const doc = window.document
+        const body = doc.body
+        if (!body) {
+          return DEFAULT_HEADER_COLOR
+        }
+        const color = window.getComputedStyle(body).backgroundColor
+        return normalizeColorHex(color) ?? DEFAULT_HEADER_COLOR
+      } catch (error) {
+        console.warn("[v0] Unable to derive header color:", error)
+        return DEFAULT_HEADER_COLOR
+      }
+    }
+
+    const applyWebAppPreferences = (webApp: TelegramWebApp) => {
+      try {
+        const headerColor = getHeaderColor()
+        if (typeof webApp.setHeaderColor === "function") {
+          webApp.setHeaderColor(headerColor)
+          console.log("[v0] Telegram header color set to", headerColor)
+        }
+
+        const platform = webApp.platform?.toLowerCase() ?? ""
+        const isMobile = platform === "android" || platform === "ios"
+        if (isMobile) {
+          if (typeof webApp.requestFullscreen === "function") {
+            webApp.requestFullscreen().catch((error) => {
+              console.warn("[v0] Unable to request fullscreen:", error)
+            })
+          }
+
+          if (typeof webApp.lockOrientation === "function") {
+            const prefersPortrait =
+              typeof window.matchMedia === "function"
+                ? window.matchMedia("(orientation: portrait)").matches
+                : true
+            const targetOrientation: "portrait" | "landscape" = prefersPortrait ? "portrait" : "landscape"
+            const lockResult = webApp.lockOrientation(targetOrientation)
+            if (lockResult instanceof Promise) {
+              lockResult.catch((error) => {
+                console.warn("[v0] Unable to lock orientation:", error)
+              })
+            }
+          }
+        }
+      } catch (error) {
+        console.warn("[v0] Failed to apply Telegram WebApp preferences:", error)
+      }
+    }
+
     // Set a timeout to prevent infinite waiting
     const timeout = setTimeout(() => {
       console.log("[v0] Telegram WebApp timeout - not running in Telegram")
@@ -91,6 +177,7 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
         console.log("[v0] Telegram WebApp found and ready")
         // Call ready() to signal that the app is ready
         window.Telegram.WebApp.ready()
+        applyWebAppPreferences(window.Telegram.WebApp)
         resolve(window.Telegram.WebApp)
       } else {
         // Keep checking until available or timeout

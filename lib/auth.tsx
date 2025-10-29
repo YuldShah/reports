@@ -34,6 +34,40 @@ export const useAuth = (): AuthState => {
   })
 
   useEffect(() => {
+    const runtimeEnv = (
+      (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env
+    ) ?? {}
+    const isProduction = runtimeEnv.NODE_ENV === "production"
+
+    const showProductionFallback = (message: string) => {
+      if (typeof window !== "undefined" && window.__reportsDebugAuth) {
+        delete window.__reportsDebugAuth
+      }
+
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        telegramUser: null,
+        dbUser: null,
+        isAdmin: false,
+        error: message,
+      })
+    }
+
+    const getDebugTelegramUser = (): TelegramUser => {
+      const debugId = Number(runtimeEnv.NEXT_PUBLIC_DEBUG_TELEGRAM_ID || "999999")
+      const debugFirstName = runtimeEnv.NEXT_PUBLIC_DEBUG_FIRST_NAME || "Browser"
+      const debugLastName = runtimeEnv.NEXT_PUBLIC_DEBUG_LAST_NAME || "Debug"
+      const debugUsername = runtimeEnv.NEXT_PUBLIC_DEBUG_USERNAME || "browser_debug"
+
+      return {
+        id: debugId,
+        first_name: debugFirstName,
+        last_name: debugLastName,
+        username: debugUsername,
+      }
+    }
+
     const getStoredDebugRole = (): "admin" | "employee" => {
       if (typeof window === "undefined") return "employee"
       return window.localStorage?.getItem("reportsDebugRole") === "admin" ? "admin" : "employee"
@@ -53,10 +87,9 @@ export const useAuth = (): AuthState => {
 
       const applyRole = (role: "admin" | "employee") => {
         persistDebugRole(role)
-        setAuthState((prev) => {
-          if (!prev) return prev
-          const updatedDbUser = prev.dbUser
-            ? { ...prev.dbUser, role }
+        setAuthState((prevState: AuthState) => {
+          const updatedDbUser = prevState.dbUser
+            ? { ...prevState.dbUser, role }
             : {
                 telegramId: telegramUser.id,
                 firstName: telegramUser.first_name,
@@ -68,7 +101,7 @@ export const useAuth = (): AuthState => {
                 createdAt: new Date(),
               }
           return {
-            ...prev,
+            ...prevState,
             dbUser: updatedDbUser,
             isAdmin: role === "admin",
           }
@@ -100,41 +133,52 @@ export const useAuth = (): AuthState => {
         // Check if user exists in database via API
         const response = await fetch(`/api/users?telegramId=${telegramUser.id}`)
         let dbUser: User | null = null
+        const envSaysAdmin = isAdmin(telegramUser.id)
 
         if (response.ok) {
           const data = await response.json()
           dbUser = data.user
           console.log("[v0] Found existing user:", dbUser?.firstName)
 
-          // Update existing user with latest profile info (including photo)
-          if (
-            dbUser &&
-            (
-              dbUser.firstName !== telegramUser.first_name ||
-              dbUser.lastName !== telegramUser.last_name ||
-              dbUser.username !== telegramUser.username ||
-              dbUser.photoUrl !== telegramUser.photo_url
-            )
-          ) {
-            console.log("[v0] Updating existing user profile")
-            const updateResponse = await fetch('/api/users', {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                telegramId: telegramUser.id,
-                firstName: telegramUser.first_name,
-                lastName: telegramUser.last_name,
-                username: telegramUser.username,
-                photoUrl: telegramUser.photo_url,
-              }),
-            })
+          if (dbUser) {
+            const updates: Record<string, unknown> = {}
 
-            if (updateResponse.ok) {
-              const updateData = await updateResponse.json()
-              dbUser = updateData.user
-              console.log("[v0] User profile updated successfully")
+            if (dbUser.firstName !== telegramUser.first_name) {
+              updates.firstName = telegramUser.first_name
+            }
+            if (dbUser.lastName !== telegramUser.last_name) {
+              updates.lastName = telegramUser.last_name
+            }
+            if (dbUser.username !== telegramUser.username) {
+              updates.username = telegramUser.username
+            }
+            if (dbUser.photoUrl !== telegramUser.photo_url) {
+              updates.photoUrl = telegramUser.photo_url
+            }
+            if (envSaysAdmin && dbUser.role !== "admin") {
+              updates.role = "admin"
+            }
+
+            if (Object.keys(updates).length > 0) {
+              console.log("[v0] Updating existing user profile")
+              const updateResponse = await fetch('/api/users', {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  telegramId: telegramUser.id,
+                  ...updates,
+                }),
+              })
+
+              if (updateResponse.ok) {
+                const updateData = await updateResponse.json()
+                dbUser = updateData.user
+                console.log("[v0] User profile updated successfully")
+              } else if (updates.role === "admin") {
+                dbUser = { ...dbUser, role: "admin" }
+              }
             }
           }
         } else if (response.status === 404) {
@@ -158,6 +202,26 @@ export const useAuth = (): AuthState => {
             const createData = await createResponse.json()
             dbUser = createData.user
             console.log("[v0] User created successfully:", dbUser?.firstName)
+            if (dbUser && envSaysAdmin && dbUser.role !== "admin") {
+              console.log("[v0] Elevating new user to admin role")
+              const roleUpdateResponse = await fetch('/api/users', {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  telegramId: telegramUser.id,
+                  role: "admin",
+                }),
+              })
+
+              if (roleUpdateResponse.ok) {
+                const roleUpdateData = await roleUpdateResponse.json()
+                dbUser = roleUpdateData.user
+              } else {
+                dbUser = { ...dbUser, role: "admin" }
+              }
+            }
           } else {
             throw new Error('Failed to create user')
           }
@@ -203,7 +267,7 @@ export const useAuth = (): AuthState => {
             isLoading: false,
             telegramUser,
             dbUser,
-            isAdmin: isAdmin(telegramUser.id),
+            isAdmin: dbUser?.role === "admin" || envSaysAdmin,
             error: null,
           })
         }
@@ -236,8 +300,8 @@ export const useAuth = (): AuthState => {
           return
         }
 
-        setAuthState((prev) => ({
-          ...prev,
+        setAuthState((prevState: AuthState) => ({
+          ...prevState,
           isLoading: false,
           error: "Failed to authenticate with server",
         }))
@@ -253,19 +317,12 @@ export const useAuth = (): AuthState => {
         if (!webApp) {
           console.log("[v0] Telegram WebApp not detected - using debug browser authentication")
 
-          const debugId = Number(process.env.NEXT_PUBLIC_DEBUG_TELEGRAM_ID || "999999")
-          const debugFirstName = process.env.NEXT_PUBLIC_DEBUG_FIRST_NAME || "Browser"
-          const debugLastName = process.env.NEXT_PUBLIC_DEBUG_LAST_NAME || "Debug"
-          const debugUsername = process.env.NEXT_PUBLIC_DEBUG_USERNAME || "browser_debug"
-
-          const debugUser: TelegramUser = {
-            id: debugId,
-            first_name: debugFirstName,
-            last_name: debugLastName,
-            username: debugUsername,
+          if (isProduction) {
+            showProductionFallback("Telegram WebApp not detected")
+            return
           }
 
-          await authenticateWithTelegramUser(debugUser, { isDebugFallback: true })
+          await authenticateWithTelegramUser(getDebugTelegramUser(), { isDebugFallback: true })
           return
         }
 
@@ -277,23 +334,17 @@ export const useAuth = (): AuthState => {
         })
 
         const telegramUser = webApp.initDataUnsafe?.user
+        const hasValidInitData = typeof webApp.initData === "string" && webApp.initData.trim().length > 0
 
-        if (!telegramUser) {
-          console.log("[v0] No user data available - falling back to debug mode")
+        if (!hasValidInitData || !telegramUser) {
+          console.log("[v0] No valid Telegram init data - falling back")
 
-          const debugId = Number(process.env.NEXT_PUBLIC_DEBUG_TELEGRAM_ID || "999999")
-          const debugFirstName = process.env.NEXT_PUBLIC_DEBUG_FIRST_NAME || "Browser"
-          const debugLastName = process.env.NEXT_PUBLIC_DEBUG_LAST_NAME || "Debug"
-          const debugUsername = process.env.NEXT_PUBLIC_DEBUG_USERNAME || "browser_debug"
-
-          const debugUser: TelegramUser = {
-            id: debugId,
-            first_name: debugFirstName,
-            last_name: debugLastName,
-            username: debugUsername,
+          if (isProduction) {
+            showProductionFallback("Telegram authentication required")
+            return
           }
 
-          await authenticateWithTelegramUser(debugUser, { isDebugFallback: true })
+          await authenticateWithTelegramUser(getDebugTelegramUser(), { isDebugFallback: true })
           return
         }
 
@@ -301,8 +352,8 @@ export const useAuth = (): AuthState => {
         await authenticateWithTelegramUser(telegramUser)
       } catch (error) {
         console.error("[v0] Auth initialization error:", error)
-        setAuthState((prev) => ({
-          ...prev,
+        setAuthState((prevState: AuthState) => ({
+          ...prevState,
           isLoading: false,
           error: "Authentication failed",
         }))
