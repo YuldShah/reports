@@ -47,6 +47,7 @@ const SelectContent = React.forwardRef<
     position = "item-aligned",
     sideOffset = 4,
     avoidCollisions = false,
+    style,
     ...props
   }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>,
   ref: React.Ref<React.ElementRef<typeof SelectPrimitive.Content>>
@@ -64,6 +65,12 @@ const SelectContent = React.forwardRef<
         align="start"
         sideOffset={sideOffset}
         avoidCollisions={avoidCollisions}
+        style={{
+          transitionProperty: "opacity",
+          transitionDuration: "150ms",
+          transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+          ...style,
+        }}
         {...props}
       >
         <SelectPrimitive.Viewport className="p-2 h-full max-h-80 overflow-y-auto">
