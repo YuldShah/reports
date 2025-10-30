@@ -112,6 +112,11 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Disable transform transitions for Radix popper wrappers to avoid dropdown slide-in */
+[data-radix-popper-content-wrapper] {
+  transition: none !important;
+}
+
 /* Fade transitions for Radix UI portals */
 [data-radix-portal] > *[data-state="open"] {
   animation: radix-fade-in 0.18s cubic-bezier(0.4, 0, 0.2, 1);
