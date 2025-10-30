@@ -224,6 +224,13 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
     description: "Tyutorlar tomonidan o'tkazilgan tadbirlarni hujjatlashtirish",
     fields: [
       {
+        id: 'tutor_full_name',
+        label: 'Xodimning ism-sharifi',
+        type: 'text',
+        required: true,
+        placeholder: 'Ism-sharif'
+      },
+      {
         id: 'event_type',
         label: "Chora tadbir turi (nomenklatura bo'yicha)",
         type: 'select',
@@ -239,12 +246,12 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
           },
           {
             value:
-              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+              "Talabalarni boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
             label:
-              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+              "Talabalarni boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
           },
           {
-            value: "Talabalarning huquqiy manfaatlarini himoya qilish bo‘yicha o‘tkaziladigan tadbirlar",
+            value: "Talabalarning huquqiy manfaatlarini himoya qilish bo'yicha o'tkaziladigan tadbirlar",
             label: "Talabalarning huquqiy manfaatlarini himoya qilish boyicha otkaziladigan tadbirlar",
           },
           {
@@ -269,7 +276,7 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
           { value: "Sport tadbirlari", label: "Sport tadbirlari" },
           {
             value:
-              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
+              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kino, konsert, teatr, muzeylarga tashrif)",
             label:
               "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
           },
@@ -287,13 +294,6 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
         type: 'text',
         required: true,
         placeholder: 'Nom'
-      },
-      {
-        id: 'tutor_full_name',
-        label: 'Xodimning ism-sharifi',
-        type: 'text',
-        required: true,
-        placeholder: 'Ism sharif'
       },
       {
         id: 'event_date_start',
@@ -319,7 +319,8 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
           { value: '2-kurs', label: '2-kurs' },
           { value: '3-kurs', label: '3-kurs' },
           { value: '4-kurs', label: '4-kurs' },
-          { value: 'Magistratura', label: 'Magistratura' }
+          { value: 'Magistratura', label: 'Magistratura' },
+          { value: 'Barcha kurslar', label: 'Barcha kurslar'}
         ],
         placeholder : 'Kursni tanlang'
       },
@@ -390,34 +391,7 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
         type: 'select',
         required: true,
         options: [
-          {
-            value: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
-            label: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
-          },
-          {
-            value: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
-            label: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
-          },
-          {
-            value:
-              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
-            label:
-              "Talabalami boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
-          },
-          {
-            value: "Talabalarning huquqiy manfaatlarini himoya qilish bo‘yicha o‘tkaziladigan tadbirlar",
-            label: "Talabalarning huquqiy manfaatlarini himoya qilish boyicha otkaziladigan tadbirlar",
-          },
-          {
-            value: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
-            label: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
-          },
-          {
-            value:
-              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
-            label:
-              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
-          },
+          { value: "Talabalar bilan o'tkazilgan ma'naviy-ma'rifiy tadbirlar", label: "Talabalar bilan o'tkazilgan ma'naviy-ma'rifiy tadbirlar"},
           { value: "Bayram tadbirlari", label: "Bayram tadbirlari" },
           { value: "Start-up tanlovlar", label: "Start-up tanlovlar" },
           { value: "Ma'rifiy tadbirlar", label: "Ma'rifiy tadbirlar" },
@@ -430,7 +404,7 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
           { value: "Sport tadbirlari", label: "Sport tadbirlari" },
           {
             value:
-              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
+              "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kino, konsert, teatr, muzeylarga tashrif)",
             label:
               "Talabalarning bo'sh vaqtlarini mazmunli tashkil etish (kono, konsert, teatr, muzeylarga tashrif)",
           },
@@ -440,6 +414,34 @@ const STATIC_REPORT_TEMPLATES: StaticReportTemplate[] = [
             label: "Besh tashabbus doirasidagi tanlovlar",
           },
           { value: "Sayohatlar", label: "Sayohatlar" },
+          {
+            value: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
+            label: "Talabalarning turar joylari bo'yicha amalga oshirilgan ishlar",
+          },
+          {
+            value: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
+            label: "Talabalaming ijtimoiy-psixologik portretini shakllantirish",
+          },
+          {
+            value:
+              "Talabalarni boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+            label:
+              "Talabalarni boy tarixiy, milliy va diniy an'analarimizga yot bo'lgan illatlarga murosasizlik hamda ularga qarshi kurash ruhida tarbiyalash",
+          },
+          {
+            value: "Talabalarning huquqiy manfaatlarini himoya qilish bo'yicha o'tkaziladigan tadbirlar",
+            label: "Talabalarning huquqiy manfaatlarini himoya qilish boyicha otkaziladigan tadbirlar",
+          },
+          {
+            value: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
+            label: "Talabalar turar joyiga tashrif buyurib talabalar hayotini yaqindan o'rganish",
+          },
+          {
+            value:
+              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
+            label:
+              "Talabalar ijara xonadonlariga tashrif buyurib talabalar hayotini va yaratilgan sharoitlarni yaqindan o'rganish",
+          },
         ],
       },
       {
