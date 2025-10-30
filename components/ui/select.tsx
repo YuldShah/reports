@@ -47,7 +47,7 @@ const SelectContent = React.forwardRef<
     position = "popper",
     sideOffset = 4,
     avoidCollisions = false,
-    style,
+  style,
     ...props
   }: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>,
   ref: React.Ref<React.ElementRef<typeof SelectPrimitive.Content>>
@@ -66,9 +66,7 @@ const SelectContent = React.forwardRef<
         sideOffset={sideOffset}
         avoidCollisions={avoidCollisions}
         style={{
-          transitionProperty: "opacity",
-          transitionDuration: "150ms",
-          transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "opacity 150ms cubic-bezier(0.4, 0, 0.2, 1)",
           ...style,
         }}
         {...props}
