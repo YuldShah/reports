@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, FileText, TrendingUp, Calendar } from "lucide-react"
+import { Plus, FileText, TrendingUp, Calendar, Users } from "lucide-react"
 import ReportForm from "@/components/report-form"
 import type { User } from "@/lib/types"
 
@@ -17,6 +17,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [showReportForm, setShowReportForm] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [userReports, setUserReports] = useState<any[]>([])
+  const [allReports, setAllReports] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -43,23 +44,24 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
         fetch('/api/reports'),
         fetch('/api/teams')
       ])
-      
+
       const reportsData = await reportsRes.json()
       const teamsData = await teamsRes.json()
-      
-      const allReports = reportsData.reports || []
+
+      const fetchedReports = reportsData.reports || []
       const allTeams = teamsData.teams || teamsData || []
-      
-      const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
-      
-      // Fix: Convert date strings to Date objects
-      const userReportsWithDates = userReportsFiltered.map((report: any) => ({
+
+      // Convert date strings to Date objects for all reports
+      const reportsWithDates = fetchedReports.map((report: any) => ({
         ...report,
         createdAt: new Date(report.createdAt),
         updatedAt: new Date(report.updatedAt)
       }))
-      
-      setUserReports(userReportsWithDates)
+
+      const userReportsFiltered = reportsWithDates.filter((r: any) => r.userId === user.telegramId)
+
+      setAllReports(reportsWithDates)
+      setUserReports(userReportsFiltered)
       setTeams(allTeams)
     } catch (error) {
       console.error('Failed to refresh data:', error)
@@ -84,30 +86,31 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
         const reportsData = await reportsRes.json()
         const teamsData = await teamsRes.json()
         
-        await debugLog('Data parsed', { 
+        await debugLog('Data parsed', {
           reportsCount: reportsData?.reports?.length || 0,
           teamsCount: teamsData?.teams?.length || teamsData?.length || 0
         })
-        
+
         // Fix: Extract reports array from the response
-        const allReports = reportsData.reports || []
+        const fetchedReports = reportsData.reports || []
         const allTeams = teamsData.teams || teamsData || []
-        
-        const userReportsFiltered = allReports.filter((r: any) => r.userId === user.telegramId)
-        
-        // Fix: Convert date strings to Date objects
-        const userReportsWithDates = userReportsFiltered.map((report: any) => ({
+
+        // Fix: Convert date strings to Date objects for all reports
+        const reportsWithDates = fetchedReports.map((report: any) => ({
           ...report,
           createdAt: new Date(report.createdAt),
           updatedAt: new Date(report.updatedAt)
         }))
-        
-        await debugLog('Data filtered', { 
-          userReportsCount: userReportsWithDates.length,
+
+        const userReportsFiltered = reportsWithDates.filter((r: any) => r.userId === user.telegramId)
+
+        await debugLog('Data filtered', {
+          userReportsCount: userReportsFiltered.length,
           userTelegramId: user.telegramId
         })
-        
-        setUserReports(userReportsWithDates)
+
+        setAllReports(reportsWithDates)
+        setUserReports(userReportsFiltered)
         setTeams(allTeams)
         setLoading(false)
         
@@ -123,8 +126,14 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
 
   const userTeam = teams.find((t: any) => t.id === user.teamId)
 
+  // Calculate team reports (all reports from users in the same team)
+  const teamReports = user.teamId
+    ? allReports.filter((r: any) => r.teamId === user.teamId)
+    : []
+
   const stats = {
     totalReports: userReports.length,
+    teamReports: teamReports.length,
   }
 
   if (loading) {
@@ -192,12 +201,26 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             <Card className="border border-white/20">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Reports</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">My Reports</CardTitle>
                   <FileText className="w-4 h-4 text-blue-500" />
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="text-2xl font-bold">{stats.totalReports}</div>
+                <p className="text-xs text-muted-foreground mt-1">Reports submitted by you</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-white/20">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Team Reports</CardTitle>
+                  <Users className="w-4 h-4 text-green-500" />
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-2xl font-bold">{stats.teamReports}</div>
+                <p className="text-xs text-muted-foreground mt-1">Total reports from your team</p>
               </CardContent>
             </Card>
           </div>
