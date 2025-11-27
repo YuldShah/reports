@@ -40,7 +40,9 @@ export async function POST(request: NextRequest) {
     if (!team) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 })
     }
-    const resolvedTemplateId = templateId || team?.templateId
+
+    // Determine template ID: use provided templateId, or fallback to team's first template
+    const resolvedTemplateId = templateId || (team?.templateIds && team.templateIds.length > 0 ? team.templateIds[0] : null)
     const normalizedAnswers = answers || templateData
 
     if (!resolvedTemplateId) {
