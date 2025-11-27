@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Send, AlertCircle, FileText } from "lucide-react"
+import { ArrowLeft, Send, AlertCircle, FileText, ChevronRight } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
 
@@ -18,13 +18,22 @@ interface ReportFormProps {
   onSuccess: () => void
 }
 
+type FormStep = 'select-template' | 'fill-form'
+
+interface TeamWithTemplates extends Team {
+  templateIds?: string[]
+  templates?: ReportTemplate[]
+}
+
 export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
-  const [team, setTeam] = useState<Team | null>(null)
-  const [template, setTemplate] = useState<ReportTemplate | null>(null)
+  const [team, setTeam] = useState<TeamWithTemplates | null>(null)
+  const [availableTemplates, setAvailableTemplates] = useState<ReportTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [formStep, setFormStep] = useState<FormStep>('select-template')
 
   // Default form data for non-template forms
   const [defaultFormData, setDefaultFormData] = useState({
@@ -46,56 +55,65 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
   ]
 
   useEffect(() => {
-    const fetchTeamAndTemplate = async () => {
+    const fetchTeamAndTemplates = async () => {
       if (!user.teamId) {
         setLoading(false)
         return
       }
 
       try {
-        // Fetch team data to get template info
+        // Fetch team data with templates
         const teamResponse = await fetch(`/api/teams?id=${user.teamId}`)
         if (teamResponse.ok) {
           const teamData = await teamResponse.json()
           setTeam(teamData.team)
 
-          // If team has a template, fetch template data
-          if (teamData.team?.templateId) {
-            const templateResponse = await fetch(`/api/templates?id=${teamData.team.templateId}`)
-            if (templateResponse.ok) {
-              const templateData = await templateResponse.json()
-              setTemplate(templateData.template)
-              
-              // Initialize form data based on template fields
-              const initialFormData: Record<string, any> = {}
-              templateData.template.fields.forEach((field: TemplateField) => {
-                initialFormData[field.id] = field.type === 'number' ? '' : ''
-              })
-              setFormData(initialFormData)
-            }
+          // Get available templates for this team
+          const teamTemplates = teamData.team?.templates || []
+          setAvailableTemplates(teamTemplates)
+
+          // If only one template, auto-select it and skip to form
+          if (teamTemplates.length === 1) {
+            selectTemplate(teamTemplates[0])
+          } else if (teamTemplates.length === 0) {
+            // No templates assigned - use default form
+            setFormStep('fill-form')
           }
         }
       } catch (error) {
         console.error('Error fetching team/template data:', error)
         toast({
           title: "Warning",
-          description: "Failed to load team template. Using default form.",
+          description: "Failed to load team templates. Using default form.",
           variant: "default",
         })
+        setFormStep('fill-form')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchTeamAndTemplate()
+    fetchTeamAndTemplates()
   }, [user.teamId])
+
+  const selectTemplate = (template: ReportTemplate) => {
+    setSelectedTemplate(template)
+    
+    // Initialize form data based on template fields
+    const initialFormData: Record<string, any> = {}
+    template.fields.forEach((field: TemplateField) => {
+      initialFormData[field.id] = field.type === 'number' ? '' : ''
+    })
+    setFormData(initialFormData)
+    setFormStep('fill-form')
+  }
 
   const validateForm = () => {
     const errors: Record<string, string> = {}
     
-    if (template) {
+    if (selectedTemplate) {
       // Validate template fields
-      template.fields.forEach((field) => {
+      selectedTemplate.fields.forEach((field) => {
         if (field.required) {
           const value = formData[field.id]
           if (!value || (typeof value === 'string' && !value.trim())) {
@@ -158,15 +176,15 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
     try {
       let reportData: any
       
-      if (template) {
+      if (selectedTemplate) {
         // For template-based forms
-        const titleField = template.fields.find(f => f.id === 'title' || f.id === 'event_name')
-        const descriptionField = template.fields.find(f => f.id === 'description')
+        const titleField = selectedTemplate.fields.find(f => f.id === 'title' || f.id === 'event_name')
+        const descriptionField = selectedTemplate.fields.find(f => f.id === 'description')
         
         reportData = {
           userId: user.telegramId,
           teamId: user.teamId,
-          templateId: template.id,
+          templateId: selectedTemplate.id,
           title: titleField ? formData[titleField.id] || 'Template Report' : 'Template Report',
           description: descriptionField ? formData[descriptionField.id] || JSON.stringify(formData, null, 2) : JSON.stringify(formData, null, 2),
           priority: "medium",
@@ -180,7 +198,7 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
         reportData = {
           userId: user.telegramId,
           teamId: user.teamId,
-          templateId: team?.templateId,
+          templateId: null,
           title: defaultFormData.title,
           description: defaultFormData.description,
           priority: defaultFormData.priority,
@@ -342,32 +360,98 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
     )
   }
 
+  // Template selection step
+  if (formStep === 'select-template' && availableTemplates.length > 1) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="space-y-2">
+          <Button variant="ghost" size="sm" onClick={onCancel} className="self-start">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Select Report Template</h1>
+            <p className="text-muted-foreground">Choose the template you want to use for your report</p>
+          </div>
+        </div>
+
+        {/* Template selection cards */}
+        <div className="grid gap-4">
+          {availableTemplates.map((template) => (
+            <Card 
+              key={template.id} 
+              className="cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => selectTemplate(template)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{template.name}</h3>
+                      {template.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {template.fields.length} field(s)
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting} className="self-start">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => {
+            if (availableTemplates.length > 1 && selectedTemplate) {
+              // Go back to template selection
+              setFormStep('select-template')
+              setSelectedTemplate(null)
+              setFormData({})
+              setFormErrors({})
+            } else {
+              onCancel()
+            }
+          }} 
+          disabled={isSubmitting} 
+          className="self-start"
+        >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          {availableTemplates.length > 1 && selectedTemplate ? 'Change Template' : 'Back'}
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Submit Report</h1>
           <p className="text-muted-foreground">
-            {template ? `Using ${template.name} template` : "Fill out the form below to submit your report"}
+            {selectedTemplate ? `Using ${selectedTemplate.name} template` : "Fill out the form below to submit your report"}
           </p>
         </div>
       </div>
 
       {/* Template info */}
-      {template && (
+      {selectedTemplate && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-2">
               <FileText className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <h4 className="font-medium">{template.name}</h4>
-                {template.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+                <h4 className="font-medium">{selectedTemplate.name}</h4>
+                {selectedTemplate.description && (
+                  <p className="text-sm text-muted-foreground mt-1">{selectedTemplate.description}</p>
                 )}
               </div>
             </div>
@@ -395,11 +479,11 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {template ? (
+        {selectedTemplate ? (
           /* Template-based form */
           <Card>
             <CardContent className="space-y-4 pt-4">
-              {template.fields.map(field => renderTemplateField(field))}
+              {selectedTemplate.fields.map(field => renderTemplateField(field))}
             </CardContent>
           </Card>
         ) : (

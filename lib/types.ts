@@ -13,7 +13,8 @@ export interface Team {
   id: string
   name: string
   description?: string
-  templateId?: string | null
+  templateId?: string | null  // Legacy field, kept for backward compatibility
+  templateIds?: string[]      // New field for multiple templates
   createdAt: Date
   createdBy: number | null
 }

@@ -340,6 +340,69 @@ export const deleteTemplate = async (id: string): Promise<boolean> => {
   return (result.rowCount ?? 0) > 0
 }
 
+// Team-Template junction table operations (many-to-many)
+export const getTeamTemplates = async (teamId: string): Promise<Template[]> => {
+  const result = await runQuery(
+    `SELECT t.id, t.name, t.description, t.questions, t.created_at, t.created_by
+     FROM templates t
+     INNER JOIN team_templates tt ON t.id = tt.template_id
+     WHERE tt.team_id = $1
+     ORDER BY t.name`,
+    [teamId],
+  )
+  return result.rows.map(mapTemplateRow)
+}
+
+export const addTeamTemplate = async (teamId: string, templateId: string): Promise<void> => {
+  await runQuery(
+    `INSERT INTO team_templates (team_id, template_id)
+     VALUES ($1, $2)
+     ON CONFLICT (team_id, template_id) DO NOTHING`,
+    [teamId, templateId],
+  )
+}
+
+export const removeTeamTemplate = async (teamId: string, templateId: string): Promise<void> => {
+  await runQuery(
+    `DELETE FROM team_templates
+     WHERE team_id = $1 AND template_id = $2`,
+    [teamId, templateId],
+  )
+}
+
+export const setTeamTemplates = async (teamId: string, templateIds: string[]): Promise<void> => {
+  const client = await getClient()
+  try {
+    await client.query('BEGIN')
+    
+    // Remove all existing template assignments for this team
+    await client.query('DELETE FROM team_templates WHERE team_id = $1', [teamId])
+    
+    // Add new template assignments
+    for (const templateId of templateIds) {
+      await client.query(
+        `INSERT INTO team_templates (team_id, template_id) VALUES ($1, $2)`,
+        [teamId, templateId],
+      )
+    }
+    
+    await client.query('COMMIT')
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+export const getTemplatesByTeamId = async (teamId: string): Promise<string[]> => {
+  const result = await runQuery<{ template_id: string }>(
+    `SELECT template_id FROM team_templates WHERE team_id = $1`,
+    [teamId],
+  )
+  return result.rows.map(row => row.template_id)
+}
+
 // Team operations
 export const createTeam = async (teamData: Omit<Team, 'id' | 'createdAt'>): Promise<Team> => {
   const teamId = randomUUID()

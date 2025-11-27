@@ -17,7 +17,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Users, UserPlus, Trash2, Building, FileText, Settings } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Plus, Users, UserPlus, Trash2, Building, FileText, Settings, X } from "lucide-react"
 import { type User, type Team, type ReportTemplate } from "@/lib/types"
 import { toast } from "@/hooks/use-toast"
 import { useAuthContext } from "@/components/auth-provider"
@@ -27,8 +28,12 @@ interface TeamManagementProps {
   onDataChange?: () => void
 }
 
+interface TeamWithTemplates extends Team {
+  templateIds?: string[]
+}
+
 export default function TeamManagement({ onDataChange }: TeamManagementProps) {
-  const [teams, setTeams] = useState<Team[]>([])
+  const [teams, setTeams] = useState<TeamWithTemplates[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [templates, setTemplates] = useState<ReportTemplate[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,7 +43,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
   const [newTeam, setNewTeam] = useState({ name: "", description: "" })
   const [selectedUserId, setSelectedUserId] = useState<string>("")
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("")
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
   const { telegramUser, dbUser } = useAuthContext()
 
   const debugLog = async (message: string, data?: any) => {
@@ -351,9 +356,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     if (!selectedTeam) return
 
     try {
-      // Convert "none" to null for the API
-      const templateIdToAssign = selectedTemplateId === "none" ? null : selectedTemplateId || null
-      
       const response = await fetch('/api/teams', {
         method: 'PATCH',
         headers: {
@@ -361,36 +363,46 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         },
         body: JSON.stringify({
           teamId: selectedTeam,
-          templateId: templateIdToAssign,
+          templateIds: selectedTemplateIds,
         }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to assign template')
+        throw new Error('Failed to assign templates')
       }
 
       // Refresh local data
       await fetchData()
-      setSelectedTemplateId("none")
+      setSelectedTemplateIds([])
       setIsTemplateDialogOpen(false)
 
       toast({
         title: "Success",
-        description: templateIdToAssign ? "Template assigned successfully" : "Template removed successfully",
+        description: selectedTemplateIds.length > 0 
+          ? `${selectedTemplateIds.length} template(s) assigned successfully` 
+          : "All templates removed",
         duration: 3000,
       })
 
       // Notify parent to refresh data
       onDataChange?.()
     } catch (error) {
-      console.error('Error assigning template:', error)
+      console.error('Error assigning templates:', error)
       toast({
         title: "Error",
-        description: "Failed to assign template",
+        description: "Failed to assign templates",
         variant: "destructive",
         duration: 3000,
       })
     }
+  }
+
+  const toggleTemplateSelection = (templateId: string) => {
+    setSelectedTemplateIds(prev => 
+      prev.includes(templateId)
+        ? prev.filter(id => id !== templateId)
+        : [...prev, templateId]
+    )
   }
 
   const unassignedUsers = users.filter((user) => !user.teamId && user.role !== "admin")
@@ -476,6 +488,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {teams.map((team) => {
           const teamMembers = users.filter((user) => user.teamId === team.id)
+          const teamTemplates = templates.filter(t => team.templateIds?.includes(t.id))
 
           return (
             <Card key={team.id} className="relative">
@@ -490,14 +503,17 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       <CardDescription className="line-clamp-2">
                         {team.description || "No description provided"}
                       </CardDescription>
-                      {team.templateId && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Template: {templates.find(t => t.id === team.templateId)?.name || "Unknown"}
+                      {teamTemplates.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {teamTemplates.map(t => (
+                            <Badge key={t.id} variant="outline" className="text-xs">
+                              {t.name}
+                            </Badge>
+                          ))}
                         </div>
-                      )}
-                      {!team.templateId && (
+                      ) : (
                         <div className="text-xs text-muted-foreground mt-1">
-                          No template assigned
+                          No templates assigned
                         </div>
                       )}
                     </div>
@@ -509,7 +525,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       variant="outline"
                       onClick={() => {
                         setSelectedTeam(team.id)
-                        setSelectedTemplateId(team.templateId || "none")
+                        setSelectedTemplateIds(team.templateIds || [])
                         setIsTemplateDialogOpen(true)
                       }}
                       className="h-8 w-8 p-0"
@@ -639,28 +655,46 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       {/* Template Assignment Dialog */}
       {isTemplateDialogOpen && (
         <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 border">
-            <div className="space-y-4">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 border max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
               <div>
-                <h3 className="text-lg font-semibold">Assign Report Template</h3>
-                <p className="text-sm text-muted-foreground">Choose a template for this team's reports</p>
+                <h3 className="text-lg font-semibold">Assign Report Templates</h3>
+                <p className="text-sm text-muted-foreground">Select templates for this team's reports. Employees can choose from assigned templates when submitting reports.</p>
               </div>
               
-              <div className="space-y-2">
-                <Label>Select Template</Label>
-                <Select value={selectedTemplateId || "none"} onValueChange={setSelectedTemplateId}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="No template (use default form)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No template (use default form)</SelectItem>
-                    {templates.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2 flex-1 overflow-auto">
+                <Label>Select Templates</Label>
+                <div className="space-y-2 border rounded-lg p-3">
+                  {templates.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No templates available</p>
+                  ) : (
+                    templates.map((template) => (
+                      <div 
+                        key={template.id} 
+                        className="flex items-start gap-3 p-2 hover:bg-muted/50 rounded cursor-pointer"
+                        onClick={() => toggleTemplateSelection(template.id)}
+                      >
+                        <Checkbox 
+                          checked={selectedTemplateIds.includes(template.id)}
+                          onCheckedChange={() => toggleTemplateSelection(template.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm">{template.name}</div>
+                          {template.description && (
+                            <div className="text-xs text-muted-foreground line-clamp-2">
+                              {template.description}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {selectedTemplateIds.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {selectedTemplateIds.length} template(s) selected
+                  </div>
+                )}
               </div>
               
               <div className="flex gap-2 pt-4">
@@ -671,11 +705,14 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   disabled={!selectedTeam}
                   className="flex-1"
                 >
-                  {selectedTemplateId && selectedTemplateId !== "none" ? "Assign Template" : "Remove Template"}
+                  Save Templates
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => setIsTemplateDialogOpen(false)}
+                  onClick={() => {
+                    setIsTemplateDialogOpen(false)
+                    setSelectedTemplateIds([])
+                  }}
                 >
                   Cancel
                 </Button>
