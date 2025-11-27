@@ -14,11 +14,12 @@ import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
 
 interface ReportFormProps {
   user: User
+  templateId?: string | null
   onCancel: () => void
   onSuccess: () => void
 }
 
-export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProps) {
+export default function ReportForm({ user, templateId, onCancel, onSuccess }: ReportFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
@@ -53,33 +54,34 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
       }
 
       try {
-        // Fetch team data to get template info
+        // Fetch team data
         const teamResponse = await fetch(`/api/teams?id=${user.teamId}`)
         if (teamResponse.ok) {
           const teamData = await teamResponse.json()
           setTeam(teamData.team)
+        }
 
-          // If team has a template, fetch template data
-          if (teamData.team?.templateId) {
-            const templateResponse = await fetch(`/api/templates?id=${teamData.team.templateId}`)
-            if (templateResponse.ok) {
-              const templateData = await templateResponse.json()
-              setTemplate(templateData.template)
-              
-              // Initialize form data based on template fields
-              const initialFormData: Record<string, any> = {}
-              templateData.template.fields.forEach((field: TemplateField) => {
-                initialFormData[field.id] = field.type === 'number' ? '' : ''
-              })
-              setFormData(initialFormData)
-            }
+        // If templateId prop is provided, fetch that specific template
+        if (templateId) {
+          const templateResponse = await fetch(`/api/templates?id=${templateId}`)
+          if (templateResponse.ok) {
+            const templateData = await templateResponse.json()
+            setTemplate(templateData.template)
+
+            // Initialize form data based on template fields
+            const initialFormData: Record<string, any> = {}
+            const fields = templateData.template.questions || templateData.template.fields || []
+            fields.forEach((field: TemplateField) => {
+              initialFormData[field.id] = field.type === 'number' ? '' : ''
+            })
+            setFormData(initialFormData)
           }
         }
       } catch (error) {
         console.error('Error fetching team/template data:', error)
         toast({
           title: "Warning",
-          description: "Failed to load team template. Using default form.",
+          description: "Failed to load template. Using default form.",
           variant: "default",
         })
       } finally {
@@ -88,14 +90,15 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
     }
 
     fetchTeamAndTemplate()
-  }, [user.teamId])
+  }, [user.teamId, templateId])
 
   const validateForm = () => {
     const errors: Record<string, string> = {}
-    
+
     if (template) {
-      // Validate template fields
-      template.fields.forEach((field) => {
+      // Validate template fields (support both 'questions' and 'fields' for compatibility)
+      const fields = (template as any).questions || (template as any).fields || []
+      fields.forEach((field: TemplateField) => {
         if (field.required) {
           const value = formData[field.id]
           if (!value || (typeof value === 'string' && !value.trim())) {
@@ -160,8 +163,9 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
       
       if (template) {
         // For template-based forms
-        const titleField = template.fields.find(f => f.id === 'title' || f.id === 'event_name')
-        const descriptionField = template.fields.find(f => f.id === 'description')
+        const fields = (template as any).questions || (template as any).fields || []
+        const titleField = fields.find((f: TemplateField) => f.id === 'title' || f.id === 'event_name')
+        const descriptionField = fields.find((f: TemplateField) => f.id === 'description')
         
         reportData = {
           userId: user.telegramId,
@@ -180,7 +184,7 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
         reportData = {
           userId: user.telegramId,
           teamId: user.teamId,
-          templateId: team?.templateId,
+          templateId: templateId || (team?.templateIds && team.templateIds.length > 0 ? team.templateIds[0] : null),
           title: defaultFormData.title,
           description: defaultFormData.description,
           priority: defaultFormData.priority,
@@ -399,7 +403,7 @@ export default function ReportForm({ user, onCancel, onSuccess }: ReportFormProp
           /* Template-based form */
           <Card>
             <CardContent className="space-y-4 pt-4">
-              {template.fields.map(field => renderTemplateField(field))}
+              {((template as any).questions || (template as any).fields || []).map((field: TemplateField) => renderTemplateField(field))}
             </CardContent>
           </Card>
         ) : (

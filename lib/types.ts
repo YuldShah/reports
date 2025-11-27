@@ -13,7 +13,7 @@ export interface Team {
   id: string
   name: string
   description?: string
-  templateId?: string | null
+  templateIds?: string[] // Array of template IDs (populated from junction table)
   createdAt: Date
   createdBy: number | null
 }
