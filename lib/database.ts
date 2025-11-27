@@ -343,16 +343,23 @@ export const deleteTemplate = async (id: string): Promise<boolean> => {
 // Team operations
 export const createTeam = async (teamData: Omit<Team, 'id' | 'createdAt'>): Promise<Team> => {
   const teamId = randomUUID()
-  const { name, description, templateId, createdBy } = teamData
+  const { name, description, templateIds, createdBy } = teamData
 
   const result = await runQuery(
-    `INSERT INTO teams (id, name, description, template_id, created_by)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, name, description, template_id, created_by, created_at`,
-    [teamId, name, description ?? null, templateId ?? null, createdBy ?? null],
+    `INSERT INTO teams (id, name, description, created_by)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, name, description, created_by, created_at`,
+    [teamId, name, description ?? null, createdBy ?? null],
   )
 
-  return mapTeamRow(result.rows[0])
+  // If templateIds provided, assign them to the team
+  if (templateIds && templateIds.length > 0) {
+    await assignTemplatesToTeam(teamId, templateIds)
+  }
+
+  // Fetch the complete team with templates
+  const team = await getTeamById(teamId)
+  return team!
 }
 
 export const getAllTeams = async (): Promise<Team[]> => {
