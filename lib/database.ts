@@ -25,7 +25,7 @@ export interface Team {
   id: string
   name: string
   description?: string
-  templateId?: string | null
+  templateIds?: string[] // Array of template IDs (populated from junction table)
   createdAt: Date
   createdBy: number | null
 }
@@ -107,7 +107,7 @@ const mapTeamRow = (row: any): Team => ({
   id: row.id,
   name: row.name,
   description: row.description ?? undefined,
-  templateId: row.template_id ?? null,
+  templateIds: row.template_ids ? parseJsonField<string[]>(row.template_ids, []) : [],
   createdAt: toDate(row.created_at),
   createdBy: row.created_by !== null ? toNumber(row.created_by) : null,
 })
@@ -357,9 +357,20 @@ export const createTeam = async (teamData: Omit<Team, 'id' | 'createdAt'>): Prom
 
 export const getAllTeams = async (): Promise<Team[]> => {
   const result = await runQuery(
-    `SELECT id, name, description, template_id, created_by, created_at
-     FROM teams
-     ORDER BY created_at DESC`,
+    `SELECT
+      t.id,
+      t.name,
+      t.description,
+      t.created_by,
+      t.created_at,
+      COALESCE(
+        json_agg(tt.template_id) FILTER (WHERE tt.template_id IS NOT NULL),
+        '[]'
+      ) AS template_ids
+     FROM teams t
+     LEFT JOIN team_templates tt ON t.id = tt.team_id
+     GROUP BY t.id, t.name, t.description, t.created_by, t.created_at
+     ORDER BY t.created_at DESC`,
   )
 
   return result.rows.map(mapTeamRow)
@@ -367,9 +378,20 @@ export const getAllTeams = async (): Promise<Team[]> => {
 
 export const getTeamById = async (id: string): Promise<Team | null> => {
   const result = await runQuery(
-    `SELECT id, name, description, template_id, created_by, created_at
-     FROM teams
-     WHERE id = $1`,
+    `SELECT
+      t.id,
+      t.name,
+      t.description,
+      t.created_by,
+      t.created_at,
+      COALESCE(
+        json_agg(tt.template_id) FILTER (WHERE tt.template_id IS NOT NULL),
+        '[]'
+      ) AS template_ids
+     FROM teams t
+     LEFT JOIN team_templates tt ON t.id = tt.team_id
+     WHERE t.id = $1
+     GROUP BY t.id, t.name, t.description, t.created_by, t.created_at`,
     [id],
   )
 
@@ -389,17 +411,66 @@ export const getUsersByTeam = async (teamId: string): Promise<User[]> => {
   return result.rows.map(mapUserRow)
 }
 
-export const updateTeamTemplate = async (teamId: string, templateId: string | null): Promise<Team | null> => {
+// Team-Template relationship management
+export const assignTemplatesToTeam = async (teamId: string, templateIds: string[]): Promise<void> => {
+  const client = await getClient()
+
+  try {
+    await client.query('BEGIN')
+
+    // Remove all existing template assignments for this team
+    await client.query('DELETE FROM team_templates WHERE team_id = $1', [teamId])
+
+    // Insert new template assignments
+    if (templateIds.length > 0) {
+      const values = templateIds.map((templateId, index) =>
+        `($1, $${index + 2})`
+      ).join(', ')
+
+      const params = [teamId, ...templateIds]
+      await client.query(
+        `INSERT INTO team_templates (team_id, template_id) VALUES ${values}`,
+        params
+      )
+    }
+
+    await client.query('COMMIT')
+  } catch (error) {
+    await client.query('ROLLBACK')
+    throw error
+  } finally {
+    client.release()
+  }
+}
+
+export const addTemplateToTeam = async (teamId: string, templateId: string): Promise<void> => {
+  await runQuery(
+    `INSERT INTO team_templates (team_id, template_id)
+     VALUES ($1, $2)
+     ON CONFLICT (team_id, template_id) DO NOTHING`,
+    [teamId, templateId]
+  )
+}
+
+export const removeTemplateFromTeam = async (teamId: string, templateId: string): Promise<void> => {
+  await runQuery(
+    `DELETE FROM team_templates
+     WHERE team_id = $1 AND template_id = $2`,
+    [teamId, templateId]
+  )
+}
+
+export const getTemplatesByTeam = async (teamId: string): Promise<Template[]> => {
   const result = await runQuery(
-    `UPDATE teams
-     SET template_id = $1
-     WHERE id = $2
-     RETURNING id, name, description, template_id, created_by, created_at`,
-    [templateId, teamId],
+    `SELECT t.id, t.name, t.description, t.questions, t.created_at, t.created_by
+     FROM templates t
+     INNER JOIN team_templates tt ON t.id = tt.template_id
+     WHERE tt.team_id = $1
+     ORDER BY t.name`,
+    [teamId]
   )
 
-  if (result.rows.length === 0) return null
-  return mapTeamRow(result.rows[0])
+  return result.rows.map(mapTemplateRow)
 }
 
 export const deleteTeam = async (id: string): Promise<boolean> => {

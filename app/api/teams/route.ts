@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, updateTeamTemplate } from "@/lib/database"
-import { ensureStaticTemplatesSynced, getTemplateById as getStaticTemplateById } from "@/lib/report-templates"
+import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, assignTemplatesToTeam, getTemplateById } from "@/lib/database"
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,26 +71,34 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { teamId, templateId } = body
+    const { teamId, templateIds } = body
 
     if (!teamId) {
       return NextResponse.json({ error: "Team ID is required" }, { status: 400 })
     }
 
-    await ensureStaticTemplatesSynced()
+    // Ensure templateIds is an array
+    const templateIdsArray = Array.isArray(templateIds) ? templateIds : []
 
-    let resolvedTemplateId: string | null = null
-
-    if (typeof templateId === "string" && templateId.trim().length > 0) {
-      const template = getStaticTemplateById(templateId)
-      if (!template) {
-        return NextResponse.json({ error: "Invalid template ID" }, { status: 400 })
+    // Validate all template IDs exist
+    if (templateIdsArray.length > 0) {
+      for (const templateId of templateIdsArray) {
+        const template = await getTemplateById(templateId)
+        if (!template) {
+          return NextResponse.json(
+            { error: `Invalid template ID: ${templateId}` },
+            { status: 400 }
+          )
+        }
       }
-      resolvedTemplateId = template.id
     }
 
-    const updatedTeam = await updateTeamTemplate(teamId, resolvedTemplateId)
-    
+    // Assign templates to team
+    await assignTemplatesToTeam(teamId, templateIdsArray)
+
+    // Fetch updated team
+    const updatedTeam = await getTeamById(teamId)
+
     if (!updatedTeam) {
       return NextResponse.json({ error: "Team not found" }, { status: 404 })
     }

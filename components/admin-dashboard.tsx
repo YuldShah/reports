@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, FileText, TrendingUp, ExternalLink, Zap, UserCheck, Building2 } from "lucide-react"
+import { Users, FileText, TrendingUp, ExternalLink, Zap, UserCheck, Building2, FileJson } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
 import TeamManagement from "@/components/team-management"
 import ReportsView from "@/components/reports-view"
 import UserManagement from "@/components/user-management"
 import OverviewStats from "@/components/overview-stats"
 import SheetsIntegrationStatus from "@/components/sheets-integration-status"
+import TemplateManagement from "@/components/template-management"
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -124,7 +125,7 @@ export default function AdminDashboard() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 h-auto p-1 border rounded-lg bg-muted/30">
+        <TabsList className="grid w-full grid-cols-5 h-auto p-1 border rounded-lg bg-muted/30">
           <TabsTrigger
             value="overview"
             className="flex flex-col items-center gap-1 py-2 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
@@ -145,6 +146,13 @@ export default function AdminDashboard() {
           >
             <Building2 className="w-5 h-5" />
             <span className="text-xs">Teams</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="templates"
+            className="flex flex-col items-center gap-1 py-2 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+          >
+            <FileJson className="w-5 h-5" />
+            <span className="text-xs">Templates</span>
           </TabsTrigger>
           <TabsTrigger
             value="reports"
@@ -261,6 +269,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="teams">
           <TeamManagement onDataChange={refreshData} />
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <TemplateManagement onDataChange={refreshData} />
         </TabsContent>
 
         <TabsContent value="reports">

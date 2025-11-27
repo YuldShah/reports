@@ -15,10 +15,13 @@ interface EmployeeDashboardProps {
 
 export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [showReportForm, setShowReportForm] = useState(false)
+  const [showTemplateSelection, setShowTemplateSelection] = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("overview")
   const [userReports, setUserReports] = useState<any[]>([])
   const [allReports, setAllReports] = useState<any[]>([])
   const [teams, setTeams] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const debugLog = async (message: string, data?: any) => {
@@ -40,16 +43,19 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
 
   const refreshData = async () => {
     try {
-      const [reportsRes, teamsRes] = await Promise.all([
+      const [reportsRes, teamsRes, templatesRes] = await Promise.all([
         fetch('/api/reports'),
-        fetch('/api/teams')
+        fetch('/api/teams'),
+        fetch('/api/templates')
       ])
 
       const reportsData = await reportsRes.json()
       const teamsData = await teamsRes.json()
+      const templatesData = await templatesRes.json()
 
       const fetchedReports = reportsData.reports || []
       const allTeams = teamsData.teams || teamsData || []
+      const allTemplates = templatesData.templates || []
 
       // Convert date strings to Date objects for all reports
       const reportsWithDates = fetchedReports.map((report: any) => ({
@@ -63,6 +69,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
       setAllReports(reportsWithDates)
       setUserReports(userReportsFiltered)
       setTeams(allTeams)
+      setTemplates(allTemplates)
     } catch (error) {
       console.error('Failed to refresh data:', error)
     }
@@ -72,28 +79,33 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
     async function fetchData() {
       try {
         await debugLog('Starting fetchData', { userId: user.telegramId })
-        
-        const [reportsRes, teamsRes] = await Promise.all([
+
+        const [reportsRes, teamsRes, templatesRes] = await Promise.all([
           fetch('/api/reports'),
-          fetch('/api/teams')
+          fetch('/api/teams'),
+          fetch('/api/templates')
         ])
-        
-        await debugLog('API responses received', { 
-          reportsStatus: reportsRes.status, 
-          teamsStatus: teamsRes.status 
+
+        await debugLog('API responses received', {
+          reportsStatus: reportsRes.status,
+          teamsStatus: teamsRes.status,
+          templatesStatus: templatesRes.status
         })
-        
+
         const reportsData = await reportsRes.json()
         const teamsData = await teamsRes.json()
-        
+        const templatesData = await templatesRes.json()
+
         await debugLog('Data parsed', {
           reportsCount: reportsData?.reports?.length || 0,
-          teamsCount: teamsData?.teams?.length || teamsData?.length || 0
+          teamsCount: teamsData?.teams?.length || teamsData?.length || 0,
+          templatesCount: templatesData?.templates?.length || 0
         })
 
         // Fix: Extract reports array from the response
         const fetchedReports = reportsData.reports || []
         const allTeams = teamsData.teams || teamsData || []
+        const allTemplates = templatesData.templates || []
 
         // Fix: Convert date strings to Date objects for all reports
         const reportsWithDates = fetchedReports.map((report: any) => ({
@@ -112,8 +124,9 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
         setAllReports(reportsWithDates)
         setUserReports(userReportsFiltered)
         setTeams(allTeams)
+        setTemplates(allTemplates)
         setLoading(false)
-        
+
         await debugLog('State updated successfully')
       } catch (error) {
         await debugLog('Error in fetchData', { error: error?.toString() })
@@ -144,14 +157,90 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
     )
   }
 
+  // Get templates assigned to user's team
+  const userTeamTemplates = userTeam?.templateIds
+    ? templates.filter((t: any) => userTeam.templateIds.includes(t.id))
+    : []
+
+  if (showTemplateSelection) {
+    return (
+      <div className="container mx-auto px-4 max-w-2xl">
+        <div className="space-y-6">
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowTemplateSelection(false)
+                setSelectedTemplateId(null)
+              }}
+              className="mb-4"
+            >
+              ← Back
+            </Button>
+            <h2 className="text-2xl font-bold">Select Report Template</h2>
+            <p className="text-muted-foreground">Choose a template for your report</p>
+          </div>
+
+          {userTeamTemplates.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Templates Available</h3>
+                <p className="text-muted-foreground mb-4">
+                  Your team doesn't have any templates assigned. Please contact your administrator.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {userTeamTemplates.map((template: any) => (
+                <Card
+                  key={template.id}
+                  className="cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => {
+                    setSelectedTemplateId(template.id)
+                    setShowTemplateSelection(false)
+                    setShowReportForm(true)
+                  }}
+                >
+                  <CardHeader>
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{template.name}</CardTitle>
+                        <CardDescription className="mt-1">
+                          {template.description || "No description available"}
+                        </CardDescription>
+                        <Badge variant="secondary" className="mt-2">
+                          {template.questions?.length || 0} fields
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (showReportForm) {
     return (
       <div className="container mx-auto px-4 max-w-2xl">
         <ReportForm
           user={user}
-          onCancel={() => setShowReportForm(false)}
+          templateId={selectedTemplateId}
+          onCancel={() => {
+            setShowReportForm(false)
+            setSelectedTemplateId(null)
+          }}
           onSuccess={async () => {
             setShowReportForm(false)
+            setSelectedTemplateId(null)
             await refreshData() // Refresh data instead of page reload
           }}
         />
@@ -189,7 +278,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               <CardDescription>Report issues, feedback, or updates to your team</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => setShowReportForm(true)} className="w-full sm:w-auto">
+              <Button onClick={() => setShowTemplateSelection(true)} className="w-full sm:w-auto">
                 <Plus className="w-4 h-4" />
                 Create Report
               </Button>
