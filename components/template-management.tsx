@@ -42,6 +42,9 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null)
   const [newTemplate, setNewTemplate] = useState({ name: "", description: "", questions: "[]" })
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editedTemplate, setEditedTemplate] = useState({ name: "", description: "", questions: "" })
+  const [jsonError, setJsonError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { telegramUser, dbUser } = useAuthContext()
 
@@ -74,6 +77,47 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
     }
   }
 
+  const validateQuestions = (questionsJson: string): { valid: boolean; questions?: any[]; error?: string } => {
+    try {
+      const questions = JSON.parse(questionsJson)
+
+      if (!Array.isArray(questions)) {
+        return { valid: false, error: "Questions must be an array" }
+      }
+
+      if (questions.length === 0) {
+        return { valid: false, error: "At least one question is required" }
+      }
+
+      // Validate each question has required fields
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i]
+        if (!q.id) {
+          return { valid: false, error: `Question ${i + 1}: Missing required field 'id'` }
+        }
+        if (!q.label) {
+          return { valid: false, error: `Question ${i + 1}: Missing required field 'label'` }
+        }
+        if (!q.type) {
+          return { valid: false, error: `Question ${i + 1}: Missing required field 'type'` }
+        }
+        // Valid types
+        const validTypes = ['text', 'textarea', 'number', 'email', 'tel', 'date', 'select', 'radio', 'checkbox']
+        if (!validTypes.includes(q.type)) {
+          return { valid: false, error: `Question ${i + 1}: Invalid type '${q.type}'. Must be one of: ${validTypes.join(', ')}` }
+        }
+        // If type is select, radio, or checkbox, options are required
+        if (['select', 'radio', 'checkbox'].includes(q.type) && (!q.options || !Array.isArray(q.options) || q.options.length === 0)) {
+          return { valid: false, error: `Question ${i + 1}: Field 'options' array is required for type '${q.type}'` }
+        }
+      }
+
+      return { valid: true, questions }
+    } catch (error) {
+      return { valid: false, error: error instanceof Error ? error.message : "Invalid JSON syntax" }
+    }
+  }
+
   const handleCreateTemplate = async () => {
     const actingAdminId = dbUser?.telegramId ?? telegramUser?.id
 
@@ -87,21 +131,19 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
       return
     }
 
-    let questions
-    try {
-      questions = JSON.parse(newTemplate.questions)
-      if (!Array.isArray(questions)) {
-        throw new Error("Questions must be an array")
-      }
-    } catch (error) {
+    const validation = validateQuestions(newTemplate.questions)
+    if (!validation.valid) {
+      setJsonError(validation.error || null)
       toast({
-        title: "Error",
-        description: "Invalid JSON format for questions",
+        title: "Validation Error",
+        description: validation.error,
         variant: "destructive",
-        duration: 3000,
+        duration: 5000,
       })
       return
     }
+
+    const questions = validation.questions
 
     try {
       const response = await fetch('/api/templates', {
@@ -124,6 +166,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
       const data = await response.json()
       setTemplates([...templates, { ...data.template, createdAt: new Date(data.template.createdAt) }])
       setNewTemplate({ name: "", description: "", questions: "[]" })
+      setJsonError(null)
       setIsCreateDialogOpen(false)
 
       toast({
@@ -183,6 +226,81 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
+    }
+  }
+
+  const handleUpdateTemplate = async () => {
+    if (!selectedTemplate) return
+
+    if (!editedTemplate.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Template name is required",
+        variant: "destructive",
+        duration: 3000,
+      })
+      return
+    }
+
+    const validation = validateQuestions(editedTemplate.questions)
+    if (!validation.valid) {
+      setJsonError(validation.error || null)
+      toast({
+        title: "Validation Error",
+        description: validation.error,
+        variant: "destructive",
+        duration: 5000,
+      })
+      return
+    }
+
+    const questions = validation.questions
+
+    try {
+      const response = await fetch('/api/templates', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: selectedTemplate.id,
+          name: editedTemplate.name,
+          description: editedTemplate.description,
+          questions,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update template')
+      }
+
+      const data = await response.json()
+      setTemplates(templates.map(t =>
+        t.id === selectedTemplate.id
+          ? { ...data.template, createdAt: new Date(data.template.createdAt) }
+          : t
+      ))
+
+      setJsonError(null)
+      setIsEditMode(false)
+      setIsViewDialogOpen(false)
+      setSelectedTemplate(null)
+
+      toast({
+        title: "Success",
+        description: "Template updated successfully",
+        duration: 3000,
+      })
+
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error updating template:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update template",
+        variant: "destructive",
+        duration: 3000,
+      })
     }
   }
 
@@ -296,14 +414,20 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 <Label htmlFor="template-questions">Questions (JSON Array)*</Label>
                 <Textarea
                   id="template-questions"
-                  placeholder='[{"id": "field1", "label": "Question 1", "type": "text", "required": true}]'
+                  placeholder={`[\n  {\n    "id": "field1",\n    "label": "Question 1",\n    "type": "text",\n    "required": true,\n    "placeholder": "Enter text..."\n  },\n  {\n    "id": "field2",\n    "label": "Question 2",\n    "type": "select",\n    "required": true,\n    "options": ["Option 1", "Option 2"]\n  }\n]`}
                   value={newTemplate.questions}
-                  onChange={(e) => setNewTemplate({ ...newTemplate, questions: e.target.value })}
-                  rows={10}
-                  className="font-mono text-sm"
+                  onChange={(e) => {
+                    setNewTemplate({ ...newTemplate, questions: e.target.value })
+                    setJsonError(null)
+                  }}
+                  rows={12}
+                  className={`font-mono text-sm ${jsonError ? 'border-destructive' : ''}`}
                 />
+                {jsonError && (
+                  <p className="text-xs text-destructive mt-1">{jsonError}</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Enter questions as a JSON array. Each question should have: id, label, type, required
+                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox. Fields with options (select/radio/checkbox) require an "options" array.
                 </p>
               </div>
 
@@ -315,6 +439,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                   variant="outline"
                   onClick={() => {
                     setNewTemplate({ name: "", description: "", questions: "[]" })
+                    setJsonError(null)
                     setIsCreateDialogOpen(false)
                   }}
                 >
@@ -358,6 +483,13 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                   variant="outline"
                   onClick={() => {
                     setSelectedTemplate(template)
+                    setEditedTemplate({
+                      name: template.name,
+                      description: template.description || "",
+                      questions: JSON.stringify(template.questions, null, 2)
+                    })
+                    setIsEditMode(false)
+                    setJsonError(null)
                     setIsViewDialogOpen(true)
                   }}
                   className="flex-1"
@@ -396,21 +528,108 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
         </Card>
       )}
 
-      {/* View Template Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+      {/* View/Edit Template Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
+        setIsViewDialogOpen(open)
+        if (!open) {
+          setIsEditMode(false)
+          setJsonError(null)
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedTemplate?.name}</DialogTitle>
-            <DialogDescription>{selectedTemplate?.description}</DialogDescription>
+            <DialogTitle>{isEditMode ? 'Edit Template' : selectedTemplate?.name}</DialogTitle>
+            <DialogDescription>
+              {isEditMode ? 'Update template details and questions' : selectedTemplate?.description}
+            </DialogDescription>
           </DialogHeader>
           {selectedTemplate && (
             <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Questions ({selectedTemplate.questions.length}):</h4>
-                <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-                  {JSON.stringify(selectedTemplate.questions, null, 2)}
-                </pre>
-              </div>
+              {isEditMode ? (
+                <>
+                  <div>
+                    <Label htmlFor="edit-template-name">Template Name*</Label>
+                    <Input
+                      id="edit-template-name"
+                      value={editedTemplate.name}
+                      onChange={(e) => setEditedTemplate({ ...editedTemplate, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-template-description">Description</Label>
+                    <Textarea
+                      id="edit-template-description"
+                      value={editedTemplate.description}
+                      onChange={(e) => setEditedTemplate({ ...editedTemplate, description: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-template-questions">Questions (JSON Array)*</Label>
+                    <Textarea
+                      id="edit-template-questions"
+                      value={editedTemplate.questions}
+                      onChange={(e) => {
+                        setEditedTemplate({ ...editedTemplate, questions: e.target.value })
+                        setJsonError(null)
+                      }}
+                      rows={15}
+                      className={`font-mono text-sm ${jsonError ? 'border-destructive' : ''}`}
+                    />
+                    {jsonError && (
+                      <p className="text-xs text-destructive mt-1">{jsonError}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button onClick={handleUpdateTemplate} className="flex-1">
+                      Save Changes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditMode(false)
+                        setJsonError(null)
+                        setEditedTemplate({
+                          name: selectedTemplate.name,
+                          description: selectedTemplate.description || "",
+                          questions: JSON.stringify(selectedTemplate.questions, null, 2)
+                        })
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <h4 className="font-medium mb-2">Questions ({selectedTemplate.questions.length}):</h4>
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
+                      {JSON.stringify(selectedTemplate.questions, null, 2)}
+                    </pre>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => setIsEditMode(true)} className="flex-1">
+                      Edit Template
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsViewDialogOpen(false)
+                        setSelectedTemplate(null)
+                      }}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </DialogContent>
