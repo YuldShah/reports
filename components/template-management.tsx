@@ -16,7 +16,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Plus, FileText, Trash2, Upload, Eye } from "lucide-react"
+import { Plus, FileText, Trash2, Upload, Eye, FileJson } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useAuthContext } from "@/components/auth-provider"
 
@@ -341,6 +341,18 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
   if (loading) {
     return (
       <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Template Management</h2>
+            <p className="text-sm text-muted-foreground">Create, view, and delete report templates</p>
+          </div>
+          <Button className="bg-primary hover:bg-primary/90" disabled>
+            <Plus className="w-4 h-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
+
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
         </div>
@@ -634,12 +646,8 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                       </div>
                       <div className="relative bg-slate-950 rounded-lg overflow-hidden border border-slate-800">
                         <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center gap-2">
-                          <div className="flex gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                          </div>
-                          <span className="text-xs text-slate-400 ml-2">template.json</span>
+                          <FileJson className="w-4 h-4 text-slate-400" />
+                          <span className="text-xs text-slate-400">JSON</span>
                         </div>
                         <div className="p-4 overflow-x-auto">
                           <pre className="text-sm text-slate-100 whitespace-pre-wrap break-words font-mono leading-relaxed">
