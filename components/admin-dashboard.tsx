@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Users, FileText, TrendingUp, ExternalLink, Zap, UserCheck, Building2, FileJson } from "lucide-react"
+import { Users, FileText, TrendingUp, ExternalLink, Zap, UserCheck, Building2, FileJson, Eye } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
 import TeamManagement from "@/components/team-management"
 import ReportsView from "@/components/reports-view"
@@ -13,6 +13,7 @@ import UserManagement from "@/components/user-management"
 import OverviewStats from "@/components/overview-stats"
 import SheetsIntegrationStatus from "@/components/sheets-integration-status"
 import TemplateManagement from "@/components/template-management"
+import ReportDetails from "@/components/report-details"
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -20,6 +21,7 @@ export default function AdminDashboard() {
   const [teams, setTeams] = useState<Team[]>([])
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,6 +115,15 @@ export default function AdminDashboard() {
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
         </div>
+      </div>
+    )
+  }
+
+  // Show report details if one is selected
+  if (selectedReportId) {
+    return (
+      <div className="container mx-auto px-4 max-w-4xl">
+        <ReportDetails reportId={selectedReportId} onBack={() => setSelectedReportId(null)} />
       </div>
     )
   }
@@ -250,7 +261,16 @@ export default function AdminDashboard() {
                           {report.createdAt.toLocaleDateString()}
                         </div>
                       </div>
-                      <Badge variant="outline">{report.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{report.status}</Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedReportId(report.id)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   )
                 })}
