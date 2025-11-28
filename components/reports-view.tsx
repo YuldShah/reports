@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText, Eye } from "lucide-react"
+import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
 import ReportDetails from "@/components/report-details"
 
@@ -20,6 +20,8 @@ export default function ReportsView() {
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [sheetConfigured, setSheetConfigured] = useState(false)
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   useEffect(() => {
     fetchData()
@@ -93,6 +95,27 @@ export default function ReportsView() {
       return matchesSearch && matchesTeam
     })
   }, [reports, searchTerm, teamFilter])
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, teamFilter])
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredReports.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedReports = filteredReports.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value))
+    setCurrentPage(1)
+  }
 
   if (loading) {
     return (
@@ -179,9 +202,30 @@ export default function ReportsView() {
         </CardContent>
       </Card>
 
+      {/* Items per page selector */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Show</span>
+          <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+            <SelectTrigger className="w-20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">per page</span>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredReports.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredReports.length)} of {filteredReports.length} reports
+        </div>
+      </div>
+
       {/* Reports List */}
       <div className="space-y-4">
-        {filteredReports.length === 0 ? (
+        {paginatedReports.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -194,7 +238,7 @@ export default function ReportsView() {
             </CardContent>
           </Card>
         ) : (
-          filteredReports.map((report) => {
+          paginatedReports.map((report) => {
             const user = users.find((u) => u.telegramId === report.userId)
             const team = teams.find((t) => t.id === report.teamId)
 
@@ -243,12 +287,61 @@ export default function ReportsView() {
         )}
       </div>
 
-      {/* Summary */}
-      {filteredReports.length > 0 && (
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
         <Card>
           <CardContent className="pt-6">
-            <div className="text-center text-sm text-muted-foreground">
-              Showing {filteredReports.length} of {reports.length} reports
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  // Show first page, last page, current page, and pages around current
+                  let pageNumber: number
+                  if (totalPages <= 5) {
+                    pageNumber = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + i
+                  } else {
+                    pageNumber = currentPage - 2 + i
+                  }
+
+                  return (
+                    <Button
+                      key={pageNumber}
+                      variant={currentPage === pageNumber ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNumber)}
+                      className="w-10"
+                    >
+                      {pageNumber}
+                    </Button>
+                  )
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="text-center text-sm text-muted-foreground mt-4">
+              Page {currentPage} of {totalPages}
             </div>
           </CardContent>
         </Card>

@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, FileText, TrendingUp, Calendar, Users, Eye } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Plus, FileText, TrendingUp, Calendar, Users, Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import ReportForm from "@/components/report-form"
 import ReportDetails from "@/components/report-details"
 import type { User } from "@/lib/types"
@@ -25,6 +26,8 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [teams, setTeams] = useState<any[]>([])
   const [templates, setTemplates] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
 
   const debugLog = async (message: string, data?: any) => {
     try {
@@ -149,6 +152,22 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const stats = {
     totalReports: userReports.length,
     teamReports: teamReports.length,
+  }
+
+  // Pagination calculations for My Reports tab
+  const totalPages = Math.ceil(userReports.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedReports = userReports.slice(startIndex, endIndex)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value))
+    setCurrentPage(1)
   }
 
   if (loading) {
@@ -383,6 +402,29 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             </div>
           </div>
 
+          {/* Items per page selector */}
+          {userReports.length > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show</span>
+                <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">per page</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Showing {startIndex + 1}-{Math.min(endIndex, userReports.length)} of {userReports.length} reports
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             {userReports.length === 0 ? (
               <Card className="border border-white/20">
@@ -397,7 +439,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                 </CardContent>
               </Card>
             ) : (
-              userReports.map((report) => (
+              paginatedReports.map((report) => (
                 <Card key={report.id} className="border border-white/20 hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -451,6 +493,66 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               ))
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      // Show first page, last page, current page, and pages around current
+                      let pageNumber: number
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i
+                      } else {
+                        pageNumber = currentPage - 2 + i
+                      }
+
+                      return (
+                        <Button
+                          key={pageNumber}
+                          variant={currentPage === pageNumber ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNumber)}
+                          className="w-10"
+                        >
+                          {pageNumber}
+                        </Button>
+                      )
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  Page {currentPage} of {totalPages}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
