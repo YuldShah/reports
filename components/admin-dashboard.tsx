@@ -261,16 +261,13 @@ export default function AdminDashboard() {
                           {report.createdAt.toLocaleDateString()}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{report.status}</Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedReportId(report.id)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedReportId(report.id)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
                     </div>
                   )
                 })}
