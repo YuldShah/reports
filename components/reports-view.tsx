@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText, Eye, ChevronLeft, ChevronRight, FileJson } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
 import ReportDetails from "@/components/report-details"
 
@@ -16,6 +16,7 @@ export default function ReportsView() {
   const [reports, setReports] = useState<Report[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [sheetConfigured, setSheetConfigured] = useState(false)
@@ -59,6 +60,15 @@ export default function ReportsView() {
         createdAt: new Date(team.createdAt)
       }))
       setTeams(teamsWithDates)
+
+      // Fetch templates
+      const templatesResponse = await fetch('/api/templates')
+      const templatesData = await templatesResponse.json()
+      const templatesWithDates = (templatesData.templates || []).map((template: any) => ({
+        ...template,
+        createdAt: new Date(template.createdAt)
+      }))
+      setTemplates(templatesWithDates)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -241,6 +251,7 @@ export default function ReportsView() {
           paginatedReports.map((report) => {
             const user = users.find((u) => u.telegramId === report.userId)
             const team = teams.find((t) => t.id === report.teamId)
+            const template = templates.find((t) => t.id === report.templateId)
 
             return (
               <Card key={report.id} className="hover:shadow-md transition-shadow">
@@ -249,6 +260,12 @@ export default function ReportsView() {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{report.title}</CardTitle>
                       <CardDescription className="line-clamp-2">{report.description}</CardDescription>
+                      {template && (
+                        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                          <FileJson className="w-3 h-3" />
+                          <span>{template.name}</span>
+                        </div>
+                      )}
                     </div>
                     <Button
                       variant="outline"
