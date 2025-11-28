@@ -649,7 +649,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                           <FileJson className="w-4 h-4 text-slate-400" />
                           <span className="text-xs text-slate-400">JSON</span>
                         </div>
-                        <div className="p-4 overflow-x-auto">
+                        <div className="p-4">
                           <div className="flex gap-4">
                             <div className="flex flex-col text-right text-slate-500 select-none font-mono text-sm leading-relaxed pt-[2px] shrink-0">
                               {JSON.stringify({
@@ -657,10 +657,10 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                                 description: selectedTemplate.description || "",
                                 questions: selectedTemplate.questions
                               }, null, 2).split('\n').map((_, index) => (
-                                <div key={index} className="whitespace-nowrap">{index + 1}</div>
+                                <div key={index}>{index + 1}</div>
                               ))}
                             </div>
-                            <pre className="text-sm text-slate-100 whitespace-pre font-mono leading-relaxed flex-1 overflow-x-auto">
+                            <pre className="text-sm text-slate-100 whitespace-pre-wrap break-all font-mono leading-relaxed flex-1 min-w-0">
                               <code>{JSON.stringify({
                                 name: selectedTemplate.name,
                                 description: selectedTemplate.description || "",
