@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, FileText, TrendingUp, Calendar, Users } from "lucide-react"
+import { Plus, FileText, TrendingUp, Calendar, Users, Eye } from "lucide-react"
 import ReportForm from "@/components/report-form"
+import ReportDetails from "@/components/report-details"
 import type { User } from "@/lib/types"
 
 interface EmployeeDashboardProps {
@@ -17,6 +18,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [showReportForm, setShowReportForm] = useState(false)
   const [showTemplateSelection, setShowTemplateSelection] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("overview")
   const [userReports, setUserReports] = useState<any[]>([])
   const [allReports, setAllReports] = useState<any[]>([])
@@ -248,6 +250,15 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
     )
   }
 
+  // Show report details if one is selected
+  if (selectedReportId) {
+    return (
+      <div className="container mx-auto px-4 max-w-4xl">
+        <ReportDetails reportId={selectedReportId} onBack={() => setSelectedReportId(null)} />
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 max-w-4xl">
       <div className="mb-6">
@@ -343,7 +354,16 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                         {report.category} • {report.createdAt.toLocaleDateString()}
                       </div>
                     </div>
-                    <Badge variant="outline">{report.status}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{report.status}</Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedReportId(report.id)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
 
@@ -402,19 +422,29 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {report.createdAt.toLocaleDateString()}
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {report.createdAt.toLocaleDateString()}
+                        </div>
+                        {report.category && (
+                          <Badge variant="outline" className="text-xs">
+                            {report.category}
+                          </Badge>
+                        )}
+                        {report.updatedAt.getTime() !== report.createdAt.getTime() && (
+                          <div className="text-xs">Updated: {report.updatedAt.toLocaleDateString()}</div>
+                        )}
                       </div>
-                      {report.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {report.category}
-                        </Badge>
-                      )}
-                      {report.updatedAt.getTime() !== report.createdAt.getTime() && (
-                        <div className="text-xs">Updated: {report.updatedAt.toLocaleDateString()}</div>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedReportId(report.id)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText } from "lucide-react"
+import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText, Eye } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
+import ReportDetails from "@/components/report-details"
 
 export default function ReportsView() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -18,6 +19,7 @@ export default function ReportsView() {
   const [loading, setLoading] = useState(true)
   const [sheetUrl, setSheetUrl] = useState<string | null>(null)
   const [sheetConfigured, setSheetConfigured] = useState(false)
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -106,6 +108,11 @@ export default function ReportsView() {
         </div>
       </div>
     )
+  }
+
+  // Show report details if one is selected
+  if (selectedReportId) {
+    return <ReportDetails reportId={selectedReportId} onBack={() => setSelectedReportId(null)} />
   }
 
   return (
@@ -199,6 +206,14 @@ export default function ReportsView() {
                       <CardTitle className="text-lg mb-2">{report.title}</CardTitle>
                       <CardDescription className="line-clamp-2">{report.description}</CardDescription>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedReportId(report.id)}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
