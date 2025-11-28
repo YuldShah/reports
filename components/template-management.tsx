@@ -650,13 +650,24 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                           <span className="text-xs text-slate-400">JSON</span>
                         </div>
                         <div className="p-4 overflow-x-auto">
-                          <pre className="text-sm text-slate-100 whitespace-pre-wrap break-words font-mono leading-relaxed">
-                            <code>{JSON.stringify({
-                              name: selectedTemplate.name,
-                              description: selectedTemplate.description || "",
-                              questions: selectedTemplate.questions
-                            }, null, 2)}</code>
-                          </pre>
+                          <div className="flex gap-4">
+                            <div className="flex flex-col text-right text-slate-500 select-none font-mono text-sm leading-relaxed pt-[2px]">
+                              {JSON.stringify({
+                                name: selectedTemplate.name,
+                                description: selectedTemplate.description || "",
+                                questions: selectedTemplate.questions
+                              }, null, 2).split('\n').map((_, index) => (
+                                <div key={index}>{index + 1}</div>
+                              ))}
+                            </div>
+                            <pre className="text-sm text-slate-100 whitespace-pre-wrap break-words font-mono leading-relaxed flex-1">
+                              <code>{JSON.stringify({
+                                name: selectedTemplate.name,
+                                description: selectedTemplate.description || "",
+                                questions: selectedTemplate.questions
+                              }, null, 2)}</code>
+                            </pre>
+                          </div>
                         </div>
                       </div>
                     </div>
