@@ -441,13 +441,13 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             ) : (
               paginatedReports.map((report) => (
                 <Card key={report.id} className="border border-white/20 hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <CardTitle className="text-lg mb-2">{report.title}</CardTitle>
-                        <CardDescription className="line-clamp-2">{report.description}</CardDescription>
+                        <CardTitle className="text-lg leading-tight mb-1">{report.title}</CardTitle>
+                        <CardDescription className="line-clamp-2 text-sm">{report.description}</CardDescription>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex gap-2 shrink-0">
                         <Badge
                           variant={
                             report.priority === "high"
@@ -463,7 +463,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-0 pb-4">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">

@@ -255,13 +255,13 @@ export default function ReportsView() {
 
             return (
               <Card key={report.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg mb-2">{report.title}</CardTitle>
-                      <CardDescription className="line-clamp-2">{report.description}</CardDescription>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-1">
+                      <CardTitle className="text-lg leading-tight">{report.title}</CardTitle>
+                      <CardDescription className="line-clamp-2 text-sm">{report.description}</CardDescription>
                       {template && (
-                        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground pt-0.5">
                           <FileJson className="w-3 h-3" />
                           <span>{template.name}</span>
                         </div>
@@ -271,13 +271,14 @@ export default function ReportsView() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedReportId(report.id)}
+                      className="shrink-0"
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       View
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0 pb-4">
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <UserIcon className="w-4 h-4" />
