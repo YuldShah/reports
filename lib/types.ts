@@ -22,12 +22,14 @@ export interface Report {
   id: string
   userId: number
   teamId: string
+  templateId: string
   title: string
   description: string
   priority: "low" | "medium" | "high"
   status: "pending" | "in-progress" | "completed"
   category: string
   attachments?: string[]
+  answers: Record<string, any>
   templateData?: Record<string, any>
   createdAt: Date
   updatedAt: Date
