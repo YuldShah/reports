@@ -608,13 +608,52 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 </>
               ) : (
                 <>
-                  <div>
-                    <h4 className="font-medium mb-2">Questions ({selectedTemplate.questions.length}):</h4>
-                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-                      {JSON.stringify(selectedTemplate.questions, null, 2)}
-                    </pre>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Name:</span>
+                        <p className="font-medium mt-1">{selectedTemplate.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Fields:</span>
+                        <p className="font-medium mt-1">{selectedTemplate.questions.length}</p>
+                      </div>
+                    </div>
+
+                    {selectedTemplate.description && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Description:</span>
+                        <p className="mt-1">{selectedTemplate.description}</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-medium">Template JSON</h4>
+                        <Badge variant="secondary" className="text-xs">Read-only</Badge>
+                      </div>
+                      <div className="relative bg-slate-950 rounded-lg overflow-hidden border border-slate-800">
+                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center gap-2">
+                          <div className="flex gap-1.5">
+                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          </div>
+                          <span className="text-xs text-slate-400 ml-2">template.json</span>
+                        </div>
+                        <div className="p-4 overflow-x-auto">
+                          <pre className="text-sm text-slate-100 whitespace-pre-wrap break-words font-mono leading-relaxed">
+                            <code>{JSON.stringify({
+                              name: selectedTemplate.name,
+                              description: selectedTemplate.description || "",
+                              questions: selectedTemplate.questions
+                            }, null, 2)}</code>
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 pt-2">
                     <Button onClick={() => setIsEditMode(true)} className="flex-1">
                       Edit Template
                     </Button>
