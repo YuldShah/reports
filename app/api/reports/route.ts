@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllReports, createReport, updateReport, getReportsByUser, getReportsByTeam, getTeamById, getTemplateById as getDbTemplateById, getUserByTelegramId } from "@/lib/database"
-import { ensureStaticTemplatesSynced, getTemplateById as getStaticTemplateById } from "@/lib/report-templates"
+import { getAllReports, createReport, updateReport, getReportsByUser, getReportsByTeam, getTeamById, getTemplateById, getUserByTelegramId } from "@/lib/database"
 import { appendToGoogleSheet } from "@/lib/google-sheets"
 
 export async function GET(request: NextRequest) {
@@ -29,8 +28,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { userId, teamId, templateId, title, answers, templateData } = body
-
-    await ensureStaticTemplatesSynced()
 
     if (!userId || !teamId || !title) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -68,9 +65,7 @@ export async function POST(request: NextRequest) {
       try {
         // Get related data for Google Sheets
         const user = await getUserByTelegramId(userId)
-        const dbTemplate = await getDbTemplateById(resolvedTemplateId)
-        const staticTemplate = getStaticTemplateById(resolvedTemplateId)
-        const template = dbTemplate ?? staticTemplate
+        const template = await getTemplateById(resolvedTemplateId)
 
         if (user && team && template) {
           // Format questions and answers for Google Sheets
@@ -127,7 +122,7 @@ export async function POST(request: NextRequest) {
           }
 
           await appendToGoogleSheet({
-            templateKey: staticTemplate?.key ?? resolvedTemplateId,
+            templateKey: resolvedTemplateId,
             templateName: template.name,
           }, sheetData)
         }
