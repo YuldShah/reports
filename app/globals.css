@@ -98,6 +98,30 @@
   * {
     @apply border-border outline-ring/50;
   }
+  
+  /* Prevent layout shift when dialogs/modals/selects open */
+  html {
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
+  
+  /* Override Radix UI's scroll lock padding compensation */
+  body {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  body[data-scroll-locked] {
+    overflow: hidden;
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  /* Prevent any element from getting padding-right compensation */
+  [data-radix-scroll-body-hidden] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;

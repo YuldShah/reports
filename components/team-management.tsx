@@ -471,45 +471,27 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       </div>
 
       {/* Teams Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {teams.map((team) => {
           const teamMembers = users.filter((user) => user.teamId === team.id)
 
           return (
             <Card key={team.id} className="relative">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Building className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{team.name}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {team.description || "No description provided"}
-                      </CardDescription>
-                      {team.templateIds && team.templateIds.length > 0 && (
-                        <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
-                          <span>Templates:</span>
-                          {team.templateIds.map(tid => {
-                            const template = templates.find(t => t.id === tid)
-                            return template ? (
-                              <Badge key={tid} variant="outline" className="text-xs">
-                                {template.name}
-                              </Badge>
-                            ) : null
-                          })}
-                        </div>
-                      )}
-                      {(!team.templateIds || team.templateIds.length === 0) && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          No templates assigned
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{teamMembers.length} members</Badge>
+              <CardHeader className="pb-3">
+                {/* Team name */}
+                <CardTitle className="text-lg leading-tight">{team.name}</CardTitle>
+                
+                {/* Description */}
+                <CardDescription className="line-clamp-2 mt-1">
+                  {team.description || "No description..."}
+                </CardDescription>
+                
+                {/* Stats + Actions row */}
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-muted-foreground">
+                    {teamMembers.length} members
+                  </span>
+                  <div className="flex items-center gap-1">
                     <Button
                       size="sm"
                       variant="outline"
@@ -518,20 +500,39 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                         setSelectedTemplateIds(team.templateIds || [])
                         setIsTemplateDialogOpen(true)
                       }}
-                      className="h-8 w-8 p-0"
+                      className="h-7 w-7 p-0"
                       disabled={loading}
                     >
-                      <Settings className="w-3 h-3" />
+                      <Settings className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleDeleteTeam(team.id, team.name)}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
+                </div>
+                
+                {/* Templates section */}
+                <div className="mt-2">
+                  <span className="text-xs text-muted-foreground">Templates:</span>
+                  {team.templateIds && team.templateIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {team.templateIds.map(tid => {
+                        const template = templates.find(t => t.id === tid)
+                        return template ? (
+                          <Badge key={tid} variant="outline" className="text-xs">
+                            {template.name}
+                          </Badge>
+                        ) : null
+                      })}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground ml-1">None assigned</span>
+                  )}
                 </div>
               </CardHeader>
 
@@ -597,18 +598,18 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   <div className="space-y-2">
                     {teamMembers.length > 0 ? (
                       teamMembers.map((member: User) => (
-                        <div key={member.telegramId} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="w-8 h-8">
+                        <div key={member.telegramId} className="flex items-center justify-between p-2 bg-muted/50 rounded gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Avatar className="w-8 h-8 shrink-0">
                               <AvatarImage src={member.photoUrl || "/placeholder.svg"} />
                               <AvatarFallback>{member.firstName.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <div>
-                              <div className="text-sm font-medium">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium truncate">
                                 {member.firstName} {member.lastName}
                               </div>
                               {member.username && (
-                                <div className="text-xs text-muted-foreground">@{member.username}</div>
+                                <div className="text-xs text-muted-foreground truncate">@{member.username}</div>
                               )}
                             </div>
                           </div>
@@ -616,7 +617,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                             size="sm"
                             variant="outline"
                             onClick={() => handleRemoveMember(member.telegramId)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive shrink-0"
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
@@ -630,10 +631,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   </div>
                 </div>
 
-                {/* Team Stats */}
+                {/* Team Footer */}
                 <div className="pt-3 border-t">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">Created {team.createdAt.toLocaleDateString()}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Created {team.createdAt.toLocaleDateString()}
                   </div>
                 </div>
               </CardContent>
