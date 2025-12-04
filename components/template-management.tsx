@@ -16,7 +16,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Plus, FileText, Trash2, Upload, Eye, FileJson } from "lucide-react"
+import { Plus, FileText, Trash2, Upload, Eye, FileJson, Copy, Check } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useAuthContext } from "@/components/auth-provider"
 
@@ -45,6 +45,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
   const [isEditMode, setIsEditMode] = useState(false)
   const [editedTemplate, setEditedTemplate] = useState({ name: "", description: "", questions: "" })
   const [jsonError, setJsonError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { telegramUser, dbUser } = useAuthContext()
 
@@ -645,20 +646,49 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                         <Badge variant="secondary" className="text-xs">Read-only</Badge>
                       </div>
                       <div className="relative bg-slate-950 rounded-lg overflow-hidden border border-slate-800">
-                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center gap-2">
-                          <FileJson className="w-4 h-4 text-slate-400" />
-                          <span className="text-xs text-slate-400">JSON</span>
+                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileJson className="w-4 h-4 text-slate-400" />
+                            <span className="text-xs text-slate-400">JSON</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                            onClick={() => {
+                              const jsonContent = JSON.stringify({
+                                name: selectedTemplate.name,
+                                description: selectedTemplate.description || "",
+                                questions: selectedTemplate.questions
+                              }, null, 2)
+                              navigator.clipboard.writeText(jsonContent)
+                              setCopied(true)
+                              setTimeout(() => setCopied(false), 2000)
+                              toast({
+                                title: "Copied!",
+                                description: "JSON copied to clipboard",
+                                duration: 2000,
+                              })
+                            }}
+                          >
+                            {copied ? (
+                              <Check className="w-3.5 h-3.5 mr-1" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5 mr-1" />
+                            )}
+                            <span className="text-xs">{copied ? 'Copied' : 'Copy'}</span>
+                          </Button>
                         </div>
-                        <div className="p-4 overflow-x-auto">
-                          <pre className="text-sm text-slate-100 font-mono leading-relaxed min-w-max">
+                        <div className="p-4 overflow-y-auto max-h-[50vh]">
+                          <pre className="text-sm text-slate-100 font-mono leading-relaxed">
                             <code>{JSON.stringify({
                               name: selectedTemplate.name,
                               description: selectedTemplate.description || "",
                               questions: selectedTemplate.questions
                             }, null, 2).split('\n').map((line, index) => (
                               <div key={index} className="flex">
-                                <span className="text-slate-500 select-none text-right pr-4 w-12 shrink-0">{index + 1}</span>
-                                <span className="whitespace-pre-wrap break-words flex-1">{line}</span>
+                                <span className="text-slate-500 select-none text-right pr-4 w-8 shrink-0 inline-block">{index + 1}</span>
+                                <span className="whitespace-pre-wrap break-all flex-1">{line}</span>
                               </div>
                             ))}</code>
                           </pre>
