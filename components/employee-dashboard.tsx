@@ -208,7 +208,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">No Templates Available</h3>
                 <p className="text-muted-foreground mb-4">
-                  Your team doesn't have any templates assigned. Please contact your administrator.
+                  Your team doesn&apos;t have any templates assigned. Please contact your administrator.
                 </p>
               </CardContent>
             </Card>
@@ -498,29 +498,30 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
           {totalPages > 1 && (
             <Card>
               <CardContent className="pt-6">
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-1 sm:gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
+                    className="px-2 sm:px-3"
                   >
                     <ChevronLeft className="w-4 h-4" />
-                    Previous
+                    <span className="hidden sm:inline">Previous</span>
                   </Button>
 
                   <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                      // Show first page, last page, current page, and pages around current
+                    {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
+                      // Show 3 pages on mobile for compact display
                       let pageNumber: number
-                      if (totalPages <= 5) {
+                      if (totalPages <= 3) {
                         pageNumber = i + 1
-                      } else if (currentPage <= 3) {
+                      } else if (currentPage <= 2) {
                         pageNumber = i + 1
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNumber = totalPages - 4 + i
+                      } else if (currentPage >= totalPages - 1) {
+                        pageNumber = totalPages - 2 + i
                       } else {
-                        pageNumber = currentPage - 2 + i
+                        pageNumber = currentPage - 1 + i
                       }
 
                       return (
@@ -529,7 +530,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                           variant={currentPage === pageNumber ? "default" : "outline"}
                           size="sm"
                           onClick={() => handlePageChange(pageNumber)}
-                          className="w-10"
+                          className="w-8 sm:w-10 px-0"
                         >
                           {pageNumber}
                         </Button>
@@ -542,8 +543,9 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                     size="sm"
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
+                    className="px-2 sm:px-3"
                   >
-                    Next
+                    <span className="hidden sm:inline">Next</span>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>

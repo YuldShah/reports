@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DatePicker } from "@/components/ui/date-picker"
 import { ArrowLeft, Send, AlertCircle, FileText } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
@@ -292,12 +293,11 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         )}
         
         {field.type === 'date' && (
-          <Input
-            id={field.id}
-            type="date"
+          <DatePicker
             value={value}
-            onChange={(e) => handleFieldChange(e.target.value)}
-            className={hasError ? "border-destructive" : ""}
+            onChange={handleFieldChange}
+            placeholder={field.placeholder || "Sanani tanlang"}
+            hasError={hasError}
           />
         )}
 

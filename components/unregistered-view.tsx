@@ -19,7 +19,7 @@ export default function UnregisteredView() {
             </svg>
           </div>
           <CardTitle className="text-xl">Not Registered</CardTitle>
-          <CardDescription>You're not registered in the system yet</CardDescription>
+          <CardDescription>You&apos;re not registered in the system yet</CardDescription>
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-sm text-muted-foreground">

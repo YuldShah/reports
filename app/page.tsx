@@ -33,7 +33,7 @@ export default function HomePage() {
 
   const headerPaddingTop = shouldShowLogo
     ? "calc(6px + var(--tg-safe-area-inset-top, 0px))"
-    : "var(--tg-safe-area-inset-top, 0px)"
+    : "calc(8px + var(--tg-safe-area-inset-top, 0px))"
   const contentPaddingTop = shouldShowLogo ? "calc(9rem + var(--tg-safe-area-inset-top, 0px))" : "calc(6rem + var(--tg-safe-area-inset-top, 0px))" 
 
   return (

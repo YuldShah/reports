@@ -440,7 +440,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                   <p className="text-xs text-destructive mt-1">{jsonError}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox. Fields with options (select/radio/checkbox) require an "options" array.
+                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox. Fields with options (select/radio/checkbox) require an &quot;options&quot; array.
                 </p>
               </div>
 
@@ -622,27 +622,13 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               ) : (
                 <>
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Name:</span>
-                        <p className="font-medium mt-1">{selectedTemplate.name}</p>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Fields:</span>
-                        <p className="font-medium mt-1">{selectedTemplate.questions.length}</p>
-                      </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <Badge variant="secondary">{selectedTemplate.questions.length} fields</Badge>
                     </div>
-
-                    {selectedTemplate.description && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Description:</span>
-                        <p className="mt-1">{selectedTemplate.description}</p>
-                      </div>
-                    )}
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-medium">Template JSON</h4>
+                        <h4 className="text-sm font-medium">Questions JSON</h4>
                         <Badge variant="secondary" className="text-xs">Read-only</Badge>
                       </div>
                       <div className="relative bg-slate-950 rounded-lg overflow-hidden border border-slate-800">
@@ -656,11 +642,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                             size="sm"
                             className="h-7 px-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
                             onClick={() => {
-                              const jsonContent = JSON.stringify({
-                                name: selectedTemplate.name,
-                                description: selectedTemplate.description || "",
-                                questions: selectedTemplate.questions
-                              }, null, 2)
+                              const jsonContent = JSON.stringify(selectedTemplate.questions, null, 2)
                               navigator.clipboard.writeText(jsonContent)
                               setCopied(true)
                               setTimeout(() => setCopied(false), 2000)
@@ -681,11 +663,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                         </div>
                         <div className="p-4 overflow-y-auto max-h-[50vh]">
                           <pre className="text-sm text-slate-100 font-mono leading-relaxed">
-                            <code>{JSON.stringify({
-                              name: selectedTemplate.name,
-                              description: selectedTemplate.description || "",
-                              questions: selectedTemplate.questions
-                            }, null, 2).split('\n').map((line, index) => (
+                            <code>{JSON.stringify(selectedTemplate.questions, null, 2).split('\n').map((line, index) => (
                               <div key={index} className="flex">
                                 <span className="text-slate-500 select-none text-right pr-4 w-8 shrink-0 inline-block">{index + 1}</span>
                                 <span className="whitespace-pre-wrap break-all flex-1">{line}</span>
@@ -723,7 +701,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           <DialogHeader>
             <DialogTitle>Delete Template</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{templateToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{templateToDelete?.name}&quot;? This action cannot be undone.
               Existing reports using this template will keep their data, but new reports cannot use this template.
             </DialogDescription>
           </DialogHeader>

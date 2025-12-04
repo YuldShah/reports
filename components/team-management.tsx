@@ -735,7 +735,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
               <Users className="w-5 h-5" />
               Unassigned Users
             </CardTitle>
-            <CardDescription>Users who haven't been assigned to any team yet</CardDescription>
+            <CardDescription>Users who haven&apos;t been assigned to any team yet</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
