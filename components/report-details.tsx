@@ -20,70 +20,70 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const fetchReportDetails = async () => {
+      try {
+        setLoading(true)
+
+        // Fetch all reports and find the one we need
+        const reportsResponse = await fetch('/api/reports')
+        const reportsData = await reportsResponse.json()
+        const foundReport = reportsData.reports?.find((r: any) => r.id === reportId)
+
+        if (!foundReport) {
+          console.error('Report not found')
+          setLoading(false)
+          return
+        }
+
+        setReport({
+          ...foundReport,
+          createdAt: new Date(foundReport.createdAt),
+          updatedAt: new Date(foundReport.updatedAt)
+        })
+
+        // Fetch user
+        const usersResponse = await fetch('/api/users')
+        const usersData = await usersResponse.json()
+        const foundUser = usersData.users?.find((u: any) => u.telegramId === foundReport.userId)
+        if (foundUser) {
+          setUser({
+            ...foundUser,
+            createdAt: new Date(foundUser.createdAt)
+          })
+        }
+
+        // Fetch team
+        if (foundReport.teamId) {
+          const teamResponse = await fetch(`/api/teams?id=${foundReport.teamId}`)
+          const teamData = await teamResponse.json()
+          if (teamData.team) {
+            setTeam({
+              ...teamData.team,
+              createdAt: new Date(teamData.team.createdAt)
+            })
+          }
+        }
+
+        // Fetch template if available
+        if (foundReport.templateId) {
+          const templateResponse = await fetch(`/api/templates?id=${foundReport.templateId}`)
+          const templateData = await templateResponse.json()
+          if (templateData.template) {
+            setTemplate({
+              ...templateData.template,
+              createdAt: new Date(templateData.template.createdAt)
+            })
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching report details:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchReportDetails()
   }, [reportId])
-
-  const fetchReportDetails = async () => {
-    try {
-      setLoading(true)
-
-      // Fetch all reports and find the one we need
-      const reportsResponse = await fetch('/api/reports')
-      const reportsData = await reportsResponse.json()
-      const foundReport = reportsData.reports?.find((r: any) => r.id === reportId)
-
-      if (!foundReport) {
-        console.error('Report not found')
-        setLoading(false)
-        return
-      }
-
-      setReport({
-        ...foundReport,
-        createdAt: new Date(foundReport.createdAt),
-        updatedAt: new Date(foundReport.updatedAt)
-      })
-
-      // Fetch user
-      const usersResponse = await fetch('/api/users')
-      const usersData = await usersResponse.json()
-      const foundUser = usersData.users?.find((u: any) => u.telegramId === foundReport.userId)
-      if (foundUser) {
-        setUser({
-          ...foundUser,
-          createdAt: new Date(foundUser.createdAt)
-        })
-      }
-
-      // Fetch team
-      if (foundReport.teamId) {
-        const teamResponse = await fetch(`/api/teams?id=${foundReport.teamId}`)
-        const teamData = await teamResponse.json()
-        if (teamData.team) {
-          setTeam({
-            ...teamData.team,
-            createdAt: new Date(teamData.team.createdAt)
-          })
-        }
-      }
-
-      // Fetch template if available
-      if (foundReport.templateId) {
-        const templateResponse = await fetch(`/api/templates?id=${foundReport.templateId}`)
-        const templateData = await templateResponse.json()
-        if (templateData.template) {
-          setTemplate({
-            ...templateData.template,
-            createdAt: new Date(templateData.template.createdAt)
-          })
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching report details:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (

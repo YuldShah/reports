@@ -31,10 +31,13 @@ export function DatePicker({ value, onChange, placeholder = "kk.oo.yyyy", classN
   
   // Sync input value with date value
   React.useEffect(() => {
-    if (date && isValid(date)) {
-      setInputValue(format(date, "dd.MM.yyyy"))
-      setIsInvalid(false)
-    } else if (!value) {
+    if (value) {
+      const parsedDate = new Date(value)
+      if (isValid(parsedDate)) {
+        setInputValue(format(parsedDate, "dd.MM.yyyy"))
+        setIsInvalid(false)
+      }
+    } else {
       setInputValue("")
       setIsInvalid(false)
     }
