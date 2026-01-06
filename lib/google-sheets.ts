@@ -121,7 +121,7 @@ const sanitizeIdentifier = (value: string): string => {
 const buildSheetTitle = (templateName: string): string => {
   const withSpaces = templateName
     .replace(/_/g, ' ')
-    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .replace(/[^a-zA-Z0-9 ']/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 
@@ -423,11 +423,22 @@ export const appendToGoogleSheet = async (
       return answerMap.get(header) ?? ''
     })
 
+    // Helper to determine the appropriate cell value type
+    const toCellValue = (value: string): sheets_v4.Schema$ExtendedValue => {
+      if (value === '' || value === null || value === undefined) {
+        return { stringValue: '' }
+      }
+      // Check if it's a pure number (integer or decimal)
+      const trimmed = String(value).trim()
+      if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+        return { numberValue: parseFloat(trimmed) }
+      }
+      return { stringValue: value }
+    }
+
     const rowData: sheets_v4.Schema$RowData = {
       values: rowValues.map((value) => ({
-        userEnteredValue: {
-          stringValue: value ?? '',
-        },
+        userEnteredValue: toCellValue(value ?? ''),
       })),
     }
 
