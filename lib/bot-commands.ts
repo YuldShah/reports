@@ -50,7 +50,10 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     // Echo the message with appropriate button
     const replyMsg = isUserAdmin ? "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports." : "Welcome! 👋\n\nClick the button below to submit your daily report."
     
-    const baseAppUrl = env.NEXT_PUBLIC_APP_URL || "https://voip-armstrong-lot-make.trycloudflare.com"
+    // Get app URL from env, fallback to webhook URL base (without /api/webhook)
+    const webhookUrl = env.TELEGRAM_WEBHOOK_URL || ""
+    const webhookBase = webhookUrl.replace("/api/webhook", "")
+    const baseAppUrl = env.NEXT_PUBLIC_APP_URL || webhookBase || "https://riverside-debug-inspection-clock.trycloudflare.com"
     const webAppUrl = isUserAdmin ? `${baseAppUrl}?admin=true` : baseAppUrl
 
     const buttonText = isUserAdmin ? "📊 Admin Dashboard" : "📝 Submit Report"

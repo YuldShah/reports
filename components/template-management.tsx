@@ -16,15 +16,17 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Plus, FileText, Trash2, Upload, Eye, FileJson, Copy, Check } from "lucide-react"
+import { Plus, FileText, Trash2, Upload, Eye, FileJson, Copy, Check, GraduationCap } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useAuthContext } from "@/components/auth-provider"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface Template {
   id: string
   name: string
   description?: string
   questions: any[]
+  isStudentTracker: boolean
   createdAt: Date
   createdBy: number | null
 }
@@ -41,9 +43,9 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null)
-  const [newTemplate, setNewTemplate] = useState({ name: "", description: "", questions: "[]" })
+  const [newTemplate, setNewTemplate] = useState({ name: "", description: "", questions: "[]", isStudentTracker: false })
   const [isEditMode, setIsEditMode] = useState(false)
-  const [editedTemplate, setEditedTemplate] = useState({ name: "", description: "", questions: "" })
+  const [editedTemplate, setEditedTemplate] = useState({ name: "", description: "", questions: "", isStudentTracker: false })
   const [jsonError, setJsonError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -157,6 +159,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           description: newTemplate.description,
           questions,
           createdBy: actingAdminId,
+          isStudentTracker: newTemplate.isStudentTracker,
         }),
       })
 
@@ -166,7 +169,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
 
       const data = await response.json()
       setTemplates([...templates, { ...data.template, createdAt: new Date(data.template.createdAt) }])
-      setNewTemplate({ name: "", description: "", questions: "[]" })
+      setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
       setJsonError(null)
       setIsCreateDialogOpen(false)
 
@@ -205,7 +208,8 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
         setNewTemplate({
           name: json.name || "",
           description: json.description || "",
-          questions: JSON.stringify(json.questions, null, 2)
+          questions: JSON.stringify(json.questions, null, 2),
+          isStudentTracker: json.isStudentTracker || false
         })
 
         toast({
@@ -268,6 +272,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           name: editedTemplate.name,
           description: editedTemplate.description,
           questions,
+          isStudentTracker: editedTemplate.isStudentTracker,
         }),
       })
 
@@ -444,6 +449,18 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 </p>
               </div>
 
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox
+                  id="student-tracker"
+                  checked={newTemplate.isStudentTracker}
+                  onCheckedChange={(checked) => setNewTemplate({ ...newTemplate, isStudentTracker: checked === true })}
+                />
+                <Label htmlFor="student-tracker" className="flex items-center gap-2 cursor-pointer">
+                  <GraduationCap className="w-4 h-4" />
+                  Talaba taqsimoti (Student Tracker)
+                </Label>
+              </div>
+
               <div className="flex gap-2">
                 <Button onClick={handleCreateTemplate} className="flex-1">
                   Create Template
@@ -451,7 +468,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setNewTemplate({ name: "", description: "", questions: "[]" })
+                    setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
                     setJsonError(null)
                     setIsCreateDialogOpen(false)
                   }}
@@ -485,9 +502,17 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
             </CardHeader>
 
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm flex-wrap gap-2">
                 <span className="text-muted-foreground">Questions:</span>
-                <Badge variant="secondary">{template.questions.length} fields</Badge>
+                <div className="flex gap-2">
+                  {template.isStudentTracker && (
+                    <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">
+                      <GraduationCap className="w-3 h-3 mr-1" />
+                      Talaba
+                    </Badge>
+                  )}
+                  <Badge variant="secondary">{template.questions.length} fields</Badge>
+                </div>
               </div>
 
               <div className="flex gap-2">
@@ -499,7 +524,8 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     setEditedTemplate({
                       name: template.name,
                       description: template.description || "",
-                      questions: JSON.stringify(template.questions, null, 2)
+                      questions: JSON.stringify(template.questions, null, 2),
+                      isStudentTracker: template.isStudentTracker
                     })
                     setIsEditMode(false)
                     setJsonError(null)
@@ -599,6 +625,18 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     </p>
                   </div>
 
+                  <div className="flex items-center space-x-2 py-2">
+                    <Checkbox
+                      id="edit-student-tracker"
+                      checked={editedTemplate.isStudentTracker}
+                      onCheckedChange={(checked) => setEditedTemplate({ ...editedTemplate, isStudentTracker: checked === true })}
+                    />
+                    <Label htmlFor="edit-student-tracker" className="flex items-center gap-2 cursor-pointer">
+                      <GraduationCap className="w-4 h-4" />
+                      Talaba taqsimoti (Student Tracker)
+                    </Label>
+                  </div>
+
                   <div className="flex gap-2">
                     <Button onClick={handleUpdateTemplate} className="flex-1">
                       Save Changes
@@ -611,7 +649,8 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                         setEditedTemplate({
                           name: selectedTemplate.name,
                           description: selectedTemplate.description || "",
-                          questions: JSON.stringify(selectedTemplate.questions, null, 2)
+                          questions: JSON.stringify(selectedTemplate.questions, null, 2),
+                          isStudentTracker: selectedTemplate.isStudentTracker
                         })
                       }}
                     >
@@ -623,6 +662,12 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 <>
                   <div className="space-y-3">
                     <div className="flex items-center gap-4 text-sm">
+                      {selectedTemplate.isStudentTracker && (
+                        <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">
+                          <GraduationCap className="w-3 h-3 mr-1" />
+                          Talaba taqsimoti
+                        </Badge>
+                      )}
                       <Badge variant="secondary">{selectedTemplate.questions.length} fields</Badge>
                     </div>
 

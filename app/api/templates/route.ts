@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, description, questions, createdBy } = body
+    const { name, description, questions, createdBy, isStudentTracker } = body
 
     if (!name || !questions || !Array.isArray(questions)) {
       return NextResponse.json(
@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
       name,
       description: description || null,
       questions,
-      createdBy: createdBy || null
+      createdBy: createdBy || null,
+      isStudentTracker: isStudentTracker || false
     })
 
     return NextResponse.json({ template }, { status: 201 })
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, name, description, questions } = body
+    const { id, name, description, questions, isStudentTracker } = body
 
     if (!id) {
       return NextResponse.json({ error: "Template ID is required" }, { status: 400 })
@@ -70,6 +71,7 @@ export async function PATCH(request: NextRequest) {
     if (name !== undefined) updates.name = name
     if (description !== undefined) updates.description = description
     if (questions !== undefined) updates.questions = questions
+    if (isStudentTracker !== undefined) updates.isStudentTracker = isStudentTracker
 
     const updatedTemplate = await updateTemplate(id, updates)
 

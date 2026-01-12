@@ -17,6 +17,7 @@ export interface Template {
   name: string
   description?: string
   questions: any[]
+  isStudentTracker: boolean
   createdAt: Date
   createdBy: number | null
 }
@@ -99,6 +100,7 @@ const mapTemplateRow = (row: any): Template => ({
   name: row.name,
   description: row.description ?? undefined,
   questions: parseJsonField<any[]>(row.questions, []),
+  isStudentTracker: row.is_student_tracker ?? false,
   createdAt: toDate(row.created_at),
   createdBy: row.created_by !== null ? toNumber(row.created_by) : null,
 })
@@ -267,13 +269,13 @@ export const getAllUsers = async (): Promise<User[]> => {
 
 // Template operations
 export const createTemplate = async (templateData: Omit<Template, 'createdAt'>): Promise<Template> => {
-  const { id, name, description, questions, createdBy } = templateData
+  const { id, name, description, questions, isStudentTracker, createdBy } = templateData
 
   const result = await runQuery(
-    `INSERT INTO templates (id, name, description, questions, created_by)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, name, description, questions, created_at, created_by`,
-    [id, name, description ?? null, JSON.stringify(questions), createdBy ?? null],
+    `INSERT INTO templates (id, name, description, questions, is_student_tracker, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, name, description, questions, is_student_tracker, created_at, created_by`,
+    [id, name, description ?? null, JSON.stringify(questions), isStudentTracker ?? false, createdBy ?? null],
   )
 
   return mapTemplateRow(result.rows[0])
@@ -281,7 +283,7 @@ export const createTemplate = async (templateData: Omit<Template, 'createdAt'>):
 
 export const getTemplateById = async (id: string): Promise<Template | null> => {
   const result = await runQuery(
-    `SELECT id, name, description, questions, created_at, created_by
+    `SELECT id, name, description, questions, is_student_tracker, created_at, created_by
      FROM templates
      WHERE id = $1`,
     [id],
@@ -293,7 +295,7 @@ export const getTemplateById = async (id: string): Promise<Template | null> => {
 
 export const getAllTemplates = async (): Promise<Template[]> => {
   const result = await runQuery(
-    `SELECT id, name, description, questions, created_at, created_by
+    `SELECT id, name, description, questions, is_student_tracker, created_at, created_by
      FROM templates
      ORDER BY created_at DESC`,
   )
@@ -318,6 +320,10 @@ export const updateTemplate = async (id: string, updates: Partial<Template>): Pr
     fields.push(`questions = $${paramIndex++}`)
     values.push(JSON.stringify(updates.questions))
   }
+  if (updates.isStudentTracker !== undefined) {
+    fields.push(`is_student_tracker = $${paramIndex++}`)
+    values.push(updates.isStudentTracker)
+  }
 
   if (fields.length === 0) {
     return getTemplateById(id)
@@ -327,7 +333,7 @@ export const updateTemplate = async (id: string, updates: Partial<Template>): Pr
   const result = await runQuery(
     `UPDATE templates SET ${fields.join(', ')}
      WHERE id = $${paramIndex}
-     RETURNING id, name, description, questions, created_at, created_by`,
+     RETURNING id, name, description, questions, is_student_tracker, created_at, created_by`,
     values,
   )
 

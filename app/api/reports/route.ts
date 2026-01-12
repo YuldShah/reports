@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getAllReports, createReport, updateReport, getReportsByUser, getReportsByTeam, getTeamById, getTemplateById, getUserByTelegramId } from "@/lib/database"
-import { appendToGoogleSheet } from "@/lib/google-sheets"
+import { appendToGoogleSheet, upsertToGoogleSheet } from "@/lib/google-sheets"
 
 export async function GET(request: NextRequest) {
   try {
@@ -121,10 +121,24 @@ export async function POST(request: NextRequest) {
             answers: answerEntries,
           }
 
-          await appendToGoogleSheet({
-            templateKey: resolvedTemplateId,
-            templateName: template.name,
-          }, sheetData)
+          // Use upsert for student tracker templates, append for regular templates
+          if (template.isStudentTracker) {
+            // Find the tutor name field label for upsert key
+            const tutorField = (template as any).questions?.find((q: any) => 
+              q.id === 'tutor_name' || q.label?.toLowerCase().includes('tyutor') || q.label?.toLowerCase().includes('tutor')
+            )
+            const keyColumnLabel = tutorField?.label || 'Tyutor ism-sharifi'
+            
+            await upsertToGoogleSheet({
+              templateKey: resolvedTemplateId,
+              templateName: template.name,
+            }, sheetData, keyColumnLabel)
+          } else {
+            await appendToGoogleSheet({
+              templateKey: resolvedTemplateId,
+              templateName: template.name,
+            }, sheetData)
+          }
         }
       } catch (sheetError) {
         console.error("Failed to sync to Google Sheets:", sheetError)

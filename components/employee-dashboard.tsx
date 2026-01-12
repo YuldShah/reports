@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, FileText, TrendingUp, Calendar, Users, Eye, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, FileText, TrendingUp, Calendar, Users, Eye, ChevronLeft, ChevronRight, GraduationCap } from "lucide-react"
 import ReportForm from "@/components/report-form"
 import ReportDetails from "@/components/report-details"
 import type { User } from "@/lib/types"
@@ -28,6 +28,8 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [showStudentTracker, setShowStudentTracker] = useState(false)
+  const [selectedStudentTrackerId, setSelectedStudentTrackerId] = useState<string | null>(null)
 
   const debugLog = async (message: string, data?: any) => {
     try {
@@ -183,6 +185,31 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
     ? templates.filter((t: any) => userTeam.templateIds.includes(t.id))
     : []
 
+  // Get student tracker templates assigned to user's team
+  const studentTrackerTemplates = userTeamTemplates.filter((t: any) => t.isStudentTracker)
+  const regularTemplates = userTeamTemplates.filter((t: any) => !t.isStudentTracker)
+
+  // Check if user needs to show student tracker form
+  if (showStudentTracker && selectedStudentTrackerId) {
+    return (
+      <div className="container mx-auto px-4 max-w-2xl">
+        <ReportForm
+          user={user}
+          templateId={selectedStudentTrackerId}
+          onCancel={() => {
+            setShowStudentTracker(false)
+            setSelectedStudentTrackerId(null)
+          }}
+          onSuccess={async () => {
+            setShowStudentTracker(false)
+            setSelectedStudentTrackerId(null)
+            await refreshData()
+          }}
+        />
+      </div>
+    )
+  }
+
   if (showTemplateSelection) {
     return (
       <div className="container mx-auto px-4 max-w-2xl">
@@ -202,7 +229,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             <p className="text-muted-foreground">Choose a template for your report</p>
           </div>
 
-          {userTeamTemplates.length === 0 ? (
+          {regularTemplates.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -214,7 +241,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             </Card>
           ) : (
             <div className="grid gap-4">
-              {userTeamTemplates.map((template: any) => (
+              {regularTemplates.map((template: any) => (
                 <Card
                   key={template.id}
                   className="cursor-pointer hover:border-primary transition-colors"
@@ -314,6 +341,36 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Student Tracker Section - Shows only if team has student tracker templates */}
+          {studentTrackerTemplates.length > 0 && (
+            <Card className="bg-gradient-to-r from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-emerald-600" />
+                  Talaba taqsimoti
+                </CardTitle>
+                <CardDescription>Sizga taqsimlangan talabalar sonini kiriting</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {studentTrackerTemplates.map((template: any) => (
+                    <Button
+                      key={template.id}
+                      onClick={() => {
+                        setSelectedStudentTrackerId(template.id)
+                        setShowStudentTracker(true)
+                      }}
+                      className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <GraduationCap className="w-4 h-4 mr-2" />
+                      {template.name}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

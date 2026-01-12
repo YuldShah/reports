@@ -464,6 +464,146 @@ export const appendToGoogleSheet = async (
   }
 }
 
+/**
+ * Upsert to Google Sheet - updates existing row by key column or appends new row
+ * Used for student tracker where we want one row per tutor
+ */
+export const upsertToGoogleSheet = async (
+  templateInfo: { templateKey: string; templateName: string },
+  reportData: SheetRowData,
+  keyColumnLabel: string, // e.g., "Tyutor ism-sharifi" - the column to match on
+) => {
+  const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
+
+  if (!spreadsheetId) {
+    console.error("Google Sheets spreadsheet ID not configured")
+    return
+  }
+
+  try {
+    const { templateKey, templateName } = templateInfo
+    const { sheets } = await getGoogleSheetsClient()
+    const sheetInfo = await ensureTemplateSheet(templateKey, templateName, sheets)
+
+    const requiredHeaders = Array.from(
+      new Set(
+        reportData.answers
+          .map((answer) => answer.label)
+          .filter((label): label is string => typeof label === 'string' && label.trim().length > 0),
+      ),
+    )
+    const finalHeaders = await ensureSheetHeaders(sheetInfo.sheetId, requiredHeaders, sheets)
+
+    // Find the key column index and value
+    const keyColumnIndex = finalHeaders.indexOf(keyColumnLabel)
+    const keyValue = reportData.answers.find(a => a.label === keyColumnLabel)?.value
+
+    if (keyColumnIndex === -1 || !keyValue) {
+      console.error(`Key column "${keyColumnLabel}" not found in headers or no value provided`)
+      // Fall back to append
+      return appendToGoogleSheet(templateInfo, reportData)
+    }
+
+    // Get all existing data to find matching row
+    const dataResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `'${sheetInfo.title}'!A:ZZ`,
+    })
+
+    const existingRows = dataResponse.data.values || []
+    let existingRowIndex = -1
+
+    // Find row with matching key value (skip header row at index 0)
+    for (let i = 1; i < existingRows.length; i++) {
+      if (existingRows[i][keyColumnIndex] === keyValue) {
+        existingRowIndex = i
+        break
+      }
+    }
+
+    const baseValueMap: Record<string, string> = {
+      'Report ID': reportData.reportId,
+      'Submitted At': reportData.timestamp,
+      'Team Name': reportData.teamName,
+      'User Name': reportData.userName,
+    }
+
+    const answerMap = new Map(
+      reportData.answers.map((answer) => [answer.label, answer.value === undefined || answer.value === null ? '' : String(answer.value)]),
+    )
+
+    const rowValues = finalHeaders.map((header) => {
+      if (baseValueMap[header] !== undefined) {
+        return baseValueMap[header]
+      }
+      return answerMap.get(header) ?? ''
+    })
+
+    // Helper to determine the appropriate cell value type
+    const toCellValue = (value: string): sheets_v4.Schema$ExtendedValue => {
+      if (value === '' || value === null || value === undefined) {
+        return { stringValue: '' }
+      }
+      const trimmed = String(value).trim()
+      if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
+        return { numberValue: parseFloat(trimmed) }
+      }
+      return { stringValue: value }
+    }
+
+    const rowData: sheets_v4.Schema$RowData = {
+      values: rowValues.map((value) => ({
+        userEnteredValue: toCellValue(value ?? ''),
+      })),
+    }
+
+    if (existingRowIndex !== -1) {
+      // Update existing row
+      const response = await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              updateCells: {
+                rows: [rowData],
+                fields: 'userEnteredValue',
+                start: {
+                  sheetId: sheetInfo.sheetId,
+                  rowIndex: existingRowIndex,
+                  columnIndex: 0,
+                },
+              },
+            },
+          ],
+        },
+      })
+      console.log(`Updated existing row ${existingRowIndex + 1} for ${keyValue}`)
+      return response.data
+    } else {
+      // Append new row
+      const response = await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              appendCells: {
+                sheetId: sheetInfo.sheetId,
+                rows: [rowData],
+                fields: 'userEnteredValue',
+              },
+            },
+          ],
+        },
+      })
+      console.log(`Appended new row for ${keyValue}`)
+      return response.data
+    }
+  } catch (error) {
+    console.error("Error upserting to Google Sheets:", error)
+    throw error
+  }
+}
+
 
 
 export const getAllSheetsData = async () => {
