@@ -1,0 +1,63 @@
+export interface User {
+  telegramId: number
+  firstName: string
+  lastName?: string
+  username?: string
+  photoUrl?: string
+  teamId?: string
+  role: string
+  createdAt: Date
+}
+
+export interface Team {
+  id: string
+  name: string
+  description?: string
+  templateIds?: string[] // Array of template IDs (populated from junction table)
+  createdAt: Date
+  createdBy: number | null
+}
+
+export interface Report {
+  id: string
+  userId: number
+  teamId: string
+  templateId: string
+  title: string
+  description: string
+  priority: "low" | "medium" | "high"
+  status: "pending" | "in-progress" | "completed"
+  category: string
+  attachments?: string[]
+  answers: Record<string, any>
+  templateData?: Record<string, any>
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ReportTemplate {
+  id: string
+  key?: string
+  name: string
+  description?: string
+  fields: TemplateField[]
+  isStudentTracker?: boolean
+  createdAt: Date
+}
+
+export interface TemplateField {
+  id: string
+  label: string
+  type: "text" | "number" | "date" | "textarea" | "select"
+  required: boolean
+  placeholder?: string
+  validation?: {
+    min?: number
+    max?: number
+    pattern?: string
+  }
+  options?: Array<{
+    value: string
+    label: string
+  }>
+}

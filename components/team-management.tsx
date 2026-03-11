@@ -1,0 +1,764 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Plus, Users, UserPlus, Trash2, Building, FileText, Settings } from "lucide-react"
+import { type User, type Team, type ReportTemplate } from "@/lib/types"
+import { toast } from "@/hooks/use-toast"
+import { useAuthContext } from "@/components/auth-provider"
+import { getAdminTelegramIds } from "@/lib/telegram"
+
+interface TeamManagementProps {
+  onDataChange?: () => void
+}
+
+export default function TeamManagement({ onDataChange }: TeamManagementProps) {
+  const [teams, setTeams] = useState<Team[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [templates, setTemplates] = useState<ReportTemplate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false)
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
+  const [newTeam, setNewTeam] = useState({ name: "", description: "" })
+  const [selectedUserId, setSelectedUserId] = useState<string>("")
+  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
+  const { telegramUser, dbUser } = useAuthContext()
+
+  const debugLog = async (message: string, data?: any) => {
+    try {
+      await fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          level: 'info',
+          component: 'TeamManagement',
+          data
+        })
+      })
+    } catch (err) {
+      console.error('Debug log failed:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch teams, users, and templates in parallel
+      const [teamsResponse, usersResponse, templatesResponse] = await Promise.all([
+        fetch('/api/teams'),
+        fetch('/api/users'),
+        fetch('/api/templates')
+      ])
+
+      const teamsData = await teamsResponse.json()
+      const teamsWithDates = (teamsData.teams || []).map((team: any) => {
+        let parsedDate: Date
+        try {
+          // Normalize date strings coming from API responses
+          parsedDate = new Date(team.createdAt)
+          if (isNaN(parsedDate.getTime())) {
+            // If parsing fails, use current date as fallback
+            parsedDate = new Date()
+          }
+        } catch (error) {
+          // If date parsing completely fails, use current date
+          parsedDate = new Date()
+        }
+        
+        return {
+          ...team,
+          createdAt: parsedDate
+        }
+      })
+      setTeams(teamsWithDates)
+
+      const usersData = await usersResponse.json()
+      const usersWithDates = (usersData.users || []).map((user: any) => {
+        let parsedDate: Date
+        try {
+          parsedDate = new Date(user.createdAt)
+          if (isNaN(parsedDate.getTime())) {
+            parsedDate = new Date()
+          }
+        } catch (error) {
+          parsedDate = new Date()
+        }
+        
+        return {
+          ...user,
+          createdAt: parsedDate
+        }
+      })
+      setUsers(usersWithDates)
+
+      const templatesData = await templatesResponse.json()
+      setTemplates(templatesData.templates || [])
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load data",
+        variant: "destructive",
+        duration: 3000,
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateTeam = async () => {
+    const actingAdminId = dbUser?.telegramId ?? telegramUser?.id ?? getAdminTelegramIds()[0]
+
+    if (!actingAdminId) {
+      await debugLog('Team creation failed - no admin ID available')
+      toast({
+        title: "Error",
+        description: "Unable to resolve admin account.",
+        variant: "destructive",
+        duration: 3000,
+      })
+      return
+    }
+
+    await debugLog('Starting handleCreateTeam', { teamName: newTeam.name, description: newTeam.description })
+    
+    if (!newTeam.name.trim()) {
+      await debugLog('Team creation failed - no name provided')
+      toast({
+        title: "Error",
+        description: "Team name is required",
+        variant: "destructive",
+        duration: 3000,
+      })
+      return
+    }
+
+    try {
+      await debugLog('Sending team creation request')
+      
+      const response = await fetch('/api/teams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newTeam.name,
+          description: newTeam.description,
+          createdBy: actingAdminId,
+        }),
+      })
+
+      await debugLog('Team creation response received', { 
+        status: response.status, 
+        ok: response.ok 
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        await debugLog('Team creation failed - bad response', { 
+          status: response.status, 
+          errorText 
+        })
+        throw new Error('Failed to create team')
+      }
+
+      const data = await response.json()
+      await debugLog('Team creation successful', { teamId: data.team?.id })
+      
+      // Convert the createdAt string to Date object before adding to state
+      let parsedDate: Date
+      try {
+        parsedDate = new Date(data.team.createdAt)
+        if (isNaN(parsedDate.getTime())) {
+          parsedDate = new Date()
+        }
+      } catch (error) {
+        parsedDate = new Date()
+      }
+      
+      const newTeamWithDate = {
+        ...data.team,
+        createdAt: parsedDate
+      }
+      
+      setTeams([...teams, newTeamWithDate])
+      setNewTeam({ name: "", description: "" })
+      setIsCreateDialogOpen(false)
+
+      toast({
+        title: "Success",
+        description: "Team created successfully",
+        duration: 3000,
+      })
+
+      // Notify parent to refresh data
+      onDataChange?.()
+    } catch (error) {
+      await debugLog('Team creation error caught', { error: error?.toString() })
+      console.error('Error creating team:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create team",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  const handleAddMember = async () => {
+    if (!selectedUserId || !selectedTeam) return
+
+    try {
+      const userId = Number.parseInt(selectedUserId)
+      const response = await fetch(`/api/users`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          telegramId: userId,
+          teamId: selectedTeam,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to add member to team')
+      }
+
+      // Refresh local data
+      await fetchData()
+      setSelectedUserId("")
+      setIsAddMemberDialogOpen(false)
+
+      toast({
+        title: "Success",
+        description: "Member added to team successfully",
+        duration: 3000,
+      })
+
+      // Notify parent to refresh data
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error adding member:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add member to team",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  const handleRemoveMember = async (userId: number) => {
+    try {
+      const response = await fetch(`/api/users`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          telegramId: userId,
+          teamId: null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to remove member from team')
+      }
+
+      // Refresh local data
+      await fetchData()
+
+      toast({
+        title: "Success",
+        description: "Member removed from team",
+        duration: 3000,
+      })
+
+      // Notify parent to refresh data
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error removing member:', error)
+      toast({
+        title: "Error",
+        description: "Failed to remove member from team",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
+    if (!confirm(`Are you sure you want to delete the team "${teamName}"? All members will be unassigned.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/teams?id=${teamId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete team')
+      }
+
+      // Refresh local data
+      await fetchData()
+
+      toast({
+        title: "Success",
+        description: "Team deleted successfully",
+        duration: 3000,
+      })
+
+      // Notify parent to refresh data
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error deleting team:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete team",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  const handleAssignTemplates = async () => {
+    if (!selectedTeam) return
+
+    try {
+      const response = await fetch('/api/teams', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: selectedTeam,
+          templateIds: selectedTemplateIds,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to assign templates')
+      }
+
+      // Refresh local data
+      await fetchData()
+      setSelectedTemplateIds([])
+      setIsTemplateDialogOpen(false)
+
+      toast({
+        title: "Success",
+        description: "Templates assigned successfully",
+        duration: 3000,
+      })
+
+      // Notify parent to refresh data
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error assigning templates:', error)
+      toast({
+        title: "Error",
+        description: "Failed to assign templates",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
+  const unassignedUsers = users.filter((user) => !user.teamId && user.role !== "admin")
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Team Management</h2>
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Team Management</h2>
+          <p className="text-sm text-muted-foreground">Create teams and manage team members</p>
+        </div>
+
+        {/* Create Team Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Team
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Team</DialogTitle>
+              <DialogDescription>Add a new team to organize your employees</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="team-name">Team Name</Label>
+                <Input
+                  id="team-name"
+                  placeholder="Enter team name"
+                  value={newTeam.name}
+                  onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="team-description">Description (Optional)</Label>
+                <Textarea
+                  id="team-description"
+                  placeholder="Enter team description"
+                  value={newTeam.description}
+                  onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCreateTeam} className="flex-1">
+                  Create Team
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNewTeam({ name: "", description: "" })
+                    setIsCreateDialogOpen(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Teams Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {teams.map((team) => {
+          const teamMembers = users.filter((user) => user.teamId === team.id)
+
+          return (
+            <Card key={team.id} className="relative">
+              <CardHeader className="pb-3">
+                {/* Team name */}
+                <CardTitle className="text-lg leading-tight">{team.name}</CardTitle>
+                
+                {/* Description */}
+                <CardDescription className="line-clamp-2 mt-1">
+                  {team.description || "No description..."}
+                </CardDescription>
+                
+                {/* Stats + Actions row */}
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-muted-foreground">
+                    {teamMembers.length} members
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedTeam(team.id)
+                        setSelectedTemplateIds(team.templateIds || [])
+                        setIsTemplateDialogOpen(true)
+                      }}
+                      className="h-7 w-7 p-0"
+                      disabled={loading}
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteTeam(team.id, team.name)}
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Templates section */}
+                <div className="mt-2">
+                  <span className="text-xs text-muted-foreground">Templates:</span>
+                  {team.templateIds && team.templateIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {team.templateIds.map(tid => {
+                        const template = templates.find(t => t.id === tid)
+                        return template ? (
+                          <Badge key={tid} variant="outline" className="text-xs">
+                            {template.name}
+                          </Badge>
+                        ) : null
+                      })}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground ml-1">None assigned</span>
+                  )}
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Team Members */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium">Team Members</h4>
+                    <Dialog
+                      open={isAddMemberDialogOpen && selectedTeam === team.id}
+                      onOpenChange={(open) => {
+                        setIsAddMemberDialogOpen(open)
+                        if (open) {
+                          setSelectedTeam(team.id)
+                        } else {
+                          setSelectedTeam(null)
+                          setSelectedUserId("")
+                        }
+                      }}
+                    >
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="h-8 px-2">
+                          <UserPlus className="w-3 h-3 mr-1" />
+                          Add Member
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Add Member to {team.name}</DialogTitle>
+                          <DialogDescription>Select a user to add to this team</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label>Select User</Label>
+                            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choose a user" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {unassignedUsers.map((user) => (
+                                  <SelectItem key={user.telegramId} value={user.telegramId.toString()}>
+                                    {user.firstName} {user.lastName} 
+                                    {user.username && ` (@${user.username})`}
+                                    {` [ID: ${user.telegramId}]`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button onClick={handleAddMember} disabled={!selectedUserId}>
+                              Add Member
+                            </Button>
+                            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  <div className="space-y-2">
+                    {teamMembers.length > 0 ? (
+                      teamMembers.map((member: User) => (
+                        <div key={member.telegramId} className="flex items-center justify-between p-2 bg-muted/50 rounded gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <Avatar className="w-8 h-8 shrink-0">
+                              <AvatarImage src={member.photoUrl || "/placeholder.svg"} />
+                              <AvatarFallback>{member.firstName.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium truncate">
+                                {member.firstName} {member.lastName}
+                              </div>
+                              {member.username && (
+                                <div className="text-xs text-muted-foreground truncate">@{member.username}</div>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRemoveMember(member.telegramId)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive shrink-0"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-muted-foreground text-center py-4">
+                        No members assigned yet
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Team Footer */}
+                <div className="pt-3 border-t">
+                  <div className="text-xs text-muted-foreground">
+                    Created {team.createdAt.toLocaleDateString()}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
+      {/* Template Assignment Dialog */}
+      {isTemplateDialogOpen && (
+        <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 border max-h-[80vh] overflow-y-auto">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Assign Report Templates</h3>
+                <p className="text-sm text-muted-foreground">Select multiple templates for this team</p>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Select Templates</Label>
+                {templates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No templates available</p>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map((template) => (
+                      <div key={template.id} className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md">
+                        <Checkbox
+                          id={`template-${template.id}`}
+                          checked={selectedTemplateIds.includes(template.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedTemplateIds([...selectedTemplateIds, template.id])
+                            } else {
+                              setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
+                            }
+                          }}
+                        />
+                        <div className="flex-1">
+                          <Label
+                            htmlFor={`template-${template.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {template.name}
+                          </Label>
+                          {template.description && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {template.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Selected: {selectedTemplateIds.length} template{selectedTemplateIds.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleAssignTemplates}
+                  disabled={!selectedTeam}
+                  className="flex-1"
+                >
+                  Assign Templates
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsTemplateDialogOpen(false)
+                    setSelectedTemplateIds([])
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {teams.length === 0 && (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Building className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No teams created yet</h3>
+            <p className="text-muted-foreground mb-4">Create your first team to start organizing your employees</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Unassigned Users */}
+      {unassignedUsers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Unassigned Users
+            </CardTitle>
+            <CardDescription>Users who haven&apos;t been assigned to any team yet</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {unassignedUsers.map((user) => (
+                <div key={user.telegramId} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={user.photoUrl || "/placeholder.svg"} />
+                    <AvatarFallback>{user.firstName.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">
+                      {user.firstName} {user.lastName}
+                    </div>
+                    {user.username && <div className="text-xs text-muted-foreground truncate">@{user.username}</div>}
+                    <div className="text-xs text-muted-foreground">ID: {user.telegramId}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
