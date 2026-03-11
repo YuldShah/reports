@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function FallbackView() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
+      <Card className="w-full max-w-md glass border-glass-border">
         <CardHeader className="text-center">
           <Logo />
           <CardDescription>Please open this app from Telegram to continue</CardDescription>

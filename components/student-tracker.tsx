@@ -137,14 +137,14 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
     const totalStudents = Object.values(values).reduce((sum, val) => sum + val, 0)
 
     return (
-        <Card className="border-2 border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-blue-600/10">
+        <Card className="glass border-glass-border border-2 border-chart-2/30">
             <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                        <Users className="w-6 h-6 text-blue-500" />
+                    <div className="w-12 h-12 bg-chart-2/20 rounded-xl flex items-center justify-center">
+                        <Users className="w-6 h-6 text-chart-2" />
                     </div>
                     <div>
-                        <CardTitle className="text-lg">Talaba Taqsimoti</CardTitle>
+                        <CardTitle className="font-heading text-lg">Talaba Taqsimoti</CardTitle>
                         <CardDescription>Sizga taqsimlangan talabalar sonini kiriting</CardDescription>
                     </div>
                 </div>
@@ -171,15 +171,15 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
                 </div>
 
                 {/* Total */}
-                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/20 border border-border rounded-lg">
                     <span className="text-sm font-medium">Jami talabalar:</span>
-                    <span className="text-xl font-bold text-blue-500">{totalStudents}</span>
+                    <span className="font-heading text-xl font-bold text-chart-2">{totalStudents}</span>
                 </div>
 
                 {/* Last submitted info */}
                 {hasExistingReport && lastSubmitted && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                        <CheckCircle className="w-3.5 h-3.5 text-success" />
                         <span>Oxirgi yangilanish: {lastSubmitted.toLocaleString('uz-UZ')}</span>
                     </div>
                 )}
@@ -188,7 +188,7 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
                 <Button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="w-full bg-blue-500 hover:bg-blue-600"
+                    className="w-full bg-chart-2 hover:bg-chart-2/90 text-white"
                 >
                     {isSubmitting ? (
                         <>

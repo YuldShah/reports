@@ -398,12 +398,12 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Team Management</h2>
+            <h2 className="font-heading text-xl font-semibold">Team Management</h2>
             <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
         </div>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       </div>
     )
@@ -414,7 +414,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Team Management</h2>
+          <h2 className="font-heading text-xl font-semibold">Team Management</h2>
           <p className="text-sm text-muted-foreground">Create teams and manage team members</p>
         </div>
 
@@ -476,10 +476,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
           const teamMembers = users.filter((user) => user.teamId === team.id)
 
           return (
-            <Card key={team.id} className="relative">
+            <Card key={team.id} className="relative glass border-glass-border card-interactive">
               <CardHeader className="pb-3">
                 {/* Team name */}
-                <CardTitle className="text-lg leading-tight">{team.name}</CardTitle>
+                <CardTitle className="font-heading text-lg leading-tight">{team.name}</CardTitle>
                 
                 {/* Description */}
                 <CardDescription className="line-clamp-2 mt-1">
@@ -598,7 +598,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   <div className="space-y-2">
                     {teamMembers.length > 0 ? (
                       teamMembers.map((member: User) => (
-                        <div key={member.telegramId} className="flex items-center justify-between p-2 bg-muted/50 rounded gap-2">
+                        <div key={member.telegramId} className="flex items-center justify-between p-2 bg-muted/20 border border-border rounded-lg gap-2">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <Avatar className="w-8 h-8 shrink-0">
                               <AvatarImage src={member.photoUrl || "/placeholder.svg"} />
@@ -646,7 +646,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       {/* Template Assignment Dialog */}
       {isTemplateDialogOpen && (
         <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4 border max-h-[80vh] overflow-y-auto">
+          <div className="bg-background glass border-glass-border rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">Assign Report Templates</h3>
@@ -719,10 +719,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       {/* Empty State */}
       {teams.length === 0 && (
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="text-center py-12">
             <Building className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No teams created yet</h3>
+            <h3 className="font-heading text-lg font-medium mb-2">No teams created yet</h3>
             <p className="text-muted-foreground mb-4">Create your first team to start organizing your employees</p>
           </CardContent>
         </Card>
@@ -730,9 +730,9 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       {/* Unassigned Users */}
       {unassignedUsers.length > 0 && (
-        <Card>
+        <Card className="glass border-glass-border">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="font-heading flex items-center gap-2">
               <Users className="w-5 h-5" />
               Unassigned Users
             </CardTitle>
@@ -741,7 +741,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {unassignedUsers.map((user) => (
-                <div key={user.telegramId} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <div key={user.telegramId} className="flex items-center gap-3 p-3 bg-muted/20 border border-border rounded-lg">
                   <Avatar className="w-10 h-10">
                     <AvatarImage src={user.photoUrl || "/placeholder.svg"} />
                     <AvatarFallback>{user.firstName.charAt(0)}</AvatarFallback>

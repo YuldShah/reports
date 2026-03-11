@@ -1,7 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Users, FileText, TrendingUp } from "lucide-react"
 import AnimatedCounter from "@/components/animated-counter"
-// Note: Removed import EnhancedCard as we are now using the standard Card
 
 interface OverviewStatsProps {
   stats: {
@@ -14,53 +13,43 @@ interface OverviewStatsProps {
 export default function OverviewStats({ stats }: OverviewStatsProps) {
   const statCards = [
     {
-      title: "Total Users",
+      title: "Users",
       value: stats.totalUsers,
       icon: Users,
-      description: "Registered employees",
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      accent: "text-chart-2",
+      bg: "bg-chart-2/10",
     },
     {
-      title: "Active Teams",
+      title: "Teams",
       value: stats.totalTeams,
       icon: TrendingUp,
-      description: "Operational teams",
-      color: "text-green-500",
-      bgColor: "bg-green-500/10",
+      accent: "text-success",
+      bg: "bg-success/10",
     },
     {
-      title: "Total Reports",
+      title: "Reports",
       value: stats.totalReports,
       icon: FileText,
-      description: "All time reports",
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
+      accent: "text-primary",
+      bg: "bg-primary/10",
     },
   ]
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-stagger">
+    <div className="grid grid-cols-3 gap-3 stagger-children">
       {statCards.map((stat, index) => {
         const Icon = stat.icon
         return (
-          // Replaced EnhancedCard with the standard Card component
-          <Card key={stat.title} className="relative overflow-hidden">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                <div className={`w-8 h-8 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
-                  <Icon className={`w-4 h-4 ${stat.color}`} />
-                </div>
+          <Card key={stat.title} className="glass border-glass-border overflow-hidden">
+            <CardContent className="p-4">
+              <div className={`w-8 h-8 rounded-lg ${stat.bg} flex items-center justify-center mb-3`}>
+                <Icon className={`w-4 h-4 ${stat.accent}`} />
               </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="text-2xl font-bold">
+              <div className="font-heading text-2xl font-bold tracking-tight">
                 <AnimatedCounter value={stat.value} duration={1000 + index * 200} />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{stat.title}</p>
             </CardContent>
-            {/* The custom colored edge div was removed */}
           </Card>
         )
       })}

@@ -1,17 +1,28 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { DM_Sans, Outfit } from "next/font/google"
 import "./globals.css"
 import Script from "next/script"
 import { Toaster } from "@/components/ui/toaster"
 import AuthProvider from "@/components/auth-provider"
 import ErrorBoundary from "@/components/error-boundary"
+import { ThemeProvider } from "@/components/theme-provider"
 
-const inter = Inter({ subsets: ["latin"] })
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+})
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap",
+})
 
 export const metadata: Metadata = {
-  title: "Reports App - Team Reporting System",
-  description: "Submit and manage team reports through Telegram integration",
+  title: "Reports",
+  description: "Team reporting system",
   icons: {
     icon: "/favicon.ico",
   },
@@ -23,17 +34,19 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en" className={`${dmSans.variable} ${outfit.variable}`} suppressHydrationWarning>
       <head>
         <Script src="https://telegram.org/js/telegram-web-app.js?62" strategy="beforeInteractive" />
       </head>
-      <body className="antialiased">
-        <ErrorBoundary>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </ErrorBoundary>
+      <body className="font-sans antialiased noise">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          <ErrorBoundary>
+            <AuthProvider>
+              {children}
+              <Toaster />
+            </AuthProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   )

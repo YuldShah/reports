@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useAuthContext } from "@/components/auth-provider"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import StatusBadge from "@/components/status-badge"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function ProfileCard() {
   const { telegramUser, dbUser, isAdmin } = useAuthContext()
@@ -51,42 +51,41 @@ export default function ProfileCard() {
   return (
     <div className="mx-4 mb-2">
       <div
-        className={`border border-border bg-card shadow-sm rounded-xl transition-all duration-300 ease-out ${
+        className={`rounded-xl transition-all duration-500 ease-out ${
           isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
         }`}
       >
-        <div className="flex items-center gap-3 px-3 py-2">
-          {/* Avatar with status */}
+        <div className="flex items-center gap-3 px-1 py-1.5">
+          {/* Avatar */}
           <div className="relative">
-            <Avatar className="h-9 w-9 ring-1 ring-white/20">
+            <Avatar className="h-9 w-9 ring-1 ring-white/10">
               <AvatarImage src={telegramUser.photo_url || "/placeholder.svg"} alt={displayName} />
-              <AvatarFallback className="bg-telegram-blue text-white font-medium text-sm">
+              <AvatarFallback className="bg-primary/20 text-primary font-heading font-semibold text-sm">
                 {displayName.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border border-card" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-success rounded-full ring-2 ring-background" />
           </div>
 
           {/* User info */}
           <div className="flex-1 min-w-0">
-            {/* Name + Role */}
             <div className="flex items-center gap-2">
-              <p className="text-base font-medium text-foreground truncate">{displayName}</p>
-              <StatusBadge
-                status={role === "Admin" ? "online" : "away"}
-                showIndicator
-                className="text-xs bg-telegram-blue/60 text-white border-0"
-              >
+              <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+              <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary">
                 {role}
-              </StatusBadge>
+              </span>
             </div>
-
-            {/* Username + Team (inline) */}
-            <div className="flex items-center gap-1 truncate">
-              {usernameDisplay && <p className="text-sm font-medium text-foregound truncate">{usernameDisplay}</p>}
-              <p className="text-sm text-muted-foreground truncate">{team}</p>
+            <div className="flex items-center gap-1.5 truncate">
+              {usernameDisplay && (
+                <span className="text-xs text-muted-foreground/80 truncate">{usernameDisplay}</span>
+              )}
+              {usernameDisplay && <span className="text-muted-foreground/30 text-xs">·</span>}
+              <span className="text-xs text-muted-foreground truncate">{team}</span>
             </div>
           </div>
+
+          {/* Theme toggle */}
+          <ThemeToggle />
         </div>
       </div>
     </div>

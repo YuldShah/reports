@@ -40,16 +40,16 @@ export default function SheetsIntegrationStatus() {
   }, [])
 
   return (
-    <Card>
+    <Card className="glass border-glass-border">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <CardTitle>Google Sheets Integration</CardTitle>
+              <CardTitle className="font-heading">Google Sheets Integration</CardTitle>
               {status.configured ? (
-                <CheckCircle className="w-5 h-5 text-green-500" />
+                <CheckCircle className="w-5 h-5 text-success" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-yellow-500" />
+                <AlertCircle className="w-5 h-5 text-warning" />
               )}
             </div>
             <CardDescription className="mt-1">Reports are automatically saved to Google Sheets</CardDescription>
@@ -97,7 +97,7 @@ export default function SheetsIntegrationStatus() {
             <p className="text-sm text-muted-foreground">
               To enable Google Sheets integration, set the spreadsheet ID and provide a Google service account key with edit access.
             </p>
-            <div className="p-3 bg-muted rounded-lg font-mono text-xs">
+            <div className="p-3 bg-muted/30 border border-border rounded-lg font-mono text-xs">
               <div>GOOGLE_SHEETS_ID=your_spreadsheet_id</div>
               <div>GOOGLE_SERVICE_ACCOUNT_KEY=&lt;service_account_json&gt; (or set GOOGLE_SERVICE_ACCOUNT_KEY_PATH)</div>
             </div>

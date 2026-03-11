@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -63,7 +63,6 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
       const allTeams = teamsData.teams || teamsData || []
       const allTemplates = templatesData.templates || []
 
-      // Convert date strings to Date objects for all reports
       const reportsWithDates = fetchedReports.map((report: any) => ({
         ...report,
         createdAt: new Date(report.createdAt),
@@ -108,12 +107,10 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
           templatesCount: templatesData?.templates?.length || 0
         })
 
-        // Fix: Extract reports array from the response
         const fetchedReports = reportsData.reports || []
         const allTeams = teamsData.teams || teamsData || []
         const allTemplates = templatesData.templates || []
 
-        // Fix: Convert date strings to Date objects for all reports
         const reportsWithDates = fetchedReports.map((report: any) => ({
           ...report,
           createdAt: new Date(report.createdAt),
@@ -145,7 +142,6 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
 
   const userTeam = teams.find((t: any) => t.id === user.teamId)
 
-  // Calculate team reports (all reports from users in the same team)
   const teamReports = user.teamId
     ? allReports.filter((r: any) => r.teamId === user.teamId)
     : []
@@ -155,7 +151,6 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
     teamReports: teamReports.length,
   }
 
-  // Pagination calculations for My Reports tab
   const totalPages = Math.ceil(userReports.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
@@ -173,74 +168,76 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading...</div>
+      <div className="container mx-auto py-8">
+        <div className="flex justify-center">
+          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </div>
       </div>
     )
   }
 
-  // Get templates assigned to user's team
   const userTeamTemplates = userTeam?.templateIds
     ? templates.filter((t: any) => userTeam.templateIds.includes(t.id))
     : []
 
-  // Check if user has a student tracker template
   const studentTrackerTemplate = userTeamTemplates.find((t: any) => t.isStudentTracker)
 
   if (showTemplateSelection) {
     return (
-      <div className="container mx-auto px-4 max-w-2xl">
+      <div className="container mx-auto max-w-2xl">
         <div className="space-y-6">
           <div>
-            <Button
-              variant="ghost"
+            <button
               onClick={() => {
                 setShowTemplateSelection(false)
                 setSelectedTemplateId(null)
               }}
-              className="mb-4"
+              className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
             >
-              ← Back
-            </Button>
-            <h2 className="text-2xl font-bold">Select Report Template</h2>
-            <p className="text-muted-foreground">Choose a template for your report</p>
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+            <h2 className="font-heading text-2xl font-bold tracking-tight">Select Template</h2>
+            <p className="text-sm text-muted-foreground mt-1">Choose a template for your report</p>
           </div>
 
           {userTeamTemplates.length === 0 ? (
-            <Card>
+            <Card className="glass border-glass-border">
               <CardContent className="text-center py-12">
-                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Templates Available</h3>
-                <p className="text-muted-foreground mb-4">
-                  Your team doesn&apos;t have any templates assigned. Please contact your administrator.
+                <div className="w-12 h-12 bg-muted/30 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <h3 className="font-heading text-lg font-medium mb-2">No Templates</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your team doesn&apos;t have any templates assigned yet.
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-3 stagger-children">
               {userTeamTemplates.map((template: any) => (
                 <Card
                   key={template.id}
-                  className="cursor-pointer hover:border-primary transition-colors"
+                  className="glass border-glass-border card-interactive cursor-pointer hover:border-primary/30"
                   onClick={() => {
                     setSelectedTemplateId(template.id)
                     setShowTemplateSelection(false)
                     setShowReportForm(true)
                   }}
                 >
-                  <CardHeader>
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-6 h-6 text-primary" />
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
+                        <FileText className="w-5 h-5 text-primary" />
                       </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{template.name}</CardTitle>
-                        <CardDescription className="mt-1">
-                          {template.description || "No description available"}
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="font-heading text-base">{template.name}</CardTitle>
+                        <CardDescription className="mt-0.5 text-xs line-clamp-2">
+                          {template.description || "No description"}
                         </CardDescription>
-                        <Badge variant="secondary" className="mt-2">
+                        <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded-md text-[10px] font-medium bg-muted/40 text-muted-foreground">
                           {template.questions?.length || 0} fields
-                        </Badge>
+                        </span>
                       </div>
                     </div>
                   </CardHeader>
@@ -255,7 +252,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
 
   if (showReportForm) {
     return (
-      <div className="container mx-auto px-4 max-w-2xl">
+      <div className="container mx-auto max-w-2xl">
         <ReportForm
           user={user}
           templateId={selectedTemplateId}
@@ -266,60 +263,61 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
           onSuccess={async () => {
             setShowReportForm(false)
             setSelectedTemplateId(null)
-            await refreshData() // Refresh data instead of page reload
+            await refreshData()
           }}
         />
       </div>
     )
   }
 
-  // Show report details if one is selected
   if (selectedReportId) {
     return (
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto max-w-4xl">
         <ReportDetails reportId={selectedReportId} onBack={() => setSelectedReportId(null)} />
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 max-w-4xl">
+    <div className="container mx-auto max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground mb-2">Welcome, {user.firstName}!</h1>
-        <p className="text-muted-foreground">Team: {userTeam?.name || "No team assigned"}</p>
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Welcome, {user.firstName}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{userTeam?.name || "No team assigned"}</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 h-auto p-1">
-          <TabsTrigger value="overview" className="flex flex-col items-center gap-1 py-2 px-2">
-            <TrendingUp className="w-5 h-5" />
-            <span className="text-xs">Overview</span>
+        <TabsList className="grid w-full grid-cols-2 h-auto p-1 glass border-glass-border rounded-xl">
+          <TabsTrigger value="overview" className="flex items-center gap-2 py-2 rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+            <TrendingUp className="w-4 h-4" />
+            <span className="text-xs font-medium">Overview</span>
           </TabsTrigger>
-          <TabsTrigger value="reports" className="flex flex-col items-center gap-1 py-2 px-2">
-            <FileText className="w-5 h-5" />
-            <span className="text-xs">My Reports</span>
+          <TabsTrigger value="reports" className="flex items-center gap-2 py-2 rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+            <FileText className="w-4 h-4" />
+            <span className="text-xs font-medium">My Reports</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Quick Action */}
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Submit New Report
-              </CardTitle>
-              <CardDescription>Report issues, feedback, or updates to your team</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={() => setShowTemplateSelection(true)} className="w-full sm:w-auto">
-                <Plus className="w-4 h-4" />
-                Create Report
-              </Button>
+        <TabsContent value="overview" className="space-y-5">
+          {/* Submit CTA */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-heading text-sm font-semibold text-foreground">New Report</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Submit updates to your team</p>
+                </div>
+                <Button
+                  onClick={() => setShowTemplateSelection(true)}
+                  size="sm"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 shrink-0"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Create
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Student Distribution Tracker - only show if user has tracker template */}
           {studentTrackerTemplate && (
             <StudentTracker
               user={user}
@@ -329,99 +327,86 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
           )}
 
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card className="border border-white/20">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">My Reports</CardTitle>
-                  <FileText className="w-4 h-4 text-blue-500" />
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="glass border-glass-border">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">My Reports</span>
+                  <div className="w-7 h-7 rounded-lg bg-chart-2/10 flex items-center justify-center">
+                    <FileText className="w-3.5 h-3.5 text-chart-2" />
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-bold">{stats.totalReports}</div>
-                <p className="text-xs text-muted-foreground mt-1">Reports submitted by you</p>
+                <div className="font-heading text-2xl font-bold tracking-tight">{stats.totalReports}</div>
               </CardContent>
             </Card>
 
-            <Card className="border border-white/20">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Team Reports</CardTitle>
-                  <Users className="w-4 h-4 text-green-500" />
+            <Card className="glass border-glass-border">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Team Reports</span>
+                  <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
+                    <Users className="w-3.5 h-3.5 text-success" />
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-bold">{stats.teamReports}</div>
-                <p className="text-xs text-muted-foreground mt-1">Total reports from your team</p>
+                <div className="font-heading text-2xl font-bold tracking-tight">{stats.teamReports}</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Recent Reports */}
-          <Card className="border border-white/20">
-            <CardHeader>
-              <CardTitle>Recent Reports</CardTitle>
-              <CardDescription>Your latest submitted reports</CardDescription>
+          <Card className="glass border-glass-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-heading text-base">Recent Reports</CardTitle>
+              <CardDescription className="text-xs">Your latest submissions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {userReports.slice(0, 3).map((report) => (
-                  <div key={report.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm">{report.title}</span>
-                        <Badge
-                          variant={
-                            report.priority === "high"
-                              ? "destructive"
-                              : report.priority === "medium"
-                                ? "default"
-                                : "secondary"
-                          }
-                        >
-                          {report.priority}
-                        </Badge>
+                  <div key={report.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border hover:bg-muted/30 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-medium text-sm truncate">{report.title}</span>
+                        {report.priority === "high" && (
+                          <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">high</span>
+                        )}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {report.category} • {report.createdAt.toLocaleDateString()}
+                        {report.category} · {report.createdAt.toLocaleDateString()}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{report.status}</Badge>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedReportId(report.id)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedReportId(report.id)}
+                      className="shrink-0 h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                   </div>
                 ))}
 
                 {userReports.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">No reports submitted yet</div>
+                  <div className="text-center py-8 text-sm text-muted-foreground">No reports submitted yet</div>
                 )}
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="reports" className="space-y-6">
+        <TabsContent value="reports" className="space-y-5">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-semibold">My Reports</h2>
-              <p className="text-sm text-muted-foreground">All your submitted reports</p>
+              <h2 className="font-heading text-lg font-semibold">My Reports</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">All your submitted reports</p>
             </div>
           </div>
 
-          {/* Items per page selector */}
           {userReports.length > 0 && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Show</span>
+                <span className="text-xs text-muted-foreground">Show</span>
                 <Select value={String(itemsPerPage)} onValueChange={handleItemsPerPageChange}>
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger className="w-16 h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -430,75 +415,62 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                     <SelectItem value="50">50</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-sm text-muted-foreground">per page</span>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Showing {startIndex + 1}-{Math.min(endIndex, userReports.length)} of {userReports.length} reports
-              </div>
+              <span className="text-xs text-muted-foreground">
+                {startIndex + 1}-{Math.min(endIndex, userReports.length)} of {userReports.length}
+              </span>
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {userReports.length === 0 ? (
-              <Card className="border border-white/20">
+              <Card className="glass border-glass-border">
                 <CardContent className="text-center py-12">
-                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No reports yet</h3>
-                  <p className="text-muted-foreground mb-4">Submit your first report to get started</p>
-                  <Button onClick={() => setShowReportForm(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
+                  <div className="w-12 h-12 rounded-xl bg-muted/30 flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-heading text-lg font-medium mb-2">No reports yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Submit your first report to get started</p>
+                  <Button onClick={() => setShowTemplateSelection(true)} size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    <Plus className="w-4 h-4 mr-1" />
                     Create First Report
                   </Button>
                 </CardContent>
               </Card>
             ) : (
               paginatedReports.map((report) => (
-                <Card key={report.id} className="border border-white/20 hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg leading-tight mb-1">{report.title}</CardTitle>
-                        <CardDescription className="line-clamp-2 text-sm">{report.description}</CardDescription>
+                <Card key={report.id} className="glass border-glass-border card-interactive">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm leading-tight truncate">{report.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{report.description}</p>
                       </div>
-                      <div className="flex gap-2 shrink-0">
-                        <Badge
-                          variant={
-                            report.priority === "high"
-                              ? "destructive"
-                              : report.priority === "medium"
-                                ? "default"
-                                : "secondary"
-                          }
-                        >
-                          {report.priority}
-                        </Badge>
-                        <Badge variant="outline">{report.status}</Badge>
+                      <div className="flex gap-1.5 shrink-0">
+                        {report.priority === "high" && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">high</span>
+                        )}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted/40 text-muted-foreground font-medium">{report.status}</span>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 pb-4">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
                           {report.createdAt.toLocaleDateString()}
-                        </div>
+                        </span>
                         {report.category && (
-                          <Badge variant="outline" className="text-xs">
-                            {report.category}
-                          </Badge>
-                        )}
-                        {report.updatedAt.getTime() !== report.createdAt.getTime() && (
-                          <div className="text-xs">Updated: {report.updatedAt.toLocaleDateString()}</div>
+                          <span className="px-1.5 py-0.5 rounded bg-muted/30 text-[10px]">{report.category}</span>
                         )}
                       </div>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={() => setSelectedReportId(report.id)}
+                        className="h-7 text-xs hover:bg-primary/10 hover:text-primary"
                       >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Details
+                        <Eye className="w-3.5 h-3.5 mr-1" />
+                        View
                       </Button>
                     </div>
                   </CardContent>
@@ -507,66 +479,52 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             )}
           </div>
 
-          {/* Pagination Controls */}
           {totalPages > 1 && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center gap-1 sm:gap-2">
+            <div className="flex items-center justify-center gap-1 pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+
+              {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
+                let pageNumber: number
+                if (totalPages <= 3) {
+                  pageNumber = i + 1
+                } else if (currentPage <= 2) {
+                  pageNumber = i + 1
+                } else if (currentPage >= totalPages - 1) {
+                  pageNumber = totalPages - 2 + i
+                } else {
+                  pageNumber = currentPage - 1 + i
+                }
+                return (
                   <Button
-                    variant="outline"
+                    key={pageNumber}
+                    variant={currentPage === pageNumber ? "default" : "ghost"}
                     size="sm"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-2 sm:px-3"
+                    onClick={() => handlePageChange(pageNumber)}
+                    className={`h-8 w-8 p-0 text-xs ${currentPage === pageNumber ? 'bg-primary text-primary-foreground' : ''}`}
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline">Previous</span>
+                    {pageNumber}
                   </Button>
+                )
+              })}
 
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
-                      // Show 3 pages on mobile for compact display
-                      let pageNumber: number
-                      if (totalPages <= 3) {
-                        pageNumber = i + 1
-                      } else if (currentPage <= 2) {
-                        pageNumber = i + 1
-                      } else if (currentPage >= totalPages - 1) {
-                        pageNumber = totalPages - 2 + i
-                      } else {
-                        pageNumber = currentPage - 1 + i
-                      }
-
-                      return (
-                        <Button
-                          key={pageNumber}
-                          variant={currentPage === pageNumber ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(pageNumber)}
-                          className="w-8 sm:w-10 px-0"
-                        >
-                          {pageNumber}
-                        </Button>
-                      )
-                    })}
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="px-2 sm:px-3"
-                  >
-                    <span className="hidden sm:inline">Next</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="text-center text-sm text-muted-foreground mt-4">
-                  Page {currentPage} of {totalPages}
-                </div>
-              </CardContent>
-            </Card>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           )}
         </TabsContent>
       </Tabs>

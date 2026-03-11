@@ -359,7 +359,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
         {/* Header */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Template Management</h2>
+            <h2 className="font-heading text-xl font-semibold">Template Management</h2>
             <p className="text-sm text-muted-foreground">Create, view, and delete report templates</p>
           </div>
           <Button className="bg-primary hover:bg-primary/90" disabled>
@@ -369,7 +369,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
         </div>
 
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       </div>
     )
@@ -380,7 +380,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Template Management</h2>
+          <h2 className="font-heading text-xl font-semibold">Template Management</h2>
           <p className="text-sm text-muted-foreground">Create, view, and delete report templates</p>
         </div>
 
@@ -505,7 +505,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {templates.map((template) => (
-          <Card key={template.id} className="relative">
+          <Card key={template.id} className="relative glass border-glass-border card-interactive">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3 flex-1">
@@ -513,7 +513,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg truncate">{template.name}</CardTitle>
+                    <CardTitle className="font-heading text-lg truncate">{template.name}</CardTitle>
                     <CardDescription className="line-clamp-2">
                       {template.description || "No description provided"}
                     </CardDescription>
@@ -579,10 +579,10 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
       </div>
 
       {templates.length === 0 && (
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="text-center py-12">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No templates created yet</h3>
+            <h3 className="font-heading text-lg font-medium mb-2">No templates created yet</h3>
             <p className="text-muted-foreground mb-4">Create your first template to get started</p>
           </CardContent>
         </Card>
@@ -701,16 +701,16 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                         <h4 className="text-sm font-medium">Questions JSON</h4>
                         <Badge variant="secondary" className="text-xs">Read-only</Badge>
                       </div>
-                      <div className="relative bg-slate-950 rounded-lg overflow-hidden border border-slate-800">
-                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+                        <div className="bg-muted/30 rounded-lg overflow-hidden border border-border">
+                          <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <FileJson className="w-4 h-4 text-slate-400" />
-                            <span className="text-xs text-slate-400">JSON</span>
+                            <FileJson className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">JSON</span>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                            className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-muted"
                             onClick={() => {
                               const jsonContent = JSON.stringify(selectedTemplate.questions, null, 2)
                               navigator.clipboard.writeText(jsonContent)
@@ -732,10 +732,10 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                           </Button>
                         </div>
                         <div className="p-4 overflow-y-auto max-h-[50vh]">
-                          <pre className="text-sm text-slate-100 font-mono leading-relaxed">
+                          <pre className="text-sm text-foreground font-mono leading-relaxed">
                             <code>{JSON.stringify(selectedTemplate.questions, null, 2).split('\n').map((line, index) => (
                               <div key={index} className="flex">
-                                <span className="text-slate-500 select-none text-right pr-4 w-8 shrink-0 inline-block">{index + 1}</span>
+                                <span className="text-muted-foreground select-none text-right pr-4 w-8 shrink-0 inline-block">{index + 1}</span>
                                 <span className="whitespace-pre-wrap break-all flex-1">{line}</span>
                               </div>
                             ))}</code>

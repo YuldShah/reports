@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,8 +27,6 @@ export default function AdminDashboard() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        
-        // Fetch users
         const usersResponse = await fetch('/api/users')
         const usersData = await usersResponse.json()
         const usersWithDates = (usersData.users || []).map((user: any) => ({
@@ -37,7 +35,6 @@ export default function AdminDashboard() {
         }))
         setUsers(usersWithDates)
 
-        // Fetch teams
         const teamsResponse = await fetch('/api/teams')
         const teamsData = await teamsResponse.json()
         const teamsWithDates = (teamsData.teams || []).map((team: any) => ({
@@ -46,7 +43,6 @@ export default function AdminDashboard() {
         }))
         setTeams(teamsWithDates)
 
-        // Fetch reports
         const reportsResponse = await fetch('/api/reports')
         const reportsData = await reportsResponse.json()
         const reportsWithDates = (reportsData.reports || []).map((report: any) => ({
@@ -73,7 +69,6 @@ export default function AdminDashboard() {
 
   const refreshData = async () => {
     try {
-      // Fetch users
       const usersResponse = await fetch('/api/users')
       const usersData = await usersResponse.json()
       const usersWithDates = (usersData.users || []).map((user: any) => ({
@@ -82,7 +77,6 @@ export default function AdminDashboard() {
       }))
       setUsers(usersWithDates)
 
-      // Fetch teams
       const teamsResponse = await fetch('/api/teams')
       const teamsData = await teamsResponse.json()
       const teamsWithDates = (teamsData.teams || []).map((team: any) => ({
@@ -91,7 +85,6 @@ export default function AdminDashboard() {
       }))
       setTeams(teamsWithDates)
 
-      // Fetch reports
       const reportsResponse = await fetch('/api/reports')
       const reportsData = await reportsResponse.json()
       const reportsWithDates = (reportsData.reports || []).map((report: any) => ({
@@ -107,70 +100,69 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 max-w-6xl">
+      <div className="container mx-auto max-w-6xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Loading...</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Loading...</p>
         </div>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
         </div>
       </div>
     )
   }
 
-  // Show report details if one is selected
   if (selectedReportId) {
     return (
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto max-w-4xl">
         <ReportDetails reportId={selectedReportId} onBack={() => setSelectedReportId(null)} />
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 max-w-6xl">
+    <div className="container mx-auto max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground mb-2">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Manage users, teams, and reports</p>
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage users, teams, and reports</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 h-auto p-1 border rounded-lg bg-muted/30">
+        <TabsList className="grid w-full grid-cols-5 h-auto p-1 glass border-glass-border rounded-xl">
           <TabsTrigger
             value="overview"
-            className="flex flex-col items-center gap-1 py-2 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            className="flex flex-col items-center gap-1 py-2 px-2 rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
           >
-            <TrendingUp className="w-5 h-5" />
-            <span className="text-xs">Overview</span>
+            <TrendingUp className="w-4 h-4" />
+            <span className="text-[11px] font-medium">Overview</span>
           </TabsTrigger>
           <TabsTrigger
             value="users"
-            className="flex flex-col items-center gap-1 py-2 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            className="flex flex-col items-center gap-1 py-2 px-2 rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
           >
-            <UserCheck className="w-5 h-5" />
-            <span className="text-xs">Users</span>
+            <UserCheck className="w-4 h-4" />
+            <span className="text-[11px] font-medium">Users</span>
           </TabsTrigger>
           <TabsTrigger
             value="teams"
-            className="flex flex-col items-center gap-1 py-2 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            className="flex flex-col items-center gap-1 py-2 px-2 rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
           >
-            <Building2 className="w-5 h-5" />
-            <span className="text-xs">Teams</span>
+            <Building2 className="w-4 h-4" />
+            <span className="text-[11px] font-medium">Teams</span>
           </TabsTrigger>
           <TabsTrigger
             value="templates"
-            className="flex flex-col items-center gap-1 py-2 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            className="flex flex-col items-center gap-1 py-2 px-2 rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
           >
-            <FileJson className="w-5 h-5" />
-            <span className="text-xs">Templates</span>
+            <FileJson className="w-4 h-4" />
+            <span className="text-[11px] font-medium">Templates</span>
           </TabsTrigger>
           <TabsTrigger
             value="reports"
-            className="flex flex-col items-center gap-1 py-2 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            className="flex flex-col items-center gap-1 py-2 px-2 rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
           >
-            <FileText className="w-5 h-5" />
-            <span className="text-xs">Reports</span>
+            <FileText className="w-4 h-4" />
+            <span className="text-[11px] font-medium">Reports</span>
           </TabsTrigger>
         </TabsList>
 
@@ -179,92 +171,74 @@ export default function AdminDashboard() {
           <SheetsIntegrationStatus />
 
           {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5" />
+          <Card className="glass border-glass-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-heading text-base flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary" />
                 Quick Actions
               </CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Button
-                  variant="outline"
-                  className="justify-start h-auto p-4 bg-transparent"
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button
                   onClick={() => setActiveTab("users")}
+                  className="p-3 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 text-left transition-colors"
                 >
-                  <div className="text-left">
-                    <div className="font-medium">Manage Users</div>
-                    <div className="text-sm text-muted-foreground">Edit user roles</div>
-                  </div>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="justify-start h-auto p-4 bg-transparent"
+                  <div className="text-sm font-medium text-foreground">Manage Users</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Edit user roles</div>
+                </button>
+                <button
                   onClick={() => setActiveTab("teams")}
+                  className="p-3 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 text-left transition-colors"
                 >
-                  <div className="text-left">
-                    <div className="font-medium">Create New Team</div>
-                    <div className="text-sm text-muted-foreground">Add a new team</div>
-                  </div>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="justify-start h-auto p-4 bg-transparent"
+                  <div className="text-sm font-medium text-foreground">Create Team</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Add a new team</div>
+                </button>
+                <button
                   onClick={() => setActiveTab("reports")}
+                  className="p-3 rounded-lg border border-border bg-muted/20 hover:bg-muted/40 text-left transition-colors"
                 >
-                  <div className="text-left">
-                    <div className="font-medium flex items-center gap-2">
-                      View Reports <ExternalLink className="w-4 h-4" />
-                    </div>
-                    <div className="text-sm text-muted-foreground">Access all reports data</div>
+                  <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    View Reports <ExternalLink className="w-3 h-3" />
                   </div>
-                </Button>
+                  <div className="text-xs text-muted-foreground mt-0.5">Access all reports</div>
+                </button>
               </div>
             </CardContent>
           </Card>
 
           {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest reports and team updates</CardDescription>
+          <Card className="glass border-glass-border">
+            <CardHeader className="pb-3">
+              <CardTitle className="font-heading text-base">Recent Activity</CardTitle>
+              <CardDescription className="text-xs">Latest reports and team updates</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {reports.slice(0, 5).map((report) => {
                   const user = users.find((u) => u.telegramId === report.userId)
                   const team = teams.find((t) => t.id === report.teamId)
 
                   return (
-                    <div key={report.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">{report.title}</span>
-                          <Badge
-                            variant={
-                              report.priority === "high"
-                                ? "destructive"
-                                : report.priority === "medium"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {report.priority}
-                          </Badge>
+                    <div key={report.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border hover:bg-muted/30 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-medium text-sm truncate">{report.title}</span>
+                          {report.priority === "high" && (
+                            <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-destructive/10 text-destructive">
+                              high
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          by {user?.firstName} {user?.lastName} • {team?.name} •{" "}
-                          {report.createdAt.toLocaleDateString()}
+                        <div className="text-xs text-muted-foreground truncate">
+                          {user?.firstName} {user?.lastName} · {team?.name} · {report.createdAt.toLocaleDateString()}
                         </div>
                       </div>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => setSelectedReportId(report.id)}
+                        className="shrink-0 h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -273,7 +247,7 @@ export default function AdminDashboard() {
                 })}
 
                 {reports.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">No reports yet</div>
+                  <div className="text-center py-8 text-muted-foreground text-sm">No reports yet</div>
                 )}
               </div>
             </CardContent>

@@ -132,12 +132,12 @@ export default function ReportsView() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Reports Management</h2>
+            <h2 className="font-heading text-xl font-semibold">Reports Management</h2>
             <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
         </div>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       </div>
     )
@@ -153,7 +153,7 @@ export default function ReportsView() {
       {/* Header with Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Reports Management</h2>
+          <h2 className="font-heading text-xl font-semibold">Reports Management</h2>
           <p className="text-sm text-muted-foreground">View and manage all submitted reports</p>
         </div>
         {sheetConfigured && sheetUrl ? (
@@ -176,9 +176,9 @@ export default function ReportsView() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="glass border-glass-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="font-heading flex items-center gap-2">
             <Filter className="w-5 h-5" />
             Filters
           </CardTitle>
@@ -236,10 +236,10 @@ export default function ReportsView() {
       {/* Reports List */}
       <div className="space-y-4">
         {paginatedReports.length === 0 ? (
-          <Card>
+          <Card className="glass border-glass-border">
             <CardContent className="text-center py-12">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No reports found</h3>
+              <h3 className="font-heading text-lg font-medium mb-2">No reports found</h3>
               <p className="text-muted-foreground">
                 {reports.length === 0
                   ? "No reports have been submitted yet."
@@ -254,11 +254,11 @@ export default function ReportsView() {
             const template = templates.find((t) => t.id === report.templateId)
 
             return (
-              <Card key={report.id} className="hover:shadow-md transition-shadow">
+              <Card key={report.id} className="glass border-glass-border card-interactive">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-1">
-                      <CardTitle className="text-lg leading-tight">{report.title}</CardTitle>
+                      <CardTitle className="font-heading text-lg leading-tight">{report.title}</CardTitle>
                       <CardDescription className="line-clamp-2 text-sm">{report.description}</CardDescription>
                       {template && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground pt-0.5">
@@ -271,7 +271,7 @@ export default function ReportsView() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedReportId(report.id)}
-                      className="shrink-0"
+                      className="shrink-0 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       View
@@ -307,7 +307,7 @@ export default function ReportsView() {
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="pt-6">
             <div className="flex items-center justify-center gap-1 sm:gap-2">
               <Button
@@ -341,7 +341,7 @@ export default function ReportsView() {
                       variant={currentPage === pageNumber ? "default" : "outline"}
                       size="sm"
                       onClick={() => handlePageChange(pageNumber)}
-                      className="w-8 sm:w-10 px-0"
+                      className={`w-8 sm:w-10 px-0 ${currentPage === pageNumber ? 'bg-primary text-primary-foreground' : ''}`}
                     >
                       {pageNumber}
                     </Button>

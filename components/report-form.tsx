@@ -340,7 +340,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           </div>
         </div>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       </div>
     )
@@ -350,13 +350,13 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting} className="self-start">
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting} className="self-start hover:bg-primary/10 hover:text-primary">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Submit Report</h1>
-          <p className="text-muted-foreground">
+          <h1 className="font-heading text-2xl font-bold tracking-tight">Submit Report</h1>
+          <p className="text-sm text-muted-foreground">
             {template ? `Using ${template.name} template` : "Fill out the form below to submit your report"}
           </p>
         </div>
@@ -364,7 +364,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
 
       {/* Template info */}
       {template && (
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="glass border-primary/20 bg-primary/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-2">
               <FileText className="w-5 h-5 text-primary mt-0.5" />
@@ -381,7 +381,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
 
       {/* Form validation errors */}
       {Object.keys(formErrors).length > 0 && (
-        <Card className="border-destructive/50 bg-destructive/5">
+        <Card className="glass border-destructive/50 bg-destructive/5">
           <CardContent className="pt-6">
             <div className="flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
@@ -401,7 +401,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
       <form onSubmit={handleSubmit} className="space-y-6">
         {template ? (
           /* Template-based form */
-          <Card>
+          <Card className="glass border-glass-border">
             <CardContent className="space-y-4 pt-4">
               {((template as any).questions || (template as any).fields || []).map((field: TemplateField) => renderTemplateField(field))}
             </CardContent>
@@ -410,9 +410,9 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           /* Default form */
           <>
             {/* Basic Information */}
-            <Card>
+            <Card className="glass border-glass-border">
               <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
+                <CardTitle className="font-heading">Basic Information</CardTitle>
                 <CardDescription>Essential details about your report</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -490,7 +490,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
 
         {/* Submit Button */}
         <div className="flex gap-4 pt-4">
-          <Button type="submit" disabled={isSubmitting} className="flex-1">
+          <Button type="submit" disabled={isSubmitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
             {isSubmitting ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />

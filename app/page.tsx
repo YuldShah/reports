@@ -38,22 +38,31 @@ export default function HomePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background">
-        <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border" style={{ paddingTop: headerPaddingTop }}>
+      <div className="min-h-screen bg-mesh">
+        {/* Fixed header with glass effect */}
+        <div
+          className="fixed top-0 left-0 right-0 z-50 glass-strong"
+          style={{ paddingTop: headerPaddingTop }}
+        >
           {shouldShowLogo ? <Logo /> : null}
           <ProfileCard />
         </div>
 
-        <div className="pb-6 px-4" style={{ paddingTop: contentPaddingTop }}>
-          {isAdmin ? (
-            <AdminDashboard />
-          ) : dbUser ? (
-            <ProtectedRoute requireTeam>
-              <EmployeeDashboard user={dbUser} />
-            </ProtectedRoute>
-          ) : (
-            <div>Loading...</div>
-          )}
+        {/* Main content */}
+        <div className="pb-8 px-4" style={{ paddingTop: contentPaddingTop }}>
+          <div className="fade-in">
+            {isAdmin ? (
+              <AdminDashboard />
+            ) : dbUser ? (
+              <ProtectedRoute requireTeam>
+                <EmployeeDashboard user={dbUser} />
+              </ProtectedRoute>
+            ) : (
+              <div className="flex items-center justify-center h-40">
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </ProtectedRoute>

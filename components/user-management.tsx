@@ -180,12 +180,12 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div>
-            <h2 className="text-xl font-semibold">User Management</h2>
+            <h2 className="font-heading text-xl font-semibold">User Management</h2>
             <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
         </div>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       </div>
     )
@@ -196,15 +196,15 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div>
-          <h2 className="text-xl font-semibold">User Management</h2>
+          <h2 className="font-heading text-xl font-semibold">User Management</h2>
           <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="glass border-glass-border">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="font-heading flex items-center gap-2">
             <Filter className="w-5 h-5" />
             Filters & Sort
           </CardTitle>
@@ -263,10 +263,10 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
       {/* Users List */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredAndSortedUsers.length === 0 ? (
-          <Card className="col-span-full">
+          <Card className="col-span-full glass border-glass-border">
             <CardContent className="text-center py-12">
               <UserIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No users found</h3>
+              <h3 className="font-heading text-lg font-medium mb-2">No users found</h3>
               <p className="text-muted-foreground">
                 {users.length === 0
                   ? "No users have been registered yet."
@@ -279,18 +279,18 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
             const team = teams.find((t) => t.id === user.teamId)
 
             return (
-              <Card key={user.telegramId} className="hover:shadow-md transition-shadow">
+              <Card key={user.telegramId} className="glass border-glass-border card-interactive">
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
-                    <Avatar className="w-12 h-12">
+                    <Avatar className="w-12 h-12 ring-1 ring-white/10">
                       <AvatarImage src={user.photoUrl} alt={user.firstName} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-primary/20 text-primary font-heading font-semibold">
                         {user.firstName.charAt(0)}
                         {user.lastName?.charAt(0) || ''}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg leading-tight">
+                      <CardTitle className="font-heading text-lg leading-tight">
                         {user.firstName} {user.lastName}
                       </CardTitle>
                       {user.username && (
@@ -301,7 +301,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => handleEditUser(user)}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 hover:bg-primary/10 hover:text-primary hover:border-primary/30"
                     >
                       <Edit3 className="w-4 h-4" />
                     </Button>
@@ -345,7 +345,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
 
       {/* Summary */}
       {filteredAndSortedUsers.length > 0 && (
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="pt-6">
             <div className="text-center text-sm text-muted-foreground">
               Showing {filteredAndSortedUsers.length} of {users.length} users

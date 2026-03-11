@@ -88,12 +88,12 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   if (loading) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       </div>
     )
@@ -102,11 +102,11 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   if (!report) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="text-center py-12">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">Report Not Found</h3>
@@ -124,18 +124,18 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
+        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
       </div>
 
       {/* Report Title Card */}
-      <Card>
+      <Card className="glass border-glass-border">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="text-2xl">{report.title}</CardTitle>
+              <CardTitle className="font-heading text-2xl">{report.title}</CardTitle>
               {report.description && (
                 <CardDescription className="mt-2 text-base">
                   {report.description}
@@ -148,7 +148,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
 
       {/* Metadata */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -164,7 +164,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -178,7 +178,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -194,7 +194,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass border-glass-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -213,9 +213,9 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
 
       {/* Template Info */}
       {template && (
-        <Card>
+        <Card className="glass border-glass-border">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="font-heading flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Template Information
             </CardTitle>
@@ -236,9 +236,9 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
       )}
 
       {/* Report Answers */}
-      <Card>
+      <Card className="glass border-glass-border">
         <CardHeader>
-          <CardTitle>Report Details</CardTitle>
+          <CardTitle className="font-heading">Report Details</CardTitle>
           <CardDescription>
             {template ? `Answers from ${template.name} template` : 'Report data'}
           </CardDescription>
@@ -286,9 +286,9 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
       </Card>
 
       {/* Additional Metadata */}
-      <Card>
+      <Card className="glass border-glass-border">
         <CardHeader>
-          <CardTitle>Additional Information</CardTitle>
+          <CardTitle className="font-heading">Additional Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between">
