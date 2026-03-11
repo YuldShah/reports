@@ -29,6 +29,10 @@ yarn-error.log*
 .env*.local
 .env
 
+# secrets / service account keys
+newkey.json
+*.secret.json
+
 # vercel
 .vercel
 
