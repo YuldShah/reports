@@ -20,6 +20,7 @@ import {
 import { Plus, FileText, Trash2, Upload, Eye, FileJson, Copy, Check, Users } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useAuthContext } from "@/components/auth-provider"
+import { normalizeText } from "@/lib/utils"
 
 interface Template {
   id: string
@@ -513,9 +514,9 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="font-heading text-lg truncate">{template.name}</CardTitle>
+                    <CardTitle className="font-heading text-lg truncate">{normalizeText(template.name)}</CardTitle>
                     <CardDescription className="line-clamp-2">
-                      {template.description || "No description provided"}
+                      {normalizeText(template.description) || "No description provided"}
                     </CardDescription>
                   </div>
                 </div>
@@ -598,9 +599,9 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
       }}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEditMode ? 'Edit Template' : selectedTemplate?.name}</DialogTitle>
+            <DialogTitle>{isEditMode ? 'Edit Template' : normalizeText(selectedTemplate?.name)}</DialogTitle>
             <DialogDescription>
-              {isEditMode ? 'Update template details and questions' : selectedTemplate?.description}
+              {isEditMode ? 'Update template details and questions' : normalizeText(selectedTemplate?.description)}
             </DialogDescription>
           </DialogHeader>
           {selectedTemplate && (
@@ -771,7 +772,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           <DialogHeader>
             <DialogTitle>Delete Template</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &quot;{templateToDelete?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{normalizeText(templateToDelete?.name)}&quot;? This action cannot be undone.
               Existing reports using this template will keep their data, but new reports cannot use this template.
             </DialogDescription>
           </DialogHeader>

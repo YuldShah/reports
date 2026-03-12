@@ -29,7 +29,7 @@
   --chart-3: #4d9c2e;
   --chart-4: #b82e7e;
   --chart-5: #2e4db8;
-  --radius: 1rem;
+  --radius: 1.125rem;
   --sidebar: #f2efe9;
   --sidebar-foreground: #1c1917;
   --sidebar-primary: #b8922e;
@@ -75,7 +75,7 @@
   --chart-3: #7dd453;
   --chart-4: #d453a8;
   --chart-5: #5368d4;
-  --radius: 1rem;
+  --radius: 1.125rem;
   --sidebar: #0c0f14;
   --sidebar-foreground: #e8e4df;
   --sidebar-primary: #d4a853;
@@ -147,11 +147,11 @@
 @layer base {
   * { @apply border-border outline-ring/50; }
   html {
-    overflow-y: scroll;
-    scrollbar-gutter: stable;
-    scroll-behavior: smooth;
+    overflow-y: auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
   body {
     padding-right: 0 !important;
@@ -159,6 +159,8 @@
     background: var(--background);
     color: var(--foreground);
     font-feature-settings: "rlig" 1, "calt" 1;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
   body[data-scroll-locked] {
     overflow: hidden;
@@ -169,13 +171,16 @@
     padding-right: 0 !important;
     margin-right: 0 !important;
   }
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 100px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
   ::selection { background: rgba(184,146,46,0.2); color: #1c1917; }
-  .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
-  .dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
   .dark ::selection { background: rgba(212,168,83,0.25); color: #fff; }
 }
 
@@ -258,6 +263,23 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  .surface-field {
+    background: color-mix(in srgb, var(--card) 82%, transparent);
+    border-color: color-mix(in srgb, var(--border) 78%, var(--primary) 22%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+  .dark .surface-field {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+  .surface-panel {
+    background: color-mix(in srgb, var(--card) 72%, transparent);
+    border-color: color-mix(in srgb, var(--border) 80%, var(--primary) 20%);
+  }
+  .header-halo {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--background) 96%, transparent) 0%, color-mix(in srgb, var(--background) 76%, transparent) 64%, transparent 100%);
+    backdrop-filter: blur(28px) saturate(1.2);
+    -webkit-backdrop-filter: blur(28px) saturate(1.2);
   }
 }
 

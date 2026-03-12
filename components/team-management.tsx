@@ -23,6 +23,7 @@ import { type User, type Team, type ReportTemplate } from "@/lib/types"
 import { toast } from "@/hooks/use-toast"
 import { useAuthContext } from "@/components/auth-provider"
 import { getAdminTelegramIds } from "@/lib/telegram"
+import { normalizeText } from "@/lib/utils"
 
 interface TeamManagementProps {
   onDataChange?: () => void
@@ -479,11 +480,11 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
             <Card key={team.id} className="relative glass border-glass-border card-interactive">
               <CardHeader className="pb-3">
                 {/* Team name */}
-                <CardTitle className="font-heading text-lg leading-tight">{team.name}</CardTitle>
+                <CardTitle className="font-heading text-lg leading-tight">{normalizeText(team.name)}</CardTitle>
                 
                 {/* Description */}
                 <CardDescription className="line-clamp-2 mt-1">
-                  {team.description || "No description..."}
+                  {normalizeText(team.description) || "No description..."}
                 </CardDescription>
                 
                 {/* Stats + Actions row */}
@@ -525,7 +526,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                         const template = templates.find(t => t.id === tid)
                         return template ? (
                           <Badge key={tid} variant="outline" className="text-xs">
-                            {template.name}
+                            {normalizeText(template.name)}
                           </Badge>
                         ) : null
                       })}
@@ -561,7 +562,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                       </DialogTrigger>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Add Member to {team.name}</DialogTitle>
+                          <DialogTitle>Add Member to {normalizeText(team.name)}</DialogTitle>
                           <DialogDescription>Select a user to add to this team</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
@@ -574,7 +575,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               <SelectContent>
                                 {unassignedUsers.map((user) => (
                                   <SelectItem key={user.telegramId} value={user.telegramId.toString()}>
-                                    {user.firstName} {user.lastName} 
+                                    {normalizeText(user.firstName)} {normalizeText(user.lastName)} 
                                     {user.username && ` (@${user.username})`}
                                     {` [ID: ${user.telegramId}]`}
                                   </SelectItem>
@@ -606,7 +607,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                             </Avatar>
                             <div className="min-w-0 flex-1">
                               <div className="text-sm font-medium truncate">
-                                {member.firstName} {member.lastName}
+                                {normalizeText(member.firstName)} {normalizeText(member.lastName)}
                               </div>
                               {member.username && (
                                 <div className="text-xs text-muted-foreground truncate">@{member.username}</div>
@@ -677,11 +678,11 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                             htmlFor={`template-${template.id}`}
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                           >
-                            {template.name}
+                            {normalizeText(template.name)}
                           </Label>
                           {template.description && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              {template.description}
+                              {normalizeText(template.description)}
                             </p>
                           )}
                         </div>
@@ -748,7 +749,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">
-                      {user.firstName} {user.lastName}
+                      {normalizeText(user.firstName)} {normalizeText(user.lastName)}
                     </div>
                     {user.username && <div className="text-xs text-muted-foreground truncate">@{user.username}</div>}
                     <div className="text-xs text-muted-foreground">ID: {user.telegramId}</div>

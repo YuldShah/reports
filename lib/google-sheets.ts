@@ -50,6 +50,29 @@ const getCwd = (): string => {
   return ''
 }
 
+const resolveCredentialPath = (): string | null => {
+  const configuredPath = getEnvVar('GOOGLE_SERVICE_ACCOUNT_KEY_PATH') || getEnvVar('GOOGLE_APPLICATION_CREDENTIALS')
+  const candidatePaths = [configuredPath]
+    .filter(Boolean)
+    .map((candidate) => candidate as string)
+    .flatMap((candidate) => {
+      if (path.isAbsolute(candidate)) {
+        return [candidate]
+      }
+
+      const cwd = getCwd()
+      return cwd ? [path.join(cwd, candidate), candidate] : [candidate]
+    })
+
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate
+    }
+  }
+
+  return null
+}
+
 export interface GoogleSheetsConfig {
   spreadsheetId: string
   serviceAccountPath: string
@@ -66,22 +89,10 @@ const getGoogleSheetsClient = async () => {
       credentials = JSON.parse(getEnvVar('GOOGLE_SERVICE_ACCOUNT_KEY') as string)
     } else {
       // Fallback to file (for development)
-      const keyPathFromEnv = getEnvVar('GOOGLE_SERVICE_ACCOUNT_KEY_PATH')
-      const candidatePaths = [keyPathFromEnv].filter(Boolean) as string[]
-
-      const resolvedPath = candidatePaths
-        .map((relativePath) => {
-          if (!relativePath) return ''
-          if (path.isAbsolute(relativePath)) {
-            return relativePath
-          }
-          const cwd = getCwd()
-          return cwd ? path.join(cwd, relativePath) : relativePath
-        })
-        .find((candidate) => fs.existsSync(candidate))
+      const resolvedPath = resolveCredentialPath()
 
       if (!resolvedPath) {
-        throw new Error('Google Service Account credentials not found')
+        throw new Error('Google Service Account credentials not found at GOOGLE_SERVICE_ACCOUNT_KEY_PATH or GOOGLE_APPLICATION_CREDENTIALS')
       }
 
       credentials = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'))

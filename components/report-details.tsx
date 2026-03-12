@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Calendar, User, Building, FileText, Clock } from "lucide-react"
 import type { Report, User as UserType, Team, ReportTemplate } from "@/lib/types"
+import { normalizeText } from "@/lib/utils"
 
 interface ReportDetailsProps {
   reportId: string
@@ -135,10 +136,10 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className="font-heading text-2xl">{report.title}</CardTitle>
+              <CardTitle className="font-heading text-2xl">{normalizeText(report.title)}</CardTitle>
               {report.description && (
                 <CardDescription className="mt-2 text-base">
-                  {report.description}
+                  {normalizeText(report.description)}
                 </CardDescription>
               )}
             </div>
@@ -157,7 +158,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               <div>
                 <p className="text-sm text-muted-foreground">Submitted by</p>
                 <p className="font-medium">
-                  {user ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : 'Unknown'}
+                  {user ? `${normalizeText(user.firstName)}${user.lastName ? ` ${normalizeText(user.lastName)}` : ''}` : 'Unknown'}
                 </p>
               </div>
             </div>
@@ -172,7 +173,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Team</p>
-                <p className="font-medium">{team?.name || 'Unknown'}</p>
+                <p className="font-medium">{normalizeText(team?.name || 'Unknown')}</p>
               </div>
             </div>
           </CardContent>
@@ -223,12 +224,12 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
           <CardContent className="space-y-2">
             <div>
               <span className="text-sm text-muted-foreground">Template Name: </span>
-              <span className="font-medium">{template.name}</span>
+              <span className="font-medium">{normalizeText(template.name)}</span>
             </div>
             {template.description && (
               <div>
                 <span className="text-sm text-muted-foreground">Description: </span>
-                <span className="text-sm">{template.description}</span>
+                <span className="text-sm">{normalizeText(template.description)}</span>
               </div>
             )}
           </CardContent>
@@ -240,7 +241,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
         <CardHeader>
           <CardTitle className="font-heading">Report Details</CardTitle>
           <CardDescription>
-            {template ? `Answers from ${template.name} template` : 'Report data'}
+            {template ? `Answers from ${normalizeText(template.name)} template` : 'Report data'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -251,11 +252,11 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               return (
                 <div key={field.id} className="border-b last:border-0 pb-4 last:pb-0">
                   <p className="text-sm font-medium text-muted-foreground mb-1">
-                    {field.label || field.question || field.id}
+                    {normalizeText(field.label || field.question || field.id)}
                   </p>
                   <p className="text-base">
                     {value !== undefined && value !== null && value !== ''
-                      ? String(value)
+                      ? normalizeText(String(value))
                       : <span className="text-muted-foreground italic">No answer provided</span>
                     }
                   </p>
@@ -267,11 +268,11 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
             Object.entries(answers).map(([key, value]) => (
               <div key={key} className="border-b last:border-0 pb-4 last:pb-0">
                 <p className="text-sm font-medium text-muted-foreground mb-1">
-                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  {normalizeText(key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                 </p>
                 <p className="text-base">
                   {value !== undefined && value !== null && value !== ''
-                    ? String(value)
+                    ? normalizeText(String(value))
                     : <span className="text-muted-foreground italic">No answer provided</span>
                   }
                 </p>
@@ -302,7 +303,7 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
           {report.category && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Category:</span>
-              <Badge variant="secondary">{report.category}</Badge>
+              <Badge variant="secondary">{normalizeText(report.category)}</Badge>
             </div>
           )}
           {report.priority && (

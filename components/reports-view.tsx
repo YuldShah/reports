@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Filter, ExternalLink, Calendar, User as UserIcon, Building, FileText, Eye, ChevronLeft, ChevronRight, FileJson } from "lucide-react"
 import { type User, type Team, type Report } from "@/lib/types"
 import ReportDetails from "@/components/report-details"
+import { normalizeText } from "@/lib/utils"
 
 export default function ReportsView() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -96,10 +97,12 @@ export default function ReportsView() {
   }
 
   const filteredReports = useMemo(() => {
+    const normalizedSearchTerm = normalizeText(searchTerm).toLowerCase()
+
     return reports.filter((report) => {
       const matchesSearch =
-        report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        report.description.toLowerCase().includes(searchTerm.toLowerCase())
+        normalizeText(report.title).toLowerCase().includes(normalizedSearchTerm) ||
+        normalizeText(report.description).toLowerCase().includes(normalizedSearchTerm)
       const matchesTeam = teamFilter === "all" || report.teamId === teamFilter
 
       return matchesSearch && matchesTeam
@@ -119,7 +122,7 @@ export default function ReportsView() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0 })
   }
 
   const handleItemsPerPageChange = (value: string) => {
@@ -203,7 +206,7 @@ export default function ReportsView() {
                 <SelectItem value="all">All Teams</SelectItem>
                 {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id}>
-                    {team.name}
+                    {normalizeText(team.name)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -258,12 +261,12 @@ export default function ReportsView() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-1">
-                      <CardTitle className="font-heading text-lg leading-tight">{report.title}</CardTitle>
-                      <CardDescription className="line-clamp-2 text-sm">{report.description}</CardDescription>
+                      <CardTitle className="font-heading text-lg leading-tight">{normalizeText(report.title)}</CardTitle>
+                      <CardDescription className="line-clamp-2 text-sm">{normalizeText(report.description)}</CardDescription>
                       {template && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground pt-0.5">
                           <FileJson className="w-3 h-3" />
-                          <span>{template.name}</span>
+                          <span>{normalizeText(template.name)}</span>
                         </div>
                       )}
                     </div>
@@ -282,11 +285,11 @@ export default function ReportsView() {
                   <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <UserIcon className="w-4 h-4" />
-                      {user?.firstName} {user?.lastName}
+                      {normalizeText(user?.firstName)} {normalizeText(user?.lastName)}
                     </div>
                     <div className="flex items-center gap-1">
                       <Building className="w-4 h-4" />
-                      {team?.name}
+                      {normalizeText(team?.name)}
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
@@ -294,7 +297,7 @@ export default function ReportsView() {
                     </div>
                     {report.category && (
                       <Badge variant="outline" className="text-xs">
-                        {report.category}
+                        {normalizeText(report.category)}
                       </Badge>
                     )}
                   </div>

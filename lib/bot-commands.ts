@@ -11,6 +11,25 @@ const getEnv = (): Record<string, string | undefined> => {
   return (globalThis as GlobalWithProcess).process?.env ?? {}
 }
 
+const getMiniAppBaseUrl = (env: Record<string, string | undefined>): string | null => {
+  const explicitUrl = env.TELEGRAM_MINI_APP_URL || env.NEXT_PUBLIC_APP_URL
+  if (explicitUrl) {
+    return explicitUrl.replace(/\/+$/, "")
+  }
+
+  const webhookUrl = env.TELEGRAM_WEBHOOK_URL
+  if (!webhookUrl) {
+    return null
+  }
+
+  try {
+    return new URL(webhookUrl).origin
+  } catch (error) {
+    console.error("Invalid TELEGRAM_WEBHOOK_URL for mini app derivation:", error)
+    return null
+  }
+}
+
 export async function handleBotCommand(chatId: number, message: string, userId: number, firstName?: string, lastName?: string, username?: string) {
   try {
     console.log(`Handling bot message: ${message} for user ${userId}`)
@@ -50,21 +69,23 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     // Echo the message with appropriate button
     const replyMsg = isUserAdmin ? "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports." : "Welcome! 👋\n\nClick the button below to submit your daily report."
     
-    const baseAppUrl = env.NEXT_PUBLIC_APP_URL || "https://voip-armstrong-lot-make.trycloudflare.com"
-    const webAppUrl = isUserAdmin ? `${baseAppUrl}?admin=true` : baseAppUrl
+    const baseAppUrl = getMiniAppBaseUrl(env)
+    const webAppUrl = baseAppUrl ? (isUserAdmin ? `${baseAppUrl}?admin=true` : baseAppUrl) : null
 
     const buttonText = isUserAdmin ? "📊 Admin Dashboard" : "📝 Submit Report"
-    const additionalText = isUserAdmin ? 
-      "\n\nUse the button below to access your admin dashboard." : 
-      "\n\nUse the button below to submit your report."
-
-    const replyMarkup = {
-      inline_keyboard: [[
-        {
-          text: buttonText,
-          web_app: { url: webAppUrl }
+    const replyMarkup = webAppUrl
+      ? {
+          inline_keyboard: [[
+            {
+              text: buttonText,
+              web_app: { url: webAppUrl },
+            },
+          ]],
         }
-      ]]
+      : undefined
+
+    if (!webAppUrl) {
+      console.error("Telegram mini app URL is not configured. Set TELEGRAM_MINI_APP_URL, NEXT_PUBLIC_APP_URL, or TELEGRAM_WEBHOOK_URL.")
     }
     
     await sendTelegramMessage(

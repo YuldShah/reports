@@ -161,7 +161,7 @@ export function DatePicker({ value, onChange, placeholder = "kk.oo.yyyy", classN
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="absolute right-0 top-0 bottom-0 w-12 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-r-md transition-colors"
+            className="absolute right-0 top-0 bottom-0 flex w-12 items-center justify-center rounded-r-[calc(var(--radius)+2px)] text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
           >
             <CalendarIcon className="h-5 w-5" />
           </button>

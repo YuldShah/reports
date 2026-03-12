@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Search, Filter, User as UserIcon, Building, Calendar, Edit3, Shield, Hash } from "lucide-react"
 import { type User, type Team } from "@/lib/types"
 import { toast } from "@/hooks/use-toast"
+import { normalizeText } from "@/lib/utils"
 
 interface UserManagementProps {
   onDataChange?: () => void
@@ -134,7 +135,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
       // Don't show admin users in the list
       if (user.role === "admin") return false
       
-      const fullName = `${user.firstName} ${user.lastName || ''}`.toLowerCase()
+      const fullName = `${normalizeText(user.firstName)} ${normalizeText(user.lastName)}`.toLowerCase()
       const username = user.username?.toLowerCase() || ''
       
       const matchesSearch = 
@@ -241,7 +242,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                 <SelectItem value="unassigned">Unassigned</SelectItem>
                 {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id}>
-                    {team.name}
+                    {normalizeText(team.name)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -283,15 +284,15 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
                     <Avatar className="w-12 h-12 ring-1 ring-white/10">
-                      <AvatarImage src={user.photoUrl} alt={user.firstName} />
+                      <AvatarImage src={user.photoUrl} alt={normalizeText(user.firstName)} />
                       <AvatarFallback className="bg-primary/20 text-primary font-heading font-semibold">
-                        {user.firstName.charAt(0)}
-                        {user.lastName?.charAt(0) || ''}
+                        {normalizeText(user.firstName).charAt(0)}
+                        {normalizeText(user.lastName).charAt(0) || ''}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <CardTitle className="font-heading text-lg leading-tight">
-                        {user.firstName} {user.lastName}
+                        {normalizeText(user.firstName)} {normalizeText(user.lastName)}
                       </CardTitle>
                       {user.username && (
                         <p className="text-sm text-muted-foreground">@{user.username}</p>
@@ -325,7 +326,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                     {team && (
                       <div className="flex items-center gap-2">
                         <Building className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">{team.name}</span>
+                        <span className="text-sm text-muted-foreground">{normalizeText(team.name)}</span>
                       </div>
                     )}
 
@@ -360,21 +361,21 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
           <DialogHeader>
             <DialogTitle>Edit User Role</DialogTitle>
             <DialogDescription>
-              Update the role for {editingUser?.firstName} {editingUser?.lastName}
+              Update the role for {normalizeText(editingUser?.firstName)} {normalizeText(editingUser?.lastName)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Avatar>
-                <AvatarImage src={editingUser?.photoUrl} alt={editingUser?.firstName} />
+                <AvatarImage src={editingUser?.photoUrl} alt={normalizeText(editingUser?.firstName)} />
                 <AvatarFallback>
-                  {editingUser?.firstName.charAt(0)}
-                  {editingUser?.lastName?.charAt(0) || ''}
+                  {normalizeText(editingUser?.firstName).charAt(0)}
+                  {normalizeText(editingUser?.lastName).charAt(0) || ''}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-medium">
-                  {editingUser?.firstName} {editingUser?.lastName}
+                  {normalizeText(editingUser?.firstName)} {normalizeText(editingUser?.lastName)}
                 </p>
                 {editingUser?.username && (
                   <p className="text-sm text-muted-foreground">@{editingUser.username}</p>

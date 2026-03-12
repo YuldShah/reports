@@ -34,23 +34,23 @@ export default function HomePage() {
   const headerPaddingTop = shouldShowLogo
     ? "calc(6px + var(--tg-safe-area-inset-top, 0px))"
     : "calc(8px + var(--tg-safe-area-inset-top, 0px))"
-  const contentPaddingTop = shouldShowLogo ? "calc(9rem + var(--tg-safe-area-inset-top, 0px))" : "calc(6rem + var(--tg-safe-area-inset-top, 0px))" 
+  const contentPaddingTop = shouldShowLogo ? "calc(8.5rem + var(--tg-safe-area-inset-top, 0px))" : "calc(5.75rem + var(--tg-safe-area-inset-top, 0px))"
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-mesh">
-        {/* Fixed header with glass effect */}
+      <div className="min-h-screen bg-mesh noise">
         <div
-          className="fixed top-0 left-0 right-0 z-50 glass-strong"
+          className="header-halo fixed left-0 right-0 top-0 z-50"
           style={{ paddingTop: headerPaddingTop }}
         >
-          {shouldShowLogo ? <Logo /> : null}
-          <ProfileCard />
+          <div className="mx-auto max-w-6xl px-4 pb-4">
+            {shouldShowLogo ? <Logo /> : null}
+            <ProfileCard />
+          </div>
         </div>
 
-        {/* Main content */}
-        <div className="pb-8 px-4" style={{ paddingTop: contentPaddingTop }}>
-          <div className="fade-in">
+        <div className="px-4 pb-10" style={{ paddingTop: contentPaddingTop }}>
+          <div className="fade-in mx-auto max-w-6xl">
             {isAdmin ? (
               <AdminDashboard />
             ) : dbUser ? (

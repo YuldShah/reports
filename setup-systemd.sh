@@ -7,7 +7,6 @@ set -euo pipefail
 # ============================================================
 
 APP_DIR="/home/ubuntu/reports-app"
-BUN_PATH="/home/ubuntu/.bun/bin/bun"
 
 echo "=== Creating systemd service ==="
 
@@ -20,7 +19,7 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=${APP_DIR}
-ExecStart=${BUN_PATH} run start
+ExecStart=/usr/bin/node ${APP_DIR}/node_modules/next/dist/bin/next start
 Restart=on-failure
 RestartSec=5
 Environment=NODE_ENV=production

@@ -12,6 +12,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { ArrowLeft, Send, AlertCircle, FileText } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
+import { normalizeText } from "@/lib/utils"
 
 interface ReportFormProps {
   user: User
@@ -235,6 +236,8 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
   const renderTemplateField = (field: TemplateField) => {
     const value = formData[field.id] || ''
     const hasError = !!formErrors[field.id]
+    const fieldLabel = normalizeText(field.label || field.id)
+    const fieldPlaceholder = normalizeText(field.placeholder)
 
     const handleFieldChange = (newValue: string) => {
       setFormData(prev => ({
@@ -255,13 +258,13 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     return (
       <div key={field.id} className="space-y-2">
         <Label htmlFor={field.id} className={hasError ? "text-destructive" : ""}>
-          {field.label}
+          {fieldLabel}
         </Label>
         
         {field.type === 'text' && (
           <Input
             id={field.id}
-            placeholder={field.placeholder}
+            placeholder={fieldPlaceholder}
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
             className={hasError ? "border-destructive" : ""}
@@ -271,7 +274,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         {field.type === 'textarea' && (
           <Textarea
             id={field.id}
-            placeholder={field.placeholder}
+            placeholder={fieldPlaceholder}
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
             className={hasError ? "border-destructive" : ""}
@@ -283,7 +286,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           <Input
             id={field.id}
             type="number"
-            placeholder={field.placeholder}
+            placeholder={fieldPlaceholder}
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
             className={hasError ? "border-destructive" : ""}
@@ -296,7 +299,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           <DatePicker
             value={value}
             onChange={handleFieldChange}
-            placeholder={field.placeholder || "Sanani tanlang"}
+            placeholder={fieldPlaceholder || "Sanani tanlang"}
             hasError={hasError}
           />
         )}
@@ -304,12 +307,12 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         {field.type === 'select' && Array.isArray(field.options) && field.options.length > 0 && (
           <Select value={value} onValueChange={handleFieldChange}>
             <SelectTrigger id={field.id} className={hasError ? "border-destructive" : ""}>
-              <SelectValue placeholder={field.placeholder || "Tanlang"} />
+              <SelectValue placeholder={fieldPlaceholder || "Tanlang"} />
             </SelectTrigger>
             <SelectContent>
               {field.options.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {normalizeText(option.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -357,7 +360,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         <div>
           <h1 className="font-heading text-2xl font-bold tracking-tight">Submit Report</h1>
           <p className="text-sm text-muted-foreground">
-            {template ? `Using ${template.name} template` : "Fill out the form below to submit your report"}
+            {template ? `Using ${normalizeText(template.name)} template` : "Fill out the form below to submit your report"}
           </p>
         </div>
       </div>
@@ -369,9 +372,9 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             <div className="flex items-start gap-2">
               <FileText className="w-5 h-5 text-primary mt-0.5" />
               <div>
-                <h4 className="font-medium">{template.name}</h4>
+                <h4 className="font-medium">{normalizeText(template.name)}</h4>
                 {template.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{template.description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{normalizeText(template.description)}</p>
                 )}
               </div>
             </div>
