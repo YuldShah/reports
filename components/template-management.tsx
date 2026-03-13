@@ -392,7 +392,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               Create Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New Template</DialogTitle>
               <DialogDescription>Create a template manually or upload a JSON file</DialogDescription>
@@ -598,7 +598,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           setJsonError(null)
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{isEditMode ? 'Edit Template' : normalizeText(selectedTemplate?.name)}</DialogTitle>
             <DialogDescription>

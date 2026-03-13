@@ -652,7 +652,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       {/* Template Assignment Dialog (Refactored to standard Dialog) */}
       <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign Report Templates</DialogTitle>
             <DialogDescription>Select multiple templates for this team</DialogDescription>
