@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -146,6 +147,9 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         description: "Please fill in all required fields",
         variant: "destructive",
       })
+      
+      // Scroll to top to see errors
+      window.scrollTo({ top: 0, behavior: "smooth" })
       return
     }
 
@@ -233,7 +237,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     }
   }
 
-  const renderTemplateField = (field: TemplateField) => {
+  const renderTemplateField = (field: TemplateField, index: number) => {
     const value = formData[field.id] || ''
     const hasError = !!formErrors[field.id]
     const fieldLabel = normalizeText(field.label || field.id)
@@ -256,7 +260,13 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     }
 
     return (
-      <div key={field.id} className="space-y-2">
+      <motion.div 
+        key={field.id} 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05, duration: 0.3 }}
+        className="space-y-2"
+      >
         <Label htmlFor={field.id} className={hasError ? "text-destructive" : ""}>
           {fieldLabel}
         </Label>
@@ -267,7 +277,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             placeholder={fieldPlaceholder}
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
-            className={hasError ? "border-destructive" : ""}
+            className={hasError ? "border-destructive focus-visible:ring-destructive" : "transition-all focus:border-primary"}
           />
         )}
         
@@ -277,7 +287,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             placeholder={fieldPlaceholder}
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
-            className={hasError ? "border-destructive" : ""}
+            className={hasError ? "border-destructive focus-visible:ring-destructive" : "transition-all focus:border-primary"}
             rows={3}
           />
         )}
@@ -289,7 +299,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             placeholder={fieldPlaceholder}
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
-            className={hasError ? "border-destructive" : ""}
+            className={hasError ? "border-destructive focus-visible:ring-destructive" : "transition-all focus:border-primary"}
             min={field.validation?.min}
             max={field.validation?.max}
           />
@@ -306,7 +316,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
 
         {field.type === 'select' && Array.isArray(field.options) && field.options.length > 0 && (
           <Select value={value} onValueChange={handleFieldChange}>
-            <SelectTrigger id={field.id} className={hasError ? "border-destructive" : ""}>
+            <SelectTrigger id={field.id} className={hasError ? "border-destructive focus-visible:ring-destructive" : "transition-all focus:border-primary"}>
               <SelectValue placeholder={fieldPlaceholder || "Tanlang"} />
             </SelectTrigger>
             <SelectContent>
@@ -319,13 +329,20 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           </Select>
         )}
         
-        {hasError && (
-          <p className="text-sm text-destructive flex items-center gap-1">
-            <AlertCircle className="w-4 h-4" />
-            {formErrors[field.id]}
-          </p>
-        )}
-      </div>
+        <AnimatePresence>
+          {hasError && (
+            <motion.p 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="text-sm text-destructive flex items-center gap-1 overflow-hidden"
+            >
+              <AlertCircle className="w-4 h-4" />
+              {formErrors[field.id]}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </motion.div>
     )
   }
 
@@ -352,8 +369,12 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="space-y-2">
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting} className="self-start hover:bg-primary/10 hover:text-primary">
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-2"
+      >
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting} className="self-start hover:bg-primary/10 hover:text-primary transition-transform active:scale-95">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -363,63 +384,83 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             {template ? `Using ${normalizeText(template.name)} template` : "Fill out the form below to submit your report"}
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Template info */}
-      {template && (
-        <Card className="glass border-primary/20 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-2">
-              <FileText className="w-5 h-5 text-primary mt-0.5" />
-              <div>
-                <h4 className="font-medium">{normalizeText(template.name)}</h4>
-                {template.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{normalizeText(template.description)}</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <AnimatePresence>
+        {template && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Card className="surface-panel border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">{normalizeText(template.name)}</h4>
+                    {template.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{normalizeText(template.description)}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Form validation errors */}
-      {Object.keys(formErrors).length > 0 && (
-        <Card className="glass border-destructive/50 bg-destructive/5">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-destructive mt-0.5" />
-              <div>
-                <h4 className="font-medium text-destructive">Please fix the following errors:</h4>
-                <ul className="mt-2 text-sm text-destructive space-y-1">
-                  {Object.entries(formErrors).map(([field, error]) => (
-                    <li key={field}>• {error}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <AnimatePresence>
+        {Object.keys(formErrors).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="surface-panel border-destructive/50 bg-destructive/5 mb-6">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-destructive">Please fix the following errors:</h4>
+                    <ul className="mt-2 text-sm text-destructive space-y-1">
+                      {Object.entries(formErrors).map(([field, error]) => (
+                        <li key={field}>• {error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {template ? (
           /* Template-based form */
-          <Card className="glass border-glass-border">
-            <CardContent className="space-y-4 pt-4">
-              {((template as any).questions || (template as any).fields || []).map((field: TemplateField) => renderTemplateField(field))}
+          <Card className="surface-panel border-glass-border">
+            <CardContent className="space-y-5 pt-6 pb-6">
+              {((template as any).questions || (template as any).fields || []).map((field: TemplateField, index: number) => renderTemplateField(field, index))}
             </CardContent>
           </Card>
         ) : (
           /* Default form */
-          <>
-            {/* Basic Information */}
-            <Card className="glass border-glass-border">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card className="surface-panel border-glass-border">
               <CardHeader>
                 <CardTitle className="font-heading">Basic Information</CardTitle>
                 <CardDescription>Essential details about your report</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
+              <CardContent className="space-y-5">
+                <div className="space-y-2">
                   <Label htmlFor="title">
                     Report Title <span className="text-destructive">*</span>
                   </Label>
@@ -429,17 +470,32 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                     onChange={(e) => {
                       setDefaultFormData((prev) => ({ ...prev, title: e.target.value }))
                       if (formErrors.title) {
-                        setFormErrors((prev) => ({ ...prev, title: "" }))
+                        setFormErrors((prev) => {
+                          const newErrors = {...prev}
+                          delete newErrors.title
+                          return newErrors
+                        })
                       }
                     }}
                     placeholder="Brief summary of the issue or topic"
-                    className={formErrors.title ? "border-destructive" : ""}
-                    required
+                    className={`transition-all ${formErrors.title ? "border-destructive focus-visible:ring-destructive" : "focus:border-primary"}`}
                   />
-                  {formErrors.title && <p className="text-sm text-destructive mt-1">{formErrors.title}</p>}
+                  <AnimatePresence>
+                    {formErrors.title && (
+                      <motion.p 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="text-sm text-destructive mt-1 flex items-center gap-1 overflow-hidden"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {formErrors.title}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="description">
                     Description <span className="text-destructive">*</span>
                   </Label>
@@ -449,18 +505,33 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                     onChange={(e) => {
                       setDefaultFormData((prev) => ({ ...prev, description: e.target.value }))
                       if (formErrors.description) {
-                        setFormErrors((prev) => ({ ...prev, description: "" }))
+                        setFormErrors((prev) => {
+                          const newErrors = {...prev}
+                          delete newErrors.description
+                          return newErrors
+                        })
                       }
                     }}
                     placeholder="Detailed description of the issue, request, or feedback"
                     rows={4}
-                    className={formErrors.description ? "border-destructive" : ""}
-                    required
+                    className={`transition-all ${formErrors.description ? "border-destructive focus-visible:ring-destructive" : "focus:border-primary"}`}
                   />
-                  {formErrors.description && <p className="text-sm text-destructive mt-1">{formErrors.description}</p>}
+                  <AnimatePresence>
+                    {formErrors.description && (
+                      <motion.p 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="text-sm text-destructive mt-1 flex items-center gap-1 overflow-hidden"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {formErrors.description}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="category">
                     Category <span className="text-destructive">*</span>
                   </Label>
@@ -469,11 +540,15 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                     onValueChange={(value) => {
                       setDefaultFormData((prev) => ({ ...prev, category: value }))
                       if (formErrors.category) {
-                        setFormErrors((prev) => ({ ...prev, category: "" }))
+                        setFormErrors((prev) => {
+                          const newErrors = {...prev}
+                          delete newErrors.category
+                          return newErrors
+                        })
                       }
                     }}
                   >
-                    <SelectTrigger className={formErrors.category ? "border-destructive" : ""}>
+                    <SelectTrigger className={`transition-all ${formErrors.category ? "border-destructive focus-visible:ring-destructive" : "focus:border-primary"}`}>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent position="popper" sideOffset={4}>
@@ -484,32 +559,57 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                       ))}
                     </SelectContent>
                   </Select>
-                  {formErrors.category && <p className="text-sm text-destructive mt-1">{formErrors.category}</p>}
+                  <AnimatePresence>
+                    {formErrors.category && (
+                      <motion.p 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="text-sm text-destructive mt-1 flex items-center gap-1 overflow-hidden"
+                      >
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        {formErrors.category}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
               </CardContent>
             </Card>
-          </>
+          </motion.div>
         )}
 
         {/* Submit Button */}
-        <div className="flex gap-4 pt-4">
-          <Button type="submit" disabled={isSubmitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
+        <motion.div 
+          className="flex gap-4 pt-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Button type="submit" disabled={isSubmitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95 shadow-md">
             {isSubmitting ? (
-              <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center"
+              >
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                 Submitting...
-              </>
+              </motion.div>
             ) : (
-              <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center"
+              >
                 <Send className="w-4 h-4 mr-2" />
                 Submit Report
-              </>
+              </motion.div>
             )}
           </Button>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting} className="transition-transform active:scale-95">
             Cancel
           </Button>
-        </div>
+        </motion.div>
       </form>
     </div>
   )
