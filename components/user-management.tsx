@@ -396,9 +396,13 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
               </p>
             </div>
             
-            <div className="flex justify-end gap-2">
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleSaveRole} className="flex-1">
+                Save Role
+              </Button>
               <Button
                 variant="outline"
+                className="flex-1"
                 onClick={() => {
                   setIsEditDialogOpen(false)
                   setEditingUser(null)
@@ -406,9 +410,6 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                 }}
               >
                 Cancel
-              </Button>
-              <Button onClick={handleSaveRole}>
-                Save Role
               </Button>
             </div>
           </div>

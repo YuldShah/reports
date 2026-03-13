@@ -114,8 +114,8 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
         if (!q.type) {
           return { valid: false, error: `Question ${i + 1}: Missing required field 'type'` }
         }
-        // Valid types
-        const validTypes = ['text', 'textarea', 'number', 'email', 'tel', 'date', 'select', 'radio', 'checkbox']
+        // Valid types including 'photo'
+        const validTypes = ['text', 'textarea', 'number', 'email', 'tel', 'date', 'select', 'radio', 'checkbox', 'photo']
         if (!validTypes.includes(q.type)) {
           return { valid: false, error: `Question ${i + 1}: Invalid type '${q.type}'. Must be one of: ${validTypes.join(', ')}` }
         }
@@ -479,7 +479,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                   <p className="text-xs text-destructive mt-1">{jsonError}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox. Fields with options (select/radio/checkbox) require an &quot;options&quot; array.
+                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, <strong>photo</strong>. Fields with options (select/radio/checkbox) require an &quot;options&quot; array.
                 </p>
               </div>
 
@@ -489,6 +489,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 </Button>
                 <Button
                   variant="outline"
+                  className="flex-1"
                   onClick={() => {
                     setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
                     setJsonError(null)
@@ -665,7 +666,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                       <p className="text-xs text-destructive mt-1">{jsonError}</p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox
+                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, <strong>photo</strong>
                     </p>
                   </div>
 
@@ -675,6 +676,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     </Button>
                     <Button
                       variant="outline"
+                      className="flex-1"
                       onClick={() => {
                         setIsEditMode(false)
                         setJsonError(null)
@@ -751,6 +753,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     </Button>
                     <Button
                       variant="outline"
+                      className="flex-1"
                       onClick={() => {
                         setIsViewDialogOpen(false)
                         setSelectedTemplate(null)
@@ -776,8 +779,9 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               Existing reports using this template will keep their data, but new reports cannot use this template.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="flex gap-2 w-full pt-4">
             <Button
+              className="flex-1"
               variant="outline"
               onClick={() => {
                 setIsDeleteDialogOpen(false)
@@ -787,6 +791,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               Cancel
             </Button>
             <Button
+              className="flex-1"
               variant="destructive"
               onClick={() => {
                 handleDeleteTemplate()

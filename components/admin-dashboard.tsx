@@ -15,7 +15,6 @@ import {
 } from "lucide-react"
 
 import BottomNav from "@/components/bottom-nav"
-import OverviewStats from "@/components/overview-stats"
 import ReportDetails from "@/components/report-details"
 import ReportsView from "@/components/reports-view"
 import SheetsIntegrationStatus from "@/components/sheets-integration-status"
@@ -24,7 +23,6 @@ import TemplateManagement from "@/components/template-management"
 import UserManagement from "@/components/user-management"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { type Report, type Team, type User } from "@/lib/types"
 import { normalizeText } from "@/lib/utils"
 
@@ -189,7 +187,6 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
 
-              <OverviewStats stats={stats} />
               <SheetsIntegrationStatus />
 
               <Card className="surface-panel border-glass-border/80">
@@ -203,21 +200,21 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <button
                       onClick={() => setActiveSection("users")}
-                      className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/30 active:scale-95"
+                      className="cursor-pointer rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/30 active:scale-95"
                     >
                       <div className="text-sm font-medium text-foreground">Manage Users</div>
                       <div className="mt-1 text-xs text-muted-foreground">Review access and roles.</div>
                     </button>
                     <button
                       onClick={() => setActiveSection("teams")}
-                      className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/30 active:scale-95"
+                      className="cursor-pointer rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/30 active:scale-95"
                     >
                       <div className="text-sm font-medium text-foreground">Organize Teams</div>
                       <div className="mt-1 text-xs text-muted-foreground">Assign structures and templates.</div>
                     </button>
                     <button
                       onClick={() => setActiveSection("reports")}
-                      className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/30 active:scale-95"
+                      className="cursor-pointer rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:-translate-y-1 hover:shadow-md hover:border-primary/30 active:scale-95"
                     >
                       <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                         Review Reports

@@ -41,6 +41,8 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   const [newTeam, setNewTeam] = useState({ name: "", description: "" })
   const [selectedUserId, setSelectedUserId] = useState<string>("")
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [teamToDelete, setTeamToDelete] = useState<{ id: string, name: string } | null>(null)
   const { telegramUser, dbUser } = useAuthContext()
 
   const debugLog = async (message: string, data?: any) => {
@@ -313,13 +315,11 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     }
   }
 
-  const handleDeleteTeam = async (teamId: string, teamName: string) => {
-    if (!confirm(`Are you sure you want to delete the team "${teamName}"? All members will be unassigned.`)) {
-      return
-    }
+  const handleDeleteTeam = async () => {
+    if (!teamToDelete) return
 
     try {
-      const response = await fetch(`/api/teams?id=${teamId}`, {
+      const response = await fetch(`/api/teams?id=${teamToDelete.id}`, {
         method: 'DELETE',
       })
 
@@ -329,6 +329,8 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       // Refresh local data
       await fetchData()
+      setIsDeleteDialogOpen(false)
+      setTeamToDelete(null)
 
       toast({
         title: "Success",
@@ -458,6 +460,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                 </Button>
                 <Button
                   variant="outline"
+                  className="flex-1"
                   onClick={() => {
                     setNewTeam({ name: "", description: "" })
                     setIsCreateDialogOpen(false)
@@ -509,7 +512,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleDeleteTeam(team.id, team.name)}
+                      onClick={() => {
+                        setTeamToDelete({ id: team.id, name: team.name })
+                        setIsDeleteDialogOpen(true)
+                      }}
                       className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -584,10 +590,10 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                             </Select>
                           </div>
                           <div className="flex gap-2">
-                            <Button onClick={handleAddMember} disabled={!selectedUserId}>
+                            <Button onClick={handleAddMember} disabled={!selectedUserId} className="flex-1">
                               Add Member
                             </Button>
-                            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
+                            <Button variant="outline" className="flex-1" onClick={() => setIsAddMemberDialogOpen(false)}>
                               Cancel
                             </Button>
                           </div>
@@ -644,79 +650,77 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         })}
       </div>
 
-      {/* Template Assignment Dialog */}
-      {isTemplateDialogOpen && (
-        <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
-          <div className="bg-background glass border-glass-border rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold">Assign Report Templates</h3>
-                <p className="text-sm text-muted-foreground">Select multiple templates for this team</p>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Select Templates</Label>
-                {templates.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No templates available</p>
-                ) : (
-                  <div className="space-y-2">
-                    {templates.map((template) => (
-                      <div key={template.id} className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md">
-                        <Checkbox
-                          id={`template-${template.id}`}
-                          checked={selectedTemplateIds.includes(template.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedTemplateIds([...selectedTemplateIds, template.id])
-                            } else {
-                              setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
-                            }
-                          }}
-                        />
-                        <div className="flex-1">
-                          <Label
-                            htmlFor={`template-${template.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            {normalizeText(template.name)}
-                          </Label>
-                          {template.description && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {normalizeText(template.description)}
-                            </p>
-                          )}
-                        </div>
+      {/* Template Assignment Dialog (Refactored to standard Dialog) */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assign Report Templates</DialogTitle>
+            <DialogDescription>Select multiple templates for this team</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Label>Select Templates</Label>
+              {templates.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No templates available</p>
+              ) : (
+                <div className="space-y-2">
+                  {templates.map((template) => (
+                    <div key={template.id} className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md">
+                      <Checkbox
+                        id={`template-${template.id}`}
+                        checked={selectedTemplateIds.includes(template.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedTemplateIds([...selectedTemplateIds, template.id])
+                          } else {
+                            setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
+                          }
+                        }}
+                      />
+                      <div className="flex-1">
+                        <Label
+                          htmlFor={`template-${template.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {normalizeText(template.name)}
+                        </Label>
+                        {template.description && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {normalizeText(template.description)}
+                          </p>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground mt-2">
-                  Selected: {selectedTemplateIds.length} template{selectedTemplateIds.length !== 1 ? 's' : ''}
-                </p>
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Selected: {selectedTemplateIds.length} template{selectedTemplateIds.length !== 1 ? 's' : ''}
+              </p>
+            </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleAssignTemplates}
-                  disabled={!selectedTeam}
-                  className="flex-1"
-                >
-                  Assign Templates
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsTemplateDialogOpen(false)
-                    setSelectedTemplateIds([])
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+            <div className="flex gap-2 pt-4">
+              <Button
+                onClick={handleAssignTemplates}
+                disabled={!selectedTeam}
+                className="flex-1"
+              >
+                Assign Templates
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setIsTemplateDialogOpen(false)
+                  setSelectedTemplateIds([])
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Empty State */}
       {teams.length === 0 && (
@@ -760,6 +764,37 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Team</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the team &quot;{normalizeText(teamToDelete?.name)}&quot;? All members will be unassigned.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-4 flex-row sm:justify-end w-full">
+            <Button
+              className="flex-1"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false)
+                setTeamToDelete(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              variant="destructive"
+              onClick={handleDeleteTeam}
+            >
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -275,6 +275,8 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
               // Display template-based answers with field labels
               templateFields.map((field: any, idx: number) => {
                 const value = answers[field.id]
+                const isPhoto = field.type === 'photo'
+
                 return (
                   <motion.div 
                     initial={{ opacity: 0, x: -10 }}
@@ -286,36 +288,88 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
                       {normalizeText(field.label || field.question || field.id)}
                     </p>
-                    <p className="text-[15px] leading-relaxed">
-                      {value !== undefined && value !== null && value !== ''
-                        ? normalizeText(String(value))
-                        : <span className="text-muted-foreground/60 italic">No answer provided</span>
-                      }
-                    </p>
+                    
+                    {isPhoto ? (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {value && value !== '[]' ? (
+                          (() => {
+                            try {
+                              const parsed = JSON.parse(value)
+                              if (Array.isArray(parsed)) {
+                                return parsed.map((base64: string, i: number) => (
+                                  <div key={i} className="relative w-32 h-32 rounded-lg overflow-hidden border border-border shadow-sm">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={base64} alt={`Attachment ${i}`} className="object-cover w-full h-full hover:scale-105 transition-transform duration-300" />
+                                  </div>
+                                ))
+                              }
+                              return <span className="text-muted-foreground/60 italic">Invalid photo data</span>
+                            } catch (e) {
+                              return <span className="text-muted-foreground/60 italic">Error displaying photos</span>
+                            }
+                          })()
+                        ) : (
+                          <span className="text-muted-foreground/60 italic">No photos provided</span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[15px] leading-relaxed">
+                        {value !== undefined && value !== null && value !== ''
+                          ? normalizeText(String(value))
+                          : <span className="text-muted-foreground/60 italic">No answer provided</span>
+                        }
+                      </p>
+                    )}
                   </motion.div>
                 )
               })
             ) : (
               // Display raw answers if no template
-              Object.entries(answers).map(([key, value], idx: number) => (
-                <motion.div 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 + (idx * 0.05) }}
-                  key={key} 
-                  className="border-b border-border/50 last:border-0 pb-4 last:pb-0"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-                    {normalizeText(key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
-                  </p>
-                  <p className="text-[15px] leading-relaxed">
-                    {value !== undefined && value !== null && value !== ''
-                      ? normalizeText(String(value))
-                      : <span className="text-muted-foreground/60 italic">No answer provided</span>
-                    }
-                  </p>
-                </motion.div>
-              ))
+              Object.entries(answers).map(([key, value], idx: number) => {
+                const isLikelyPhotoArray = typeof value === 'string' && value.startsWith('["data:image/')
+                
+                return (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2 + (idx * 0.05) }}
+                    key={key} 
+                    className="border-b border-border/50 last:border-0 pb-4 last:pb-0"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                      {normalizeText(key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
+                    </p>
+                    
+                    {isLikelyPhotoArray ? (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {(() => {
+                          try {
+                            const parsed = JSON.parse(value as string)
+                            if (Array.isArray(parsed)) {
+                              return parsed.map((base64: string, i: number) => (
+                                <div key={i} className="relative w-32 h-32 rounded-lg overflow-hidden border border-border shadow-sm">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={base64} alt={`Attachment ${i}`} className="object-cover w-full h-full hover:scale-105 transition-transform duration-300" />
+                                </div>
+                              ))
+                            }
+                            return <span className="text-muted-foreground/60 italic">Invalid photo data</span>
+                          } catch (e) {
+                            return <span className="text-muted-foreground/60 italic">Error displaying photos</span>
+                          }
+                        })()}
+                      </div>
+                    ) : (
+                      <p className="text-[15px] leading-relaxed">
+                        {value !== undefined && value !== null && value !== ''
+                          ? normalizeText(String(value))
+                          : <span className="text-muted-foreground/60 italic">No answer provided</span>
+                        }
+                      </p>
+                    )}
+                  </motion.div>
+                )
+              })
             )}
 
             {Object.keys(answers).length === 0 && (

@@ -606,7 +606,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
               </motion.div>
             )}
           </Button>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting} className="transition-transform active:scale-95">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting} className="transition-transform active:scale-95 flex-1">
             Cancel
           </Button>
         </motion.div>
