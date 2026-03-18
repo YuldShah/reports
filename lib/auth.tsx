@@ -20,6 +20,7 @@ export interface AuthState {
   telegramUser: TelegramUser | null
   dbUser: User | null
   isAdmin: boolean
+  isBrowserDebug?: boolean
   error: string | null
 }
 
@@ -30,6 +31,7 @@ export const useAuth = (): AuthState => {
     telegramUser: null,
     dbUser: null,
     isAdmin: false,
+    isBrowserDebug: false,
     error: null,
   })
 

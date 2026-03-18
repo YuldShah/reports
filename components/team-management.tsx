@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -454,22 +455,22 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   rows={3}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleCreateTeam} className="flex-1">
-                  Create Team
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setNewTeam({ name: "", description: "" })
-                    setIsCreateDialogOpen(false)
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
             </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setNewTeam({ name: "", description: "" })
+                  setIsCreateDialogOpen(false)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateTeam} className="flex-1">
+                Create Team
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -589,15 +590,15 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="flex gap-2">
-                            <Button onClick={handleAddMember} disabled={!selectedUserId} className="flex-1">
-                              Add Member
-                            </Button>
-                            <Button variant="outline" className="flex-1" onClick={() => setIsAddMemberDialogOpen(false)}>
-                              Cancel
-                            </Button>
-                          </div>
                         </div>
+                        <DialogFooter>
+                          <Button variant="outline" className="flex-1" onClick={() => setIsAddMemberDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleAddMember} disabled={!selectedUserId} className="flex-1">
+                            Add Member
+                          </Button>
+                        </DialogFooter>
                       </DialogContent>
                     </Dialog>
                   </div>
@@ -699,26 +700,26 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
               </p>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={handleAssignTemplates}
-                disabled={!selectedTeam}
-                className="flex-1"
-              >
-                Assign Templates
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setIsTemplateDialogOpen(false)
-                  setSelectedTemplateIds([])
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
           </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setIsTemplateDialogOpen(false)
+                setSelectedTemplateIds([])
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignTemplates}
+              disabled={!selectedTeam}
+              className="flex-1"
+            >
+              Assign Templates
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -774,7 +775,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
               Are you sure you want to delete the team &quot;{normalizeText(teamToDelete?.name)}&quot;? All members will be unassigned.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-2 pt-4 flex-row sm:justify-end w-full">
+          <DialogFooter>
             <Button
               className="flex-1"
               variant="outline"
@@ -792,7 +793,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
             >
               Delete
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

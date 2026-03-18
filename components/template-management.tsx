@@ -483,23 +483,23 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 </p>
               </div>
 
-              <div className="flex gap-2">
-                <Button onClick={handleCreateTemplate} className="flex-1">
-                  Create Template
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
-                    setJsonError(null)
-                    setIsCreateDialogOpen(false)
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
             </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
+                  setJsonError(null)
+                  setIsCreateDialogOpen(false)
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleCreateTemplate} className="flex-1">
+                Create Template
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -670,27 +670,6 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     </p>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button onClick={handleUpdateTemplate} className="flex-1">
-                      Save Changes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setIsEditMode(false)
-                        setJsonError(null)
-                        setEditedTemplate({
-                          name: selectedTemplate.name,
-                          description: selectedTemplate.description || "",
-                          questions: JSON.stringify(selectedTemplate.questions, null, 2),
-                          isStudentTracker: selectedTemplate.isStudentTracker || false
-                        })
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
                 </>
               ) : (
                 <>
@@ -747,24 +726,52 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button onClick={() => setIsEditMode(true)} className="flex-1">
-                      Edit Template
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setIsViewDialogOpen(false)
-                        setSelectedTemplate(null)
-                      }}
-                    >
-                      Close
-                    </Button>
-                  </div>
                 </>
               )}
             </div>
+          )}
+          {selectedTemplate && (
+            <DialogFooter>
+              {isEditMode ? (
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setIsEditMode(false)
+                      setJsonError(null)
+                      setEditedTemplate({
+                        name: selectedTemplate.name,
+                        description: selectedTemplate.description || "",
+                        questions: JSON.stringify(selectedTemplate.questions, null, 2),
+                        isStudentTracker: selectedTemplate.isStudentTracker || false
+                      })
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleUpdateTemplate} className="flex-1">
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setIsViewDialogOpen(false)
+                      setSelectedTemplate(null)
+                    }}
+                  >
+                    Close
+                  </Button>
+                  <Button onClick={() => setIsEditMode(true)} className="flex-1">
+                    Edit Template
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
@@ -779,7 +786,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               Existing reports using this template will keep their data, but new reports cannot use this template.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex gap-2 w-full pt-4">
+          <DialogFooter>
             <Button
               className="flex-1"
               variant="outline"
