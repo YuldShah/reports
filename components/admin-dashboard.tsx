@@ -35,6 +35,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
+  const switchSection = (id: string) => {
+    window.scrollTo(0, 0)
+    setActiveSection(id)
+  }
+
   useTelegramBackButton(!!selectedReportId, () => {
     setSelectedReportId(null)
   })
@@ -209,21 +214,21 @@ export default function AdminDashboard() {
                 <CardContent>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <button
-                      onClick={() => setActiveSection("users")}
+                      onClick={() => switchSection("users")}
                       className="cursor-pointer rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:border-primary/30 active:scale-95"
                     >
                       <div className="text-sm font-medium text-foreground">Manage Users</div>
                       <div className="mt-1 text-xs text-muted-foreground">Review access and roles.</div>
                     </button>
                     <button
-                      onClick={() => setActiveSection("teams")}
+                      onClick={() => switchSection("teams")}
                       className="cursor-pointer rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:border-primary/30 active:scale-95"
                     >
                       <div className="text-sm font-medium text-foreground">Organize Teams</div>
                       <div className="mt-1 text-xs text-muted-foreground">Assign structures and templates.</div>
                     </button>
                     <button
-                      onClick={() => setActiveSection("reports")}
+                      onClick={() => switchSection("reports")}
                       className="cursor-pointer rounded-[calc(var(--radius)+2px)] border border-border/80 bg-background/70 p-4 text-left transition-all hover:border-primary/30 active:scale-95"
                     >
                       <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
@@ -305,35 +310,35 @@ export default function AdminDashboard() {
             label: "Overview",
             icon: LayoutDashboard,
             active: activeSection === "overview",
-            onClick: () => setActiveSection("overview"),
+            onClick: () => switchSection("overview"),
           },
           {
             id: "users",
             label: "Users",
             icon: UserCheck,
             active: activeSection === "users",
-            onClick: () => setActiveSection("users"),
+            onClick: () => switchSection("users"),
           },
           {
             id: "reports",
             label: "Reports",
             icon: FileText,
             active: activeSection === "reports",
-            onClick: () => setActiveSection("reports"),
+            onClick: () => switchSection("reports"),
           },
           {
             id: "teams",
             label: "Teams",
             icon: Building2,
             active: activeSection === "teams",
-            onClick: () => setActiveSection("teams"),
+            onClick: () => switchSection("teams"),
           },
           {
             id: "templates",
             label: "Templates",
             icon: FileJson,
             active: activeSection === "templates",
-            onClick: () => setActiveSection("templates"),
+            onClick: () => switchSection("templates"),
           },
         ]}
       />

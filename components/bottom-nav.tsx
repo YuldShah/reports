@@ -44,10 +44,10 @@ export default function BottomNav({ items }: BottomNavProps) {
             >
               {isActive && (
                 <motion.div
+                  layoutId="bottom-nav-active"
                   className="absolute inset-0 rounded-[20px] border border-primary/15 bg-primary/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.15 }}
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
               <Icon
