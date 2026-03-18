@@ -665,34 +665,40 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                 <p className="text-sm text-muted-foreground">No templates available</p>
               ) : (
                 <div className="space-y-2">
-                  {templates.map((template) => (
-                    <div key={template.id} className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md">
-                      <Checkbox
-                        id={`template-${template.id}`}
-                        checked={selectedTemplateIds.includes(template.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedTemplateIds([...selectedTemplateIds, template.id])
-                          } else {
+                  {templates.map((template) => {
+                    const isChecked = selectedTemplateIds.includes(template.id)
+                    return (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => {
+                          if (isChecked) {
                             setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
+                          } else {
+                            setSelectedTemplateIds([...selectedTemplateIds, template.id])
                           }
                         }}
-                      />
-                      <div className="flex-1">
-                        <Label
-                          htmlFor={`template-${template.id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {normalizeText(template.name)}
-                        </Label>
-                        {template.description && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {normalizeText(template.description)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                        className={`flex items-start gap-3 w-full text-left p-3 rounded-[calc(var(--radius)+2px)] border transition-colors active:scale-[0.99] ${isChecked ? "border-primary/30 bg-primary/5" : "border-border/60 hover:bg-muted/50"}`}
+                      >
+                        <Checkbox
+                          id={`template-${template.id}`}
+                          checked={isChecked}
+                          className="mt-0.5 pointer-events-none"
+                          tabIndex={-1}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium leading-none">
+                            {normalizeText(template.name)}
+                          </span>
+                          {template.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {normalizeText(template.description)}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-2">

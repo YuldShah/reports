@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, User, Building, FileText, Clock } from "lucide-react"
+import { Calendar, User, Building, FileText, Clock } from "lucide-react"
 import type { Report, User as UserType, Team, ReportTemplate } from "@/lib/types"
 import { normalizeText } from "@/lib/utils"
 
@@ -90,10 +90,6 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   if (loading) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
@@ -104,10 +100,6 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   if (!report) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
         <Card className="glass border-glass-border">
           <CardContent className="text-center py-12">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -144,14 +136,6 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
       animate="show"
       className="space-y-6"
     >
-      {/* Header */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary transition-transform active:scale-95">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-      </motion.div>
-
       {/* Report Title Card */}
       <motion.div variants={itemVariants}>
         <Card className="surface-panel border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">

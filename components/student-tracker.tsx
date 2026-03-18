@@ -159,10 +159,15 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
                             </Label>
                             <Input
                                 id={field.id}
-                                type="number"
-                                min="0"
+                                type="text"
+                                inputMode="numeric"
                                 value={values[field.id]}
-                                onChange={(e) => handleValueChange(field.id, e.target.value)}
+                                onChange={(e) => {
+                                  const raw = e.target.value
+                                  if (raw === '' || /^\d*$/.test(raw)) {
+                                    handleValueChange(field.id, raw)
+                                  }
+                                }}
                                 className="h-10 text-center font-semibold"
                                 placeholder="0"
                             />
