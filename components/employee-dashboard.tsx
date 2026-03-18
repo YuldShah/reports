@@ -196,11 +196,19 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
     teamReports: teamReports.length,
   };
 
+  const isInChildView = showTemplateSelection || showReportForm || !!selectedReportId;
   const hasTelegramBackButton = useTelegramBackButton(
-    showTemplateSelection,
+    isInChildView,
     () => {
-      setShowTemplateSelection(false);
-      setSelectedTemplateId(null);
+      if (showReportForm) {
+        setShowReportForm(false);
+        setSelectedTemplateId(null);
+      } else if (showTemplateSelection) {
+        setShowTemplateSelection(false);
+        setSelectedTemplateId(null);
+      } else if (selectedReportId) {
+        setSelectedReportId(null);
+      }
     },
   );
 
@@ -227,25 +235,13 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   if (showTemplateSelection) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="mx-auto max-w-2xl pb-12"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -15 }}
+        className="mx-auto max-w-2xl pb-32"
       >
         <div className="space-y-6">
           <div>
-            {!hasTelegramBackButton && (
-              <button
-                onClick={() => {
-                  setShowTemplateSelection(false);
-                  setSelectedTemplateId(null);
-                }}
-                className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground active:scale-95"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </button>
-            )}
             <h2 className="font-heading text-2xl font-bold tracking-tight">
               Select Template
             </h2>
@@ -273,7 +269,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               {userTeamTemplates.map((template: any) => (
                 <Card
                   key={template.id}
-                  className="surface-panel card-interactive cursor-pointer border-glass-border/80 hover:border-primary/30 transition-all hover:-translate-y-1 active:scale-[0.98]"
+                  className="surface-panel card-interactive cursor-pointer border-glass-border/80 hover:border-primary/30 transition-all active:scale-[0.98]"
                   onClick={() => {
                     setSelectedTemplateId(template.id);
                     setShowTemplateSelection(false);
@@ -303,6 +299,46 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Bottom nav on template selection */}
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex items-center justify-center gap-2.5 pb-[calc(0.7rem+var(--tg-safe-area-inset-bottom,0px))]">
+          <nav className="glass-floating pointer-events-auto flex items-center rounded-[26px] px-1.5 py-1.5">
+            {(
+              [
+                { id: "overview", label: "Overview", icon: Home },
+                { id: "reports", label: "Reports", icon: FileText },
+              ] as const
+            ).map(({ id, label, icon: Icon }) => {
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setShowTemplateSelection(false);
+                    setSelectedTemplateId(null);
+                    setActiveSection(id);
+                  }}
+                  className="relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-5 py-2 transition-colors active:scale-[0.98] text-muted-foreground hover:text-foreground"
+                >
+                  <Icon
+                    className="relative z-10 h-[18px] w-[18px]"
+                    strokeWidth={2.2}
+                  />
+                  <span className="relative z-10 text-[10px] font-semibold leading-none">
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <button
+            type="button"
+            className="glass-floating pointer-events-auto flex h-[60px] w-[60px] items-center justify-center rounded-full text-primary transition-colors active:scale-[0.98]"
+          >
+            <FilePlus className="h-[18px] w-[18px]" strokeWidth={2.2} />
+          </button>
         </div>
       </motion.div>
     );
@@ -556,7 +592,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                   paginatedReports.map((report) => (
                     <Card
                       key={report.id}
-                      className="surface-panel card-interactive border-glass-border/80 transition-all hover:-translate-y-1 hover:shadow-md"
+                      className="surface-panel card-interactive border-glass-border/80 transition-all"
                     >
                       <CardContent className="p-4">
                         <div className="mb-3 flex items-start justify-between gap-3">

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DatePicker } from "@/components/ui/date-picker"
-import { ArrowLeft, Send, AlertCircle, FileText } from "lucide-react"
+import { Send, AlertCircle, FileText } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
 import { normalizeText } from "@/lib/utils"
@@ -295,13 +295,17 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         {field.type === 'number' && (
           <Input
             id={field.id}
-            type="number"
+            type="text"
+            inputMode="numeric"
             placeholder={fieldPlaceholder}
             value={value}
-            onChange={(e) => handleFieldChange(e.target.value)}
+            onChange={(e) => {
+              const raw = e.target.value
+              if (raw === '' || /^-?\d*\.?\d*$/.test(raw)) {
+                handleFieldChange(raw)
+              }
+            }}
             className={hasError ? "border-destructive focus-visible:ring-destructive" : "transition-all focus:border-primary"}
-            min={field.validation?.min}
-            max={field.validation?.max}
           />
         )}
         
@@ -349,15 +353,9 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <div>
-            <h1 className="text-xl font-semibold">Loading...</h1>
-            <p className="text-sm text-muted-foreground">Preparing report form</p>
-          </div>
+        <div>
+          <h1 className="text-xl font-semibold">Loading...</h1>
+          <p className="text-sm text-muted-foreground">Preparing report form</p>
         </div>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
@@ -374,10 +372,6 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         animate={{ opacity: 1, y: 0 }}
         className="space-y-2"
       >
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSubmitting} className="self-start hover:bg-primary/10 hover:text-primary transition-transform active:scale-95">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
         <div>
           <h1 className="font-heading text-2xl font-bold tracking-tight">Submit Report</h1>
           <p className="text-sm text-muted-foreground">
@@ -585,9 +579,12 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting} className="transition-transform active:scale-95 flex-1">
+            Cancel
+          </Button>
           <Button type="submit" disabled={isSubmitting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 transition-transform active:scale-95 shadow-md">
             {isSubmitting ? (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="flex items-center"
@@ -596,7 +593,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                 Submitting...
               </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="flex items-center"
@@ -605,9 +602,6 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                 Submit Report
               </motion.div>
             )}
-          </Button>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting} className="transition-transform active:scale-95 flex-1">
-            Cancel
           </Button>
         </motion.div>
       </form>
