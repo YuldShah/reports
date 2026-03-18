@@ -39,10 +39,10 @@ export default function AdminDashboard() {
     setSelectedReportId(null)
   })
 
-  // Scroll to top on section/view changes
+  // Scroll to top only when entering report details, not on tab switches
   useEffect(() => {
     window.scrollTo({ top: 0 })
-  }, [activeSection, selectedReportId])
+  }, [selectedReportId])
 
   useEffect(() => {
     const fetchData = async () => {

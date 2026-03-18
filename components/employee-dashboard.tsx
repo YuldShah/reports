@@ -178,10 +178,10 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
     fetchData();
   }, [user.telegramId]);
 
-  // Scroll to top on any view change
+  // Scroll to top only when entering child views, not on tab switches
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [showTemplateSelection, showReportForm, selectedReportId, activeSection]);
+  }, [showTemplateSelection, showReportForm, selectedReportId]);
 
   const userTeam = teams.find((team: any) => team.id === user.teamId);
   const userTeamName = normalizeText(userTeam?.name || "No team assigned");
@@ -701,10 +701,10 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
               >
                 {isActive && (
                   <motion.div
-                    layoutId="employee-nav-active"
                     className="absolute inset-0 rounded-[20px] border border-primary/15 bg-primary/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
-                    initial={false}
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15 }}
                   />
                 )}
                 <Icon

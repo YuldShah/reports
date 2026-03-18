@@ -168,6 +168,7 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
                                 id={field.id}
                                 type="text"
                                 inputMode="numeric"
+                                autoComplete="off"
                                 value={values[field.id]}
                                 onChange={(e) => {
                                   const raw = e.target.value

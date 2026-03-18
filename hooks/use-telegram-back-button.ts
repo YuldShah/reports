@@ -26,13 +26,13 @@ export function useTelegramBackButton(enabled: boolean, onBack: () => void) {
 
     if (enabled) {
       webApp.BackButton.show()
-      webApp.onEvent?.("backButtonClicked", handleBack)
+      webApp.BackButton.onClick(handleBack)
     } else {
       webApp.BackButton.hide()
     }
 
     return () => {
-      webApp.offEvent?.("backButtonClicked", handleBack)
+      webApp.BackButton.offClick?.(handleBack)
       webApp.BackButton.hide()
     }
   }, [enabled])

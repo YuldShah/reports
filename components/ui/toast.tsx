@@ -13,19 +13,30 @@ const ToastProvider = ToastPrimitives.Provider
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Viewport
-    ref={ref}
-    className={cn(
-      // Mirror the header container: top + safe-area, horizontal padding matching profile card
-      "fixed z-[100] flex flex-col",
-      "top-[calc(var(--tg-safe-area-inset-top,0px)+6px)]",
-      "left-0 right-0 px-5",
-      className,
-    )}
-    {...props}
-  />
-))
+>(({ className, style, ...props }, ref) => {
+  // Start with non-mobile default; update on mount once platform is known
+  const [topOffset, setTopOffset] = React.useState("calc(var(--tg-safe-area-inset-top,0px) + 8px)")
+
+  React.useEffect(() => {
+    const platform = window.Telegram?.WebApp?.platform?.toLowerCase() ?? ""
+    // iOS/Android show the Logo component above the profile card (~44px total)
+    const isMobile = ["ios", "android"].some((p) => platform.includes(p))
+    setTopOffset(
+      isMobile
+        ? "calc(var(--tg-safe-area-inset-top,0px) + 44px)"
+        : "calc(var(--tg-safe-area-inset-top,0px) + 8px)",
+    )
+  }, [])
+
+  return (
+    <ToastPrimitives.Viewport
+      ref={ref}
+      className={cn("fixed z-[100] flex flex-col left-0 right-0 px-5", className)}
+      style={{ top: topOffset, ...style }}
+      {...props}
+    />
+  )
+})
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
