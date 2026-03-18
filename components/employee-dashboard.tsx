@@ -691,12 +691,12 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
                 key={id}
                 type="button"
                 onClick={() => {
-                  window.scrollTo(0, 0);
                   if (showTemplateSelection) {
                     setShowTemplateSelection(false);
                     setSelectedTemplateId(null);
                   }
                   setActiveSection(id);
+                  setTimeout(() => window.scrollTo({ top: 0 }), 210);
                 }}
                 className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-5 py-2 transition-colors active:scale-[0.98] ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
               >

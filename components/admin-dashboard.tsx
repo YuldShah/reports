@@ -36,8 +36,10 @@ export default function AdminDashboard() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
 
   const switchSection = (id: string) => {
-    window.scrollTo(0, 0)
     setActiveSection(id)
+    // Scroll after exit animation finishes (duration: 0.2s) so the old section
+    // exits naturally and the new section enters from the top
+    setTimeout(() => window.scrollTo({ top: 0 }), 210)
   }
 
   useTelegramBackButton(!!selectedReportId, () => {
