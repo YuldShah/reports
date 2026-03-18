@@ -17,23 +17,30 @@ export function Toaster() {
 
   return (
     <ToastProvider duration={3000}>
-      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
-        const resolvedVariant = (variant as "default" | "destructive" | "success") || "default"
-        const iconVariant = title?.toString().toLowerCase().includes("success") ? "success" : resolvedVariant
-        const Icon = variantIcons[iconVariant] || variantIcons.default
-        const iconColor = variantIconColors[iconVariant] || variantIconColors.default
+      {toasts.map(({ id, title, description, action, variant, ...props }) => {
+        // Infer success from title if variant not set
+        const titleStr = title?.toString().toLowerCase() ?? ""
+        const resolvedVariant =
+          variant === "destructive" ? "destructive"
+          : (titleStr.includes("success") || titleStr.includes("muvaffaq")) ? "success"
+          : "default"
+
+        const Icon = variantIcons[resolvedVariant]
+        const iconColor = variantIconColors[resolvedVariant]
 
         return (
-          <Toast key={id} variant={iconVariant} {...props}>
-            <div className={`mt-0.5 shrink-0 ${iconColor}`}>
+          <Toast key={id} variant={resolvedVariant} {...props}>
+            {/* Icon circle — mirrors the Avatar in the profile card */}
+            <div className={`shrink-0 flex h-11 w-11 items-center justify-center rounded-full bg-muted/40 ${iconColor}`}>
               <Icon className="h-5 w-5" />
             </div>
-            <div className="grid gap-0.5 flex-1">
+
+            {/* Text */}
+            <div className="flex-1 min-w-0">
               {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
+              {description && <ToastDescription>{description}</ToastDescription>}
             </div>
+
             {action}
             <ToastClose />
           </Toast>

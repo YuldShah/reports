@@ -25,12 +25,12 @@ const COURSE_FIELDS = [
 ]
 
 export default function StudentTracker({ user, template, onSuccess }: StudentTrackerProps) {
-    const [values, setValues] = useState<Record<string, number>>({
-        course_1: 0,
-        course_2: 0,
-        course_3: 0,
-        course_4: 0,
-        masters: 0,
+    const [values, setValues] = useState<Record<string, string>>({
+        course_1: "",
+        course_2: "",
+        course_3: "",
+        course_4: "",
+        masters: "",
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [lastSubmitted, setLastSubmitted] = useState<Date | null>(null)
@@ -55,12 +55,16 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
                         setLastSubmitted(new Date(trackerReport.createdAt))
                         // Populate values from the existing report
                         const answers = trackerReport.answers || {}
+                        const toStr = (v: any) => {
+                            const n = parseInt(v)
+                            return (!isNaN(n) && n > 0) ? String(n) : ""
+                        }
                         setValues({
-                            course_1: parseInt(answers.course_1) || 0,
-                            course_2: parseInt(answers.course_2) || 0,
-                            course_3: parseInt(answers.course_3) || 0,
-                            course_4: parseInt(answers.course_4) || 0,
-                            masters: parseInt(answers.masters) || 0,
+                            course_1: toStr(answers.course_1),
+                            course_2: toStr(answers.course_2),
+                            course_3: toStr(answers.course_3),
+                            course_4: toStr(answers.course_4),
+                            masters: toStr(answers.masters),
                         })
                     }
                 }
@@ -73,11 +77,11 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
     }, [user.telegramId, template.id])
 
     const handleValueChange = (fieldId: string, value: string) => {
-        const numValue = parseInt(value) || 0
-        setValues(prev => ({
-            ...prev,
-            [fieldId]: Math.max(0, numValue) // Ensure non-negative
-        }))
+        // Allow empty string or digits only, strip leading zeros
+        if (value === "" || /^\d+$/.test(value)) {
+            const stripped = value === "" ? "" : String(parseInt(value, 10))
+            setValues(prev => ({ ...prev, [fieldId]: stripped }))
+        }
     }
 
     const handleSubmit = async () => {
@@ -103,8 +107,8 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
                     teamId: user.teamId,
                     templateId: template.id,
                     title: "Talaba Taqsimoti",
-                    answers: values,
-                    templateData: values,
+                    answers: numericValues,
+                    templateData: numericValues,
                     isStudentTrackerUpdate: true, // Special flag for update logic
                 }),
             })
@@ -134,7 +138,10 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
         }
     }
 
-    const totalStudents = Object.values(values).reduce((sum, val) => sum + val, 0)
+    const totalStudents = Object.values(values).reduce((sum, val) => sum + (parseInt(val) || 0), 0)
+    const numericValues = Object.fromEntries(
+        Object.entries(values).map(([k, v]) => [k, parseInt(v) || 0])
+    )
 
     return (
         <Card className="glass border-glass-border border-2 border-chart-2/30">

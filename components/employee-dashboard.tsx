@@ -208,7 +208,7 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
   };
 
   const isInChildView = showTemplateSelection || showReportForm || !!selectedReportId;
-  const hasTelegramBackButton = useTelegramBackButton(
+  useTelegramBackButton(
     isInChildView,
     () => {
       if (showReportForm) {
