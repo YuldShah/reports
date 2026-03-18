@@ -172,6 +172,9 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
           console.log("[v0] Telegram version", webApp.version, "does not support header/bottom bar colors (requires 6.1+)")
         }
 
+        // Ensure back button starts hidden on every app load
+        try { webApp.BackButton.hide() } catch {}
+
         const platform = webApp.platform?.toLowerCase() ?? ""
         const isMobile = platform === "android" || platform === "ios"
         if (isMobile) {
