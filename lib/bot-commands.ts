@@ -70,7 +70,13 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     const replyMsg = isUserAdmin ? "Welcome, Admin! 👋\n\nAccess your admin dashboard to manage teams and view reports." : "Welcome! 👋\n\nClick the button below to submit your daily report."
     
     const baseAppUrl = getMiniAppBaseUrl(env)
-    const webAppUrl = baseAppUrl ? (isUserAdmin ? `${baseAppUrl}?admin=true` : baseAppUrl) : null
+    // Append version timestamp to bust Telegram's mini app cache on each /start
+    const versionParam = `v=${Date.now()}`
+    const webAppUrl = baseAppUrl
+      ? isUserAdmin
+        ? `${baseAppUrl}?admin=true&${versionParam}`
+        : `${baseAppUrl}?${versionParam}`
+      : null
 
     const buttonText = isUserAdmin ? "📊 Admin Dashboard" : "📝 Submit Report"
     const replyMarkup = webAppUrl

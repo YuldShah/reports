@@ -173,7 +173,8 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
         }
 
         // Ensure back button starts hidden on every app load
-        try { webApp.BackButton.hide() } catch {}
+        webApp.BackButton.hide()
+        console.log("[v0] Telegram BackButton hidden on init")
 
         const platform = webApp.platform?.toLowerCase() ?? ""
         const isMobile = platform === "android" || platform === "ios"
@@ -207,20 +208,41 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
       }
     }
 
+    let hasResolved = false
+
+    const finish = (webApp: TelegramWebApp | null) => {
+      if (hasResolved) {
+        return
+      }
+      hasResolved = true
+      clearTimeout(timeout)
+      resolve(webApp)
+    }
+
     // Set a timeout to prevent infinite waiting
     const timeout = setTimeout(() => {
       console.log("[v0] Telegram WebApp timeout - not running in Telegram")
-      resolve(null)
-    }, 3000) // 3 second timeout
+      finish(null)
+    }, 5000) // 5 second timeout
 
     const check = () => {
+      if (hasResolved) {
+        return
+      }
+
       if (window.Telegram?.WebApp) {
-        clearTimeout(timeout)
+        const webApp = window.Telegram.WebApp
         console.log("[v0] Telegram WebApp found and ready")
-        // Call ready() to signal that the app is ready
-        window.Telegram.WebApp.ready()
-        applyWebAppPreferences(window.Telegram.WebApp)
-        resolve(window.Telegram.WebApp)
+
+        try {
+          // Call ready() to signal that the app is ready
+          webApp.ready()
+        } catch (error) {
+          console.warn("[v0] Telegram WebApp.ready() failed:", error)
+        }
+
+        applyWebAppPreferences(webApp)
+        finish(webApp)
       } else {
         // Keep checking until available or timeout
         requestAnimationFrame(check)
