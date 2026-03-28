@@ -106,6 +106,8 @@ export async function POST(request: NextRequest) {
               const answerValue =
                 rawAnswer === undefined || rawAnswer === null || (typeof rawAnswer === 'string' && rawAnswer.trim() === '')
                   ? 'No answer'
+                  : Array.isArray(rawAnswer)
+                    ? rawAnswer.map((item) => String(item)).join('\n')
                   : String(rawAnswer)
 
               return {
@@ -123,6 +125,8 @@ export async function POST(request: NextRequest) {
               const additionalValue =
                 rawAnswer === undefined || rawAnswer === null || (typeof rawAnswer === 'string' && rawAnswer.trim() === '')
                   ? 'No answer'
+                  : Array.isArray(rawAnswer)
+                    ? rawAnswer.map((item) => String(item)).join('\n')
                   : String(rawAnswer)
 
               answerEntries.push({

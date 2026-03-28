@@ -114,7 +114,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
         if (!q.type) {
           return { valid: false, error: `Question ${i + 1}: Missing required field 'type'` }
         }
-        // Valid types including 'photo'
+        // Valid types
         const validTypes = ['text', 'textarea', 'number', 'email', 'tel', 'date', 'select', 'radio', 'checkbox', 'photo']
         if (!validTypes.includes(q.type)) {
           return { valid: false, error: `Question ${i + 1}: Invalid type '${q.type}'. Must be one of: ${validTypes.join(', ')}` }
@@ -392,7 +392,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               Create Template
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Template</DialogTitle>
               <DialogDescription>Create a template manually or upload a JSON file</DialogDescription>
@@ -479,27 +479,26 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                   <p className="text-xs text-destructive mt-1">{jsonError}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, <strong>photo</strong>. Fields with options (select/radio/checkbox) require an &quot;options&quot; array.
+                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, photo. Fields with options (select/radio/checkbox) require an &quot;options&quot; array.
                 </p>
               </div>
 
+              <div className="flex gap-2">
+                <Button onClick={handleCreateTemplate} className="flex-1">
+                  Create Template
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
+                    setJsonError(null)
+                    setIsCreateDialogOpen(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
-                  setJsonError(null)
-                  setIsCreateDialogOpen(false)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateTemplate} className="flex-1">
-                Create Template
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -598,7 +597,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           setJsonError(null)
         }
       }}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditMode ? 'Edit Template' : normalizeText(selectedTemplate?.name)}</DialogTitle>
             <DialogDescription>
@@ -666,10 +665,30 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                       <p className="text-xs text-destructive mt-1">{jsonError}</p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, <strong>photo</strong>
+                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, photo
                     </p>
                   </div>
 
+                  <div className="flex gap-2">
+                    <Button onClick={handleUpdateTemplate} className="flex-1">
+                      Save Changes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditMode(false)
+                        setJsonError(null)
+                        setEditedTemplate({
+                          name: selectedTemplate.name,
+                          description: selectedTemplate.description || "",
+                          questions: JSON.stringify(selectedTemplate.questions, null, 2),
+                          isStudentTracker: selectedTemplate.isStudentTracker || false
+                        })
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <>
@@ -726,52 +745,23 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                       </div>
                     </div>
                   </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button onClick={() => setIsEditMode(true)} className="flex-1">
+                      Edit Template
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsViewDialogOpen(false)
+                        setSelectedTemplate(null)
+                      }}
+                    >
+                      Close
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
-          )}
-          {selectedTemplate && (
-            <DialogFooter>
-              {isEditMode ? (
-                <>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setIsEditMode(false)
-                      setJsonError(null)
-                      setEditedTemplate({
-                        name: selectedTemplate.name,
-                        description: selectedTemplate.description || "",
-                        questions: JSON.stringify(selectedTemplate.questions, null, 2),
-                        isStudentTracker: selectedTemplate.isStudentTracker || false
-                      })
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={handleUpdateTemplate} className="flex-1">
-                    Save Changes
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setIsViewDialogOpen(false)
-                      setSelectedTemplate(null)
-                    }}
-                  >
-                    Close
-                  </Button>
-                  <Button onClick={() => setIsEditMode(true)} className="flex-1">
-                    Edit Template
-                  </Button>
-                </>
-              )}
-            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
@@ -786,9 +776,8 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               Existing reports using this template will keep their data, but new reports cannot use this template.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
-              className="flex-1"
               variant="outline"
               onClick={() => {
                 setIsDeleteDialogOpen(false)
@@ -798,7 +787,6 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
               Cancel
             </Button>
             <Button
-              className="flex-1"
               variant="destructive"
               onClick={() => {
                 handleDeleteTemplate()

@@ -1,24 +1,12 @@
-"use client";
+"use client"
 
-import { useState, useMemo, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useState, useMemo, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -26,88 +14,72 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Search,
-  Filter,
-  User as UserIcon,
-  Building,
-  Calendar,
-  Edit3,
-  Shield,
-  Hash,
-} from "lucide-react";
-import { useTelegramBackButton } from "@/hooks/use-telegram-back-button";
-import { type User, type Team } from "@/lib/types";
-import { toast } from "@/hooks/use-toast";
-import { normalizeText } from "@/lib/utils";
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Search, Filter, User as UserIcon, Building, Calendar, Edit3, Shield, Hash } from "lucide-react"
+import { type User, type Team } from "@/lib/types"
+import { toast } from "@/hooks/use-toast"
+import { normalizeText } from "@/lib/utils"
 
 interface UserManagementProps {
-  onDataChange?: () => void;
+  onDataChange?: () => void
 }
 
 export default function UserManagement({ onDataChange }: UserManagementProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("name"); // name, registration
-  const [users, setUsers] = useState<User[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [newRole, setNewRole] = useState("");
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  useTelegramBackButton(isEditDialogOpen, () => {
-    setIsEditDialogOpen(false);
-    setEditingUser(null);
-    setNewRole("");
-  });
+  const [searchTerm, setSearchTerm] = useState("")
+  const [roleFilter, setRoleFilter] = useState("all")
+  const [teamFilter, setTeamFilter] = useState("all")
+  const [sortBy, setSortBy] = useState("name") // name, registration
+  const [users, setUsers] = useState<User[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [newRole, setNewRole] = useState("")
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData()
+  }, [])
 
   const fetchData = async () => {
     try {
-      setLoading(true);
-
+      setLoading(true)
+      
       // Fetch users
-      const usersResponse = await fetch("/api/users");
-      const usersData = await usersResponse.json();
+      const usersResponse = await fetch('/api/users')
+      const usersData = await usersResponse.json()
       const usersWithDates = (usersData.users || []).map((user: any) => ({
         ...user,
-        createdAt: new Date(user.createdAt),
-      }));
-      setUsers(usersWithDates);
+        createdAt: new Date(user.createdAt)
+      }))
+      setUsers(usersWithDates)
 
       // Fetch teams
-      const teamsResponse = await fetch("/api/teams");
-      const teamsData = await teamsResponse.json();
+      const teamsResponse = await fetch('/api/teams')
+      const teamsData = await teamsResponse.json()
       const teamsWithDates = (teamsData.teams || []).map((team: any) => ({
         ...team,
-        createdAt: new Date(team.createdAt),
-      }));
-      setTeams(teamsWithDates);
+        createdAt: new Date(team.createdAt)
+      }))
+      setTeams(teamsWithDates)
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error('Error fetching data:', error)
       toast({
         title: "Error",
         description: "Failed to load data",
         variant: "destructive",
         duration: 3000,
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleEditUser = (user: User) => {
-    setEditingUser(user);
-    setNewRole(user.role);
-    setIsEditDialogOpen(true);
-  };
+    setEditingUser(user)
+    setNewRole(user.role)
+    setIsEditDialogOpen(true)
+  }
 
   const handleSaveRole = async () => {
     if (!editingUser || !newRole.trim()) {
@@ -116,107 +88,100 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
         description: "Role is required",
         variant: "destructive",
         duration: 3000,
-      });
-      return;
+      })
+      return
     }
 
     try {
-      const response = await fetch("/api/users", {
-        method: "PATCH",
+      const response = await fetch('/api/users', {
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           telegramId: editingUser.telegramId,
           role: newRole.trim(),
         }),
-      });
+      })
 
       if (!response.ok) {
-        throw new Error("Failed to update user role");
+        throw new Error('Failed to update user role')
       }
 
       toast({
         title: "Success",
         description: `User role updated successfully`,
         duration: 3000,
-      });
+      })
 
-      setIsEditDialogOpen(false);
-      setEditingUser(null);
-      setNewRole("");
-      await fetchData();
-      onDataChange?.();
+      setIsEditDialogOpen(false)
+      setEditingUser(null)
+      setNewRole("")
+      await fetchData()
+      onDataChange?.()
     } catch (error) {
-      console.error("Error updating user role:", error);
+      console.error('Error updating user role:', error)
       toast({
         title: "Error",
         description: "Failed to update user role",
         variant: "destructive",
         duration: 3000,
-      });
+      })
     }
-  };
+  }
 
   const filteredAndSortedUsers = useMemo(() => {
     let filtered = users.filter((user) => {
       // Don't show admin users in the list
-      if (user.role === "admin") return false;
-
-      const fullName =
-        `${normalizeText(user.firstName)} ${normalizeText(user.lastName)}`.toLowerCase();
-      const username = user.username?.toLowerCase() || "";
-
-      const matchesSearch =
+      if (user.role === "admin") return false
+      
+      const fullName = `${normalizeText(user.firstName)} ${normalizeText(user.lastName)}`.toLowerCase()
+      const username = user.username?.toLowerCase() || ''
+      
+      const matchesSearch = 
         fullName.includes(searchTerm.toLowerCase()) ||
         username.includes(searchTerm.toLowerCase()) ||
         user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.telegramId.toString().includes(searchTerm.toLowerCase());
-
-      const matchesRole =
-        roleFilter === "all" ||
+        user.telegramId.toString().includes(searchTerm.toLowerCase())
+      
+      const matchesRole = roleFilter === "all" || 
         (roleFilter === "employee" && user.role === "employee") ||
-        (roleFilter === "custom" &&
-          user.role !== "admin" &&
-          user.role !== "employee");
-
-      const matchesTeam =
-        teamFilter === "all" ||
+        (roleFilter === "custom" && user.role !== "admin" && user.role !== "employee")
+      
+      const matchesTeam = teamFilter === "all" || 
         (teamFilter === "unassigned" && !user.teamId) ||
-        user.teamId === teamFilter;
+        user.teamId === teamFilter
 
-      return matchesSearch && matchesRole && matchesTeam;
-    });
+      return matchesSearch && matchesRole && matchesTeam
+    })
 
     // Sort users
     filtered.sort((a, b) => {
       if (sortBy === "name") {
-        const nameA = `${a.firstName} ${a.lastName || ""}`.toLowerCase();
-        const nameB = `${b.firstName} ${b.lastName || ""}`.toLowerCase();
-        return nameA.localeCompare(nameB);
+        const nameA = `${a.firstName} ${a.lastName || ''}`.toLowerCase()
+        const nameB = `${b.firstName} ${b.lastName || ''}`.toLowerCase()
+        return nameA.localeCompare(nameB)
       } else if (sortBy === "registration") {
-        return b.createdAt.getTime() - a.createdAt.getTime(); // Most recent first
+        return b.createdAt.getTime() - a.createdAt.getTime() // Most recent first
       }
-      return 0;
-    });
+      return 0
+    })
 
-    return filtered;
-  }, [users, searchTerm, roleFilter, teamFilter, sortBy]);
+    return filtered
+  }, [users, searchTerm, roleFilter, teamFilter, sortBy])
 
   const getRoleBadgeVariant = (role: string) => {
-    if (role === "admin") return "destructive";
-    if (role === "employee") return "default";
-    return "secondary"; // For custom roles
-  };
+    if (role === "admin") return "destructive"
+    if (role === "employee") return "default"
+    return "secondary" // For custom roles
+  }
 
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div>
-            <h2 className="font-heading text-xl font-semibold">
-              User Management
-            </h2>
+            <h2 className="font-heading text-xl font-semibold">User Management</h2>
             <p className="text-sm text-muted-foreground">Loading...</p>
           </div>
         </div>
@@ -224,7 +189,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -232,12 +197,8 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div>
-          <h2 className="font-heading text-xl font-semibold">
-            User Management
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Manage user roles and permissions
-          </p>
+          <h2 className="font-heading text-xl font-semibold">User Management</h2>
+          <p className="text-sm text-muted-foreground">Manage user roles and permissions</p>
         </div>
       </div>
 
@@ -252,12 +213,12 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search users, roles, or user ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9 pl-10"
+                className="pl-10"
               />
             </div>
 
@@ -306,9 +267,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
           <Card className="col-span-full glass border-glass-border">
             <CardContent className="text-center py-12">
               <UserIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-heading text-lg font-medium mb-2">
-                No users found
-              </h3>
+              <h3 className="font-heading text-lg font-medium mb-2">No users found</h3>
               <p className="text-muted-foreground">
                 {users.length === 0
                   ? "No users have been registered yet."
@@ -318,34 +277,25 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
           </Card>
         ) : (
           filteredAndSortedUsers.map((user) => {
-            const team = teams.find((t) => t.id === user.teamId);
+            const team = teams.find((t) => t.id === user.teamId)
 
             return (
-              <Card
-                key={user.telegramId}
-                className="glass border-glass-border card-interactive"
-              >
+              <Card key={user.telegramId} className="glass border-glass-border card-interactive">
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
                     <Avatar className="w-12 h-12 ring-1 ring-white/10">
-                      <AvatarImage
-                        src={user.photoUrl}
-                        alt={normalizeText(user.firstName)}
-                      />
+                      <AvatarImage src={user.photoUrl} alt={normalizeText(user.firstName)} />
                       <AvatarFallback className="bg-primary/20 text-primary font-heading font-semibold">
                         {normalizeText(user.firstName).charAt(0)}
-                        {normalizeText(user.lastName).charAt(0) || ""}
+                        {normalizeText(user.lastName).charAt(0) || ''}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <CardTitle className="font-heading text-lg leading-tight">
-                        {normalizeText(user.firstName)}{" "}
-                        {normalizeText(user.lastName)}
+                        {normalizeText(user.firstName)} {normalizeText(user.lastName)}
                       </CardTitle>
                       {user.username && (
-                        <p className="text-sm text-muted-foreground">
-                          @{user.username}
-                        </p>
+                        <p className="text-sm text-muted-foreground">@{user.username}</p>
                       )}
                     </div>
                     <Button
@@ -368,10 +318,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-muted-foreground" />
-                      <Badge
-                        variant={getRoleBadgeVariant(user.role)}
-                        className="capitalize"
-                      >
+                      <Badge variant={getRoleBadgeVariant(user.role)} className="capitalize">
                         {user.role}
                       </Badge>
                     </div>
@@ -379,9 +326,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                     {team && (
                       <div className="flex items-center gap-2">
                         <Building className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {normalizeText(team.name)}
-                        </span>
+                        <span className="text-sm text-muted-foreground">{normalizeText(team.name)}</span>
                       </div>
                     )}
 
@@ -394,7 +339,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                   </div>
                 </CardContent>
               </Card>
-            );
+            )
           })
         )}
       </div>
@@ -416,35 +361,28 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
           <DialogHeader>
             <DialogTitle>Edit User Role</DialogTitle>
             <DialogDescription>
-              Update the role for {normalizeText(editingUser?.firstName)}{" "}
-              {normalizeText(editingUser?.lastName)}
+              Update the role for {normalizeText(editingUser?.firstName)} {normalizeText(editingUser?.lastName)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
               <Avatar>
-                <AvatarImage
-                  src={editingUser?.photoUrl}
-                  alt={normalizeText(editingUser?.firstName)}
-                />
+                <AvatarImage src={editingUser?.photoUrl} alt={normalizeText(editingUser?.firstName)} />
                 <AvatarFallback>
                   {normalizeText(editingUser?.firstName).charAt(0)}
-                  {normalizeText(editingUser?.lastName).charAt(0) || ""}
+                  {normalizeText(editingUser?.lastName).charAt(0) || ''}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-medium">
-                  {normalizeText(editingUser?.firstName)}{" "}
-                  {normalizeText(editingUser?.lastName)}
+                  {normalizeText(editingUser?.firstName)} {normalizeText(editingUser?.lastName)}
                 </p>
                 {editingUser?.username && (
-                  <p className="text-sm text-muted-foreground">
-                    @{editingUser.username}
-                  </p>
+                  <p className="text-sm text-muted-foreground">@{editingUser.username}</p>
                 )}
               </div>
             </div>
-
+            
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Input
@@ -457,26 +395,25 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
                 You can enter any custom role name
               </p>
             </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSaveRole} className="flex-1">
-                Save Role
-              </Button>
+            
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                className="flex-1"
                 onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setEditingUser(null);
-                  setNewRole("");
+                  setIsEditDialogOpen(false)
+                  setEditingUser(null)
+                  setNewRole("")
                 }}
               >
                 Cancel
+              </Button>
+              <Button onClick={handleSaveRole}>
+                Save Role
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

@@ -70,6 +70,21 @@ export const useAuth = (): AuthState => {
       }
     }
 
+    const fetchWithTimeout = async (input: RequestInfo | URL, init?: RequestInit, timeoutMs = 10000) => {
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+
+      try {
+        return await fetch(input, {
+          ...init,
+          signal: controller.signal,
+          cache: "no-store",
+        })
+      } finally {
+        window.clearTimeout(timeoutId)
+      }
+    }
+
     const getStoredDebugRole = (): "admin" | "employee" => {
       if (typeof window === "undefined") return "employee"
       return window.localStorage?.getItem("reportsDebugRole") === "admin" ? "admin" : "employee"
@@ -133,7 +148,7 @@ export const useAuth = (): AuthState => {
         console.log("[v0] Authenticating Telegram user:", telegramUser.first_name)
 
         // Check if user exists in database via API
-        const response = await fetch(`/api/users?telegramId=${telegramUser.id}`)
+        const response = await fetchWithTimeout(`/api/users?telegramId=${telegramUser.id}`)
         let dbUser: User | null = null
         const envSaysAdmin = isAdmin(telegramUser.id)
 
@@ -163,7 +178,7 @@ export const useAuth = (): AuthState => {
 
             if (Object.keys(updates).length > 0) {
               console.log("[v0] Updating existing user profile")
-              const updateResponse = await fetch('/api/users', {
+              const updateResponse = await fetchWithTimeout('/api/users', {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
@@ -186,7 +201,7 @@ export const useAuth = (): AuthState => {
         } else if (response.status === 404) {
           // User doesn't exist, create them
           console.log("[v0] Auto-registering new user")
-          const createResponse = await fetch('/api/users', {
+              const createResponse = await fetchWithTimeout('/api/users', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -206,7 +221,7 @@ export const useAuth = (): AuthState => {
             console.log("[v0] User created successfully:", dbUser?.firstName)
             if (dbUser && envSaysAdmin && dbUser.role !== "admin") {
               console.log("[v0] Elevating new user to admin role")
-              const roleUpdateResponse = await fetch('/api/users', {
+              const roleUpdateResponse = await fetchWithTimeout('/api/users', {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
@@ -276,6 +291,9 @@ export const useAuth = (): AuthState => {
       } catch (apiError) {
         console.error("[v0] API error during auth:", apiError)
 
+        const isTimeoutError =
+          apiError instanceof DOMException && apiError.name === "AbortError"
+
         if (isDebugFallback) {
           console.log("[v0] Falling back to local debug auth state")
           const debugRole = getStoredDebugRole()
@@ -305,7 +323,9 @@ export const useAuth = (): AuthState => {
         setAuthState((prevState: AuthState) => ({
           ...prevState,
           isLoading: false,
-          error: "Failed to authenticate with server",
+          error: isTimeoutError
+            ? "Server timeout while authenticating"
+            : "Failed to authenticate with server",
         }))
       }
     }

@@ -1,84 +1,131 @@
 # Reports App Handoff
 
+## Summary
+
+This is a Next.js 14 Telegram Mini App plus bot backend for team reporting.
+
+Current blocker: Telegram Mini App still shows a logo-only loading screen for at least one user path even after API and deployment fixes.
+
 ## Current Production State
 
-- Public app URL: `https://reports.yall.uz`
-- New VPS: `ubuntu@193.149.17.11`
-- App service: `reports-app.service`
-- Tunnel service: `cloudflared.service`
-- Database runtime: Supabase session pooler
-- Old local PostgreSQL on VPS: stopped and disabled
-- Unrelated VPS services removed from runtime: `nginx`, `ModemManager`, `udisks2`, `fwupd`, `multipathd`
+- Public app URL: https://reportsv2.yall.uz
+- VPS: ubuntu@193.149.17.25
+- App path on VPS: /home/ubuntu/reports-app
+- App service: reports-app.service
+- Tunnel/proxy: Cloudflare tunnel for reportsv2.yall.uz
+- App health checks: root route and webhook route currently respond from production
 
-## Infrastructure Notes
+## Runtime Configuration Notes
 
-- The app is deployed to a 1 GB RAM VPS, so production builds should be done locally and copied to the server rather than built on the VPS.
-- Cloudflare Tunnel is configured as a named tunnel and routes `reports.yall.uz` to `localhost:3000`.
-- Telegram webhook is expected to point at `https://reports.yall.uz/api/webhook`.
-- Google Sheets integration is active and depends on the service account JSON existing on the VPS.
-- `reports-app.service` and `cloudflared.service` both use systemd restart overrides with `Restart=always` and `RestartSec=5`.
+- TELEGRAM_WEBHOOK_URL is set to https://reportsv2.yall.uz/api/webhook
+- TELEGRAM_MINI_APP_URL was explicitly added and set to https://reportsv2.yall.uz
+- Bot command code builds Mini App URL from TELEGRAM_MINI_APP_URL or NEXT_PUBLIC_APP_URL, else derives origin from TELEGRAM_WEBHOOK_URL
+- Telegram getChatMenuButton still returns type commands in current checks (not web_app)
 
-## Database Migration State
+## Production Fixes Already Applied
 
-- Production has been moved from local PostgreSQL to Supabase.
-- The current app uses a standard Postgres connection via `pg` and `DATABASE_URL`.
-- `DATABASE_SSL=true` is required for the Supabase connection.
-- The Supabase direct `db.<project>.supabase.co:5432` endpoint was not usable from the VPS because it resolved to IPv6 only.
-- Production uses the Supabase session pooler instead.
+### 1) Database schema mismatch fixed
 
-## Data Verification Completed
+Problem seen in production logs:
+- /api/teams returned 500
+- Postgres error: relation team_templates does not exist
 
-The migrated production dataset was verified with these counts:
+Action taken:
+- Ran migration-multiple-templates.sql on production database
+- Restarted reports-app.service
 
-- `reports`: 99
-- `teams`: 5
-- `templates`: 7
-- `users`: 19
-- `team_templates`: 12
-- `template_sheet_registry`: 5
+Result:
+- /api/teams now returns 200
 
-## Google Sheets Notes
+### 2) Auth startup hardening shipped
 
-- The app supports both `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` and `GOOGLE_APPLICATION_CREDENTIALS`.
-- On the VPS, the service account key must exist at the path referenced by env.
-- A previous failure was caused by the key file being missing on the new VPS, not by the Sheets code path itself.
+Files updated in codebase:
+- lib/auth.tsx
+- lib/telegram.ts
 
-## Telegram / Mini App Notes
+Changes:
+- Added fetch timeout protection for auth API calls during initialization
+- Improved Telegram WebApp readiness handling so wait flow cannot hang due duplicate resolve path
 
-- The mini app URL should come from `TELEGRAM_MINI_APP_URL` or `NEXT_PUBLIC_APP_URL`.
-- If those are absent, the bot falls back to deriving the origin from `TELEGRAM_WEBHOOK_URL`.
-- The stale quick-tunnel URL has been removed from the bot command path.
+Deployment:
+- Built locally
+- Copied build artifact to VPS via scp
+- Restarted reports-app.service
+- Verified patched auth string exists in deployed .next bundle
 
-## Build / Deployment Gotcha
+### 3) Baseline schema and docs brought in sync
 
-- A Windows-specific build failure was caused by mixed path casing, for example `Desktop/project` vs `Desktop/Project`.
-- This caused duplicate module resolution inside Next.js and produced prerender crashes during `next build`.
-- `npm run build` now goes through `scripts/build-production.js`, which normalizes the real path before invoking Next.js.
-- If a future agent sees inexplicable `useContext` prerender failures on Windows, check path casing first.
+Files updated:
+- init-database.sql
+- DATABASE_SCHEMA.md
 
-## Files Changed For Stability
+Changes:
+- Included team_templates in base schema and indexes
+- Documented many-to-many team/template mapping
 
-- `lib/bot-commands.ts`
-- `lib/google-sheets.ts`
-- `.env.example`
-- `README.md`
-- `package.json`
-- `scripts/build-production.js`
+## Unresolved Issue
 
-## Recommended Future Checks
+### Symptom
 
-- Verify `reports-app.service` after any env change: `sudo systemctl status reports-app`
-- Verify tunnel health after any DNS/tunnel change: `sudo systemctl status cloudflared`
-- Verify webhook after bot changes: `getWebhookInfo` via Telegram Bot API
-- Verify Sheets after env or key changes: `GET /api/sheets`
-- Follow app logs live: `sudo journalctl -u reports-app -f`
-- Follow tunnel logs live: `sudo journalctl -u cloudflared -f`
-- Show recent app logs: `sudo journalctl -u reports-app -n 100 --no-pager`
-- Show recent tunnel logs: `sudo journalctl -u cloudflared -n 100 --no-pager`
+Inside Telegram Mini App, app remains on logo/spinner style screen and does not proceed to dashboard for some user flow.
 
-## What Not To Regress
+### What is confirmed working
 
-- Do not point production back to local Postgres unless intentionally rolling back.
-- Do not remove `DATABASE_SSL=true` while using Supabase.
-- Do not build on the 1 GB VPS unless the deployment process changes.
-- Do not assume the Supabase direct DB host works from the VPS; prefer the session pooler.
+- Public site responds 200
+- Webhook endpoint responds 200 on POST
+- Local app endpoint on VPS responds 200
+- reports-app.service is active
+- No new service errors in recent 10 minute window after fixes
+
+### What is still uncertain
+
+- Whether Telegram client is opening a stale cached Mini App instance for this bot/user
+- Whether this specific user is hitting a Telegram-side path that bypasses updated button URL generation
+- Whether a chat-specific Telegram menu button state is overriding expected launch path
+
+## High-Value Next Debugging Steps
+
+1. Add explicit auth progress logging to server route and client debug endpoint.
+2. Capture Telegram initData presence and user id at runtime from the affected device session.
+3. Expose a temporary debug panel in Mini App showing:
+- waitForTelegram result
+- has initData
+- has initDataUnsafe.user
+- /api/users call status and timing
+4. Force a versioned Mini App URL from bot button for cache busting, for example https://reportsv2.yall.uz/?v=20260327a
+5. Verify bot keyboard button payload currently sent to affected user chat (not only menu button defaults).
+6. If needed, set per-user chat menu button to web_app and validate with Telegram API response.
+
+## Operational Commands
+
+### Service checks
+
+- sudo systemctl status reports-app --no-pager -l
+- sudo journalctl -u reports-app -n 120 --no-pager
+- sudo journalctl -u reports-app -f
+
+### HTTP checks from VPS
+
+- curl -sS -o /tmp/root.out -w '%{http_code}' http://127.0.0.1:3000/
+- curl -sS -o /tmp/teams.out -w '%{http_code}' http://127.0.0.1:3000/api/teams
+- curl -sS -o /tmp/wh.out -w '%{http_code}' -X POST http://127.0.0.1:3000/api/webhook -H 'Content-Type: application/json' -d '{}'
+
+### Telegram bot checks
+
+- getWebhookInfo
+- getChatMenuButton
+- setChatMenuButton
+
+## Deployment Notes
+
+- VPS resources are tight. Prefer local build and scp artifact deployment.
+- After deploying .next, always restart reports-app.service.
+- Re-run /api/teams check after deployment since missing team_templates previously caused silent feature break.
+
+## First 30 Minutes Checklist For New Owner
+
+1. Confirm service, root route, and /api/teams are healthy.
+2. Reproduce stuck screen on affected Telegram account.
+3. Collect runtime auth telemetry for that session.
+4. Verify exact button payload that launched Mini App.
+5. Roll out versioned launch URL and retest.

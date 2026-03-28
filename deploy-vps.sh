@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ============================================================
 # VPS Deployment Script for reports-app
-# Target: ubuntu@193.149.17.11 (bm-vm-2, 1 core, 1GB RAM)
+# Target: ubuntu@193.149.17.25
 # Run this ON the VPS after SSH'ing in
 # ============================================================
 
@@ -48,7 +48,9 @@ DATABASE_SSL=true
 
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=7525140955:AAHTe0s9SDP6YyOzKH-w2_YprqW6QG8CASM
-TELEGRAM_WEBHOOK_URL=https://yall.uz/api/webhook
+TELEGRAM_WEBHOOK_URL=https://reportsv2.yall.uz/api/webhook
+TELEGRAM_MINI_APP_URL=https://reportsv2.yall.uz
+NEXT_PUBLIC_APP_URL=https://reportsv2.yall.uz
 
 # Google Sheets Integration
 GOOGLE_SHEETS_ID=1rawzYE4uOH5PMBPrlH-vpPNK08l-7HWccjiuNNbUJUg

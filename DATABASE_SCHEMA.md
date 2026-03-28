@@ -36,6 +36,13 @@ This document describes the PostgreSQL schema that powers the reports applicatio
 | `created_at` | timestamptz | Defaults to the insertion timestamp. |
 | `created_by` | bigint | References `users.telegram_id`; nullable for seeded teams. |
 
+### `team_templates`
+| Column | Type | Notes |
+| --- | --- | --- |
+| `team_id` | uuid (PK, FK) | References `teams.id`; cascade delete. |
+| `template_id` | uuid (PK, FK) | References `templates.id`; cascade delete. |
+| `assigned_at` | timestamptz | Defaults to assignment timestamp. |
+
 ### `reports`
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -51,14 +58,14 @@ This document describes the PostgreSQL schema that powers the reports applicatio
 ## Relationships
 - **Users → Teams**: `users.team_id` points to `teams.id`, allowing a user to belong to at most one team.
 - **Users → Reports**: `reports.user_id` identifies the author; deleting a user should be done carefully to avoid orphaned reports.
-- **Templates → Teams**: `teams.template_id` links a team to the template chosen by an admin.
+- **Templates ↔ Teams**: `team_templates` enables assigning multiple templates to each team.
 - **Templates → Reports**: `reports.template_id` shows which template was used, while `reports.template_data` preserves the template snapshot for historical accuracy.
 - **Teams → Reports**: `reports.team_id` connects each report with the team that receives it.
 
 ## Lifecycle Highlights
 1. **User joins**: a record is inserted into `users`, optionally tied to a team and role.
 2. **Template management**: admins create templates that describe the questionnaire (`templates.questions`).
-3. **Team setup**: teams reference a preferred template, enabling custom forms per team.
+3. **Team setup**: template assignments are stored in `team_templates`, enabling multiple templates per team.
 4. **Report submission**: when an employee submits a form, a `reports` row captures the author, the team, the associated template, and the answers.
 
 ## Notes

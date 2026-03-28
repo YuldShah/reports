@@ -13,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -42,8 +41,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
   const [newTeam, setNewTeam] = useState({ name: "", description: "" })
   const [selectedUserId, setSelectedUserId] = useState<string>("")
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([])
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
-  const [teamToDelete, setTeamToDelete] = useState<{ id: string, name: string } | null>(null)
   const { telegramUser, dbUser } = useAuthContext()
 
   const debugLog = async (message: string, data?: any) => {
@@ -316,11 +313,13 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     }
   }
 
-  const handleDeleteTeam = async () => {
-    if (!teamToDelete) return
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
+    if (!confirm(`Are you sure you want to delete the team "${teamName}"? All members will be unassigned.`)) {
+      return
+    }
 
     try {
-      const response = await fetch(`/api/teams?id=${teamToDelete.id}`, {
+      const response = await fetch(`/api/teams?id=${teamId}`, {
         method: 'DELETE',
       })
 
@@ -330,8 +329,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
 
       // Refresh local data
       await fetchData()
-      setIsDeleteDialogOpen(false)
-      setTeamToDelete(null)
 
       toast({
         title: "Success",
@@ -455,22 +452,21 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   rows={3}
                 />
               </div>
+              <div className="flex gap-2">
+                <Button onClick={handleCreateTeam} className="flex-1">
+                  Create Team
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNewTeam({ name: "", description: "" })
+                    setIsCreateDialogOpen(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setNewTeam({ name: "", description: "" })
-                  setIsCreateDialogOpen(false)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateTeam} className="flex-1">
-                Create Team
-              </Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -513,10 +509,7 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        setTeamToDelete({ id: team.id, name: team.name })
-                        setIsDeleteDialogOpen(true)
-                      }}
+                      onClick={() => handleDeleteTeam(team.id, team.name)}
                       className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -590,15 +583,15 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                               </SelectContent>
                             </Select>
                           </div>
+                          <div className="flex gap-2">
+                            <Button onClick={handleAddMember} disabled={!selectedUserId}>
+                              Add Member
+                            </Button>
+                            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
-                        <DialogFooter>
-                          <Button variant="outline" className="flex-1" onClick={() => setIsAddMemberDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button onClick={handleAddMember} disabled={!selectedUserId} className="flex-1">
-                            Add Member
-                          </Button>
-                        </DialogFooter>
                       </DialogContent>
                     </Dialog>
                   </div>
@@ -651,83 +644,79 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
         })}
       </div>
 
-      {/* Template Assignment Dialog (Refactored to standard Dialog) */}
-      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assign Report Templates</DialogTitle>
-            <DialogDescription>Select multiple templates for this team</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <Label>Select Templates</Label>
-              {templates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No templates available</p>
-              ) : (
-                <div className="space-y-2">
-                  {templates.map((template) => {
-                    const isChecked = selectedTemplateIds.includes(template.id)
-                    return (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => {
-                          if (isChecked) {
-                            setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
-                          } else {
-                            setSelectedTemplateIds([...selectedTemplateIds, template.id])
-                          }
-                        }}
-                        className={`flex items-start gap-3 w-full text-left p-3 rounded-[calc(var(--radius)+2px)] border transition-colors active:scale-[0.99] ${isChecked ? "border-primary/30 bg-primary/5" : "border-border/60 hover:bg-muted/50"}`}
-                      >
+      {/* Template Assignment Dialog */}
+      {isTemplateDialogOpen && (
+        <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
+          <div className="bg-background glass border-glass-border rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Assign Report Templates</h3>
+                <p className="text-sm text-muted-foreground">Select multiple templates for this team</p>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Select Templates</Label>
+                {templates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No templates available</p>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map((template) => (
+                      <div key={template.id} className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md">
                         <Checkbox
                           id={`template-${template.id}`}
-                          checked={isChecked}
-                          className="mt-0.5 pointer-events-none"
-                          tabIndex={-1}
+                          checked={selectedTemplateIds.includes(template.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedTemplateIds([...selectedTemplateIds, template.id])
+                            } else {
+                              setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
+                            }
+                          }}
                         />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium leading-none">
+                        <div className="flex-1">
+                          <Label
+                            htmlFor={`template-${template.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
                             {normalizeText(template.name)}
-                          </span>
+                          </Label>
                           {template.description && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {normalizeText(template.description)}
                             </p>
                           )}
                         </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground mt-2">
-                Selected: {selectedTemplateIds.length} template{selectedTemplateIds.length !== 1 ? 's' : ''}
-              </p>
-            </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-2">
+                  Selected: {selectedTemplateIds.length} template{selectedTemplateIds.length !== 1 ? 's' : ''}
+                </p>
+              </div>
 
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleAssignTemplates}
+                  disabled={!selectedTeam}
+                  className="flex-1"
+                >
+                  Assign Templates
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsTemplateDialogOpen(false)
+                    setSelectedTemplateIds([])
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                setIsTemplateDialogOpen(false)
-                setSelectedTemplateIds([])
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAssignTemplates}
-              disabled={!selectedTeam}
-              className="flex-1"
-            >
-              Assign Templates
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Empty State */}
       {teams.length === 0 && (
@@ -771,37 +760,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
           </CardContent>
         </Card>
       )}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Team</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the team &quot;{normalizeText(teamToDelete?.name)}&quot;? All members will be unassigned.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              className="flex-1"
-              variant="outline"
-              onClick={() => {
-                setIsDeleteDialogOpen(false)
-                setTeamToDelete(null)
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1"
-              variant="destructive"
-              onClick={handleDeleteTeam}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

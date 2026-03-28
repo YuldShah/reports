@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Send, AlertCircle, FileText } from "lucide-react"
+import { Send, AlertCircle, FileText, Loader2, ImagePlus, X, Expand } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
 import { normalizeText } from "@/lib/utils"
@@ -22,6 +23,8 @@ interface ReportFormProps {
   onSuccess: () => void
 }
 
+const MAX_PHOTOS_PER_FIELD = 5
+
 export default function ReportForm({ user, templateId, onCancel, onSuccess }: ReportFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -29,6 +32,11 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
   const [team, setTeam] = useState<Team | null>(null)
   const [template, setTemplate] = useState<ReportTemplate | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [uploadingPhotoFields, setUploadingPhotoFields] = useState<Record<string, boolean>>({})
+  const [draggingPhotoField, setDraggingPhotoField] = useState<string | null>(null)
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   // Default form data for non-template forms
   const [defaultFormData, setDefaultFormData] = useState({
@@ -75,7 +83,11 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             const initialFormData: Record<string, any> = {}
             const fields = templateData.template.questions || templateData.template.fields || []
             fields.forEach((field: TemplateField) => {
-              initialFormData[field.id] = field.type === 'number' ? '' : ''
+              if (field.type === 'photo') {
+                initialFormData[field.id] = []
+              } else {
+                initialFormData[field.id] = ''
+              }
             })
             setFormData(initialFormData)
           }
@@ -95,6 +107,121 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     fetchTeamAndTemplate()
   }, [user.teamId, templateId])
 
+  useEffect(() => {
+    setIsMounted(true)
+
+    return () => {
+      setIsMounted(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!previewPhotoUrl) {
+      return
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setPreviewPhotoUrl(null)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [previewPhotoUrl])
+
+  const normalizePhotoValue = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return value.filter((item) => typeof item === "string" && item.trim().length > 0)
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      return [value]
+    }
+
+    return []
+  }
+
+  const setFieldValue = (fieldId: string, nextValue: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [fieldId]: nextValue,
+    }))
+
+    setFormErrors((prev) => {
+      if (!prev[fieldId]) {
+        return prev
+      }
+
+      const nextErrors = { ...prev }
+      delete nextErrors[fieldId]
+      return nextErrors
+    })
+  }
+
+  const uploadPhotoFiles = async (fieldId: string, files: File[]) => {
+    if (!files.length) {
+      return
+    }
+
+    const currentUrls = normalizePhotoValue(formData[fieldId])
+    const remainingSlots = MAX_PHOTOS_PER_FIELD - currentUrls.length
+
+    if (remainingSlots <= 0) {
+      toast({
+        title: "Photo limit reached",
+        description: `You can upload up to ${MAX_PHOTOS_PER_FIELD} photos for this field.`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const filesToUpload = files.slice(0, remainingSlots)
+
+    if (filesToUpload.length < files.length) {
+      toast({
+        title: "Upload limit applied",
+        description: `Only the first ${remainingSlots} photo(s) were uploaded.`,
+      })
+    }
+
+    setUploadingPhotoFields((prev) => ({ ...prev, [fieldId]: true }))
+
+    try {
+      const payload = new FormData()
+      filesToUpload.forEach((file) => payload.append("files", file))
+
+      const uploadResponse = await fetch("/api/uploads", {
+        method: "POST",
+        body: payload,
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error("Upload request failed")
+      }
+
+      const uploadResult = await uploadResponse.json()
+      const uploadedUrls = Array.isArray(uploadResult.urls)
+        ? uploadResult.urls.filter((url: unknown) => typeof url === "string" && url.trim().length > 0)
+        : []
+
+      if (!uploadedUrls.length) {
+        throw new Error("No uploaded URLs returned")
+      }
+
+      setFieldValue(fieldId, [...currentUrls, ...uploadedUrls].slice(0, MAX_PHOTOS_PER_FIELD))
+    } catch (error) {
+      console.error("Photo upload failed:", error)
+      toast({
+        title: "Upload failed",
+        description: "Could not upload photos. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingPhotoFields((prev) => ({ ...prev, [fieldId]: false }))
+    }
+  }
+
   const validateForm = () => {
     const errors: Record<string, string> = {}
 
@@ -104,7 +231,13 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
       fields.forEach((field: TemplateField) => {
         if (field.required) {
           const value = formData[field.id]
-          if (!value || (typeof value === 'string' && !value.trim())) {
+          const isMissingValue =
+            value === undefined ||
+            value === null ||
+            (typeof value === 'string' && !value.trim()) ||
+            (Array.isArray(value) && value.length === 0)
+
+          if (isMissingValue) {
             errors[field.id] = `${field.label.replace('*', '')} is required`
           }
           
@@ -242,21 +375,11 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     const hasError = !!formErrors[field.id]
     const fieldLabel = normalizeText(field.label || field.id)
     const fieldPlaceholder = normalizeText(field.placeholder)
+    const isUploadingPhotos = !!uploadingPhotoFields[field.id]
+    const photoUrls = normalizePhotoValue(value)
 
-    const handleFieldChange = (newValue: string) => {
-      setFormData(prev => ({
-        ...prev,
-        [field.id]: newValue
-      }))
-      
-      // Clear error when user starts typing
-      if (hasError) {
-        setFormErrors(prev => {
-          const newErrors = { ...prev }
-          delete newErrors[field.id]
-          return newErrors
-        })
-      }
+    const handleFieldChange = (newValue: any) => {
+      setFieldValue(field.id, newValue)
     }
 
     return (
@@ -324,13 +447,127 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
               <SelectValue placeholder={fieldPlaceholder || "Tanlang"} />
             </SelectTrigger>
             <SelectContent>
-              {field.options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {normalizeText(option.label)}
-                </SelectItem>
-              ))}
+              {field.options.map((option, optionIndex) => {
+                const optionValue = typeof option === "string" ? option : option.value
+                const optionLabel = typeof option === "string" ? option : option.label
+
+                return (
+                  <SelectItem key={`${optionValue}_${optionIndex}`} value={optionValue}>
+                    {normalizeText(optionLabel)}
+                  </SelectItem>
+                )
+              })}
             </SelectContent>
           </Select>
+        )}
+
+        {field.type === 'photo' && (
+          <div className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-3">
+            <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>5 tagacha</span>
+              <span>{photoUrls.length}/{MAX_PHOTOS_PER_FIELD}</span>
+            </div>
+
+            <input
+              ref={(node) => {
+                photoInputRefs.current[field.id] = node
+              }}
+              id={`${field.id}_photo_input`}
+              type="file"
+              accept="image/*"
+              multiple
+              disabled={isUploadingPhotos || photoUrls.length >= MAX_PHOTOS_PER_FIELD}
+              className="hidden"
+              onChange={async (event) => {
+                const selectedFiles = Array.from(event.target.files ?? [])
+                event.currentTarget.value = ''
+                await uploadPhotoFiles(field.id, selectedFiles)
+              }}
+            />
+
+            <div
+              className={`rounded-xl border-2 border-dashed p-5 transition-all ${draggingPhotoField === field.id ? "border-primary bg-primary/5" : hasError ? "border-destructive/60" : "border-border/70"}`}
+              onDragOver={(event) => {
+                event.preventDefault()
+                setDraggingPhotoField(field.id)
+              }}
+              onDragLeave={(event) => {
+                event.preventDefault()
+                if (draggingPhotoField === field.id) {
+                  setDraggingPhotoField(null)
+                }
+              }}
+              onDrop={async (event) => {
+                event.preventDefault()
+                setDraggingPhotoField(null)
+                const droppedFiles = Array.from(event.dataTransfer.files ?? [])
+                await uploadPhotoFiles(field.id, droppedFiles)
+              }}
+            >
+              <div className="flex flex-col items-center justify-center gap-3 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <ImagePlus className="h-6 w-6" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Drag and drop photos here or
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isUploadingPhotos || photoUrls.length >= MAX_PHOTOS_PER_FIELD}
+                  onClick={() => photoInputRefs.current[field.id]?.click()}
+                >
+                  Choose photos
+                </Button>
+              </div>
+            </div>
+
+            {isUploadingPhotos && (
+              <div className="inline-flex items-center gap-2 rounded-md bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Uploading photos...
+              </div>
+            )}
+
+            {photoUrls.length > 0 && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {photoUrls.map((photoUrl: string, photoIndex: number) => (
+                  <div key={`${photoUrl}-${photoIndex}`} className="group relative aspect-square overflow-hidden rounded-xl border border-border/60 bg-background">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photoUrl}
+                      alt={`Uploaded photo ${photoIndex + 1}`}
+                      className="h-full w-full cursor-zoom-in object-cover transition-transform duration-200 group-hover:scale-105"
+                      onClick={() => setPreviewPhotoUrl(photoUrl)}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute right-1.5 top-1.5 z-10 h-6 w-6 rounded-full p-0"
+                      onClick={() => {
+                        const remaining = photoUrls.filter((_, indexValue) => indexValue !== photoIndex)
+                        handleFieldChange(remaining)
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPreviewPhotoUrl(photoUrl)}
+                      className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      <Expand className="h-3 w-3" />
+                      View
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         
         <AnimatePresence>
@@ -605,6 +842,47 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           </Button>
         </motion.div>
       </form>
+
+      {isMounted
+        ? createPortal(
+            <AnimatePresence>
+              {previewPhotoUrl && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/85 p-4"
+                  onClick={() => setPreviewPhotoUrl(null)}
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="relative w-full max-w-4xl"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="absolute right-2 top-2 z-20"
+                      onClick={() => setPreviewPhotoUrl(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewPhotoUrl}
+                      alt="Photo preview"
+                      className="max-h-[85vh] w-full rounded-xl object-contain"
+                    />
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

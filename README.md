@@ -22,8 +22,8 @@ At minimum you must provide a `DATABASE_URL`. Other values (Telegram bot, Google
 
 For production, also set:
 
-- `TELEGRAM_WEBHOOK_URL` to your public webhook URL, for example `https://reports.yall.uz/api/webhook`
-- `NEXT_PUBLIC_APP_URL` or `TELEGRAM_MINI_APP_URL` to your public mini app URL, for example `https://reports.yall.uz`
+- `TELEGRAM_WEBHOOK_URL` to your public webhook URL, for example `https://reportsv2.yall.uz/api/webhook`
+- `NEXT_PUBLIC_APP_URL` or `TELEGRAM_MINI_APP_URL` to your public mini app URL, for example `https://reportsv2.yall.uz`
 - `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` or `GOOGLE_APPLICATION_CREDENTIALS` to the service account JSON file path
 - `DATABASE_SSL=true` when using Supabase or another managed Postgres provider
 
