@@ -1,21 +1,15 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { DM_Sans, Outfit } from "next/font/google"
+import { Syne } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import AuthProvider from "@/components/auth-provider"
 import ErrorBoundary from "@/components/error-boundary"
 import { ThemeProvider } from "@/components/theme-provider"
 
-const dmSans = DM_Sans({
+const syne = Syne({
   subsets: ["latin"],
-  variable: "--font-sans",
-  display: "swap",
-})
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-heading",
+  variable: "--font-syne",
   display: "swap",
 })
 
@@ -33,13 +27,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${outfit.variable}`} suppressHydrationWarning>
+    <html lang="en" className={syne.variable} suppressHydrationWarning>
       <head>
         {/* Load Telegram SDK synchronously — must be available before React hydrates */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="https://telegram.org/js/telegram-web-app.js" />
       </head>
-      <body className="font-sans antialiased noise">
+      <body className="font-syne antialiased noise">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <ErrorBoundary>
             <AuthProvider>
