@@ -43,7 +43,7 @@ export default function StudentTracker({ user, template, onSuccess }: StudentTra
                 const response = await fetch(`/api/reports?userId=${user.telegramId}`)
                 if (response.ok) {
                     const data = await response.json()
-                    const reports = data.reports || []
+                    const reports = Array.isArray(data?.reports) ? data.reports : []
 
                     // Find the latest report for this template
                     const trackerReport = reports.find(

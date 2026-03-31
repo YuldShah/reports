@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requireTeam = false, adminOnly = false }: ProtectedRouteProps) {
-  const { isLoading, isAuthenticated, dbUser, isAdmin, error } = useAuthContext()
+  const { isLoading, isAuthenticated, dbUser, isAdmin, isBrowserDebug, error } = useAuthContext()
 
   if (isLoading) {
     return <LoadingSpinner />
@@ -27,7 +27,7 @@ export default function ProtectedRoute({ children, requireTeam = false, adminOnl
     return <UnregisteredView />
   }
 
-  if (requireTeam && !dbUser?.teamId && !isAdmin) {
+  if (requireTeam && !dbUser?.teamId && !isAdmin && !isBrowserDebug) {
     return <UnregisteredView />
   }
 
