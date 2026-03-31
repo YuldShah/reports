@@ -139,10 +139,13 @@ const buildSheetTitle = (templateName: string): string => {
   return withSpaces.length > 0 ? withSpaces : 'Template'
 }
 
+const quoteSheetTitle = (sheetTitle: string) => `'${sheetTitle.replace(/'/g, "''")}'`
+
 const ensureSheetHeaders = async (
   sheetId: number,
   requiredHeaders: string[],
   sheetsClient?: sheets_v4.Sheets,
+  sheetTitle?: string,
 ) => {
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
@@ -160,14 +163,30 @@ const ensureSheetHeaders = async (
     },
   }
 
-  const headerResponse = await sheets.spreadsheets.values.batchGetByDataFilter({
-    spreadsheetId,
-    requestBody: {
-      dataFilters: [headerFilter],
-    },
-  })
+  let currentHeaders: string[] = []
+  let useA1Fallback = false
 
-  const currentHeaders = headerResponse.data.valueRanges?.[0]?.valueRange?.values?.[0] ?? []
+  try {
+    const headerResponse = await sheets.spreadsheets.values.batchGetByDataFilter({
+      spreadsheetId,
+      requestBody: {
+        dataFilters: [headerFilter],
+      },
+    })
+
+    currentHeaders = headerResponse.data.valueRanges?.[0]?.valueRange?.values?.[0] ?? []
+  } catch (error) {
+    if (!sheetTitle) {
+      throw error
+    }
+
+    useA1Fallback = true
+    const fallbackResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${quoteSheetTitle(sheetTitle)}!1:1`,
+    })
+    currentHeaders = fallbackResponse.data.values?.[0] ?? []
+  }
 
   // Start with existing headers or base headers if the row is blank
   const finalHeaders = currentHeaders.length > 0 ? [...currentHeaders] : [...BASE_HEADERS]
@@ -200,19 +219,30 @@ const ensureSheetHeaders = async (
   }
 
   if (headersChanged) {
-    await sheets.spreadsheets.values.batchUpdateByDataFilter({
-      spreadsheetId,
-      requestBody: {
+    if (useA1Fallback && sheetTitle) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${quoteSheetTitle(sheetTitle)}!A1`,
         valueInputOption: 'RAW',
-        data: [
-          {
-            dataFilter: headerFilter,
-            majorDimension: 'ROWS',
-            values: [finalHeaders],
-          } as sheets_v4.Schema$DataFilterValueRange,
-        ],
-      },
-    })
+        requestBody: {
+          values: [finalHeaders],
+        },
+      })
+    } else {
+      await sheets.spreadsheets.values.batchUpdateByDataFilter({
+        spreadsheetId,
+        requestBody: {
+          valueInputOption: 'RAW',
+          data: [
+            {
+              dataFilter: headerFilter,
+              majorDimension: 'ROWS',
+              values: [finalHeaders],
+            } as sheets_v4.Schema$DataFilterValueRange,
+          ],
+        },
+      })
+    }
   }
 
   return finalHeaders
@@ -414,7 +444,7 @@ export const appendToGoogleSheet = async (
           .filter((label): label is string => typeof label === 'string' && label.trim().length > 0),
       ),
     )
-    const finalHeaders = await ensureSheetHeaders(sheetInfo.sheetId, requiredHeaders, sheets)
+    const finalHeaders = await ensureSheetHeaders(sheetInfo.sheetId, requiredHeaders, sheets, sheetInfo.title)
 
     const baseValueMap: Record<string, string> = {
       'Report ID': reportData.reportId,
@@ -434,37 +464,12 @@ export const appendToGoogleSheet = async (
       return answerMap.get(header) ?? ''
     })
 
-    // Helper to determine the appropriate cell value type
-    const toCellValue = (value: string): sheets_v4.Schema$ExtendedValue => {
-      if (value === '' || value === null || value === undefined) {
-        return { stringValue: '' }
-      }
-      // Check if it's a pure number (integer or decimal)
-      const trimmed = String(value).trim()
-      if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
-        return { numberValue: parseFloat(trimmed) }
-      }
-      return { stringValue: value }
-    }
-
-    const rowData: sheets_v4.Schema$RowData = {
-      values: rowValues.map((value) => ({
-        userEnteredValue: toCellValue(value ?? ''),
-      })),
-    }
-
-    const response = await sheets.spreadsheets.batchUpdate({
+    const response = await sheets.spreadsheets.values.append({
       spreadsheetId,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A1`,
+      valueInputOption: 'USER_ENTERED',
       requestBody: {
-        requests: [
-          {
-            appendCells: {
-              sheetId: sheetInfo.sheetId,
-              rows: [rowData],
-              fields: 'userEnteredValue',
-            },
-          },
-        ],
+        values: [rowValues],
       },
     })
 
@@ -518,16 +523,15 @@ export const updateOrAppendStudentTracker = async (
     const sheetInfo = await ensureTemplateSheet(templateKey, templateName, sheets)
 
     // Ensure headers are set up for student tracker
-    await ensureSheetHeaders(sheetInfo.sheetId, STUDENT_TRACKER_HEADERS, sheets)
+    await ensureSheetHeaders(sheetInfo.sheetId, STUDENT_TRACKER_HEADERS, sheets, sheetInfo.title)
 
     // Get all rows to find existing tutor row
     const readResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${sheetInfo.title}'!A:G`,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A:G`,
     })
 
     const rows = readResponse.data.values || []
-    const headerRow = rows[0] || STUDENT_TRACKER_HEADERS
 
     // Find the column index for Tutor name (first column)
     const tutorColIndex = 0 // Tutor ismi is always first
@@ -553,7 +557,7 @@ export const updateOrAppendStudentTracker = async (
 
     if (existingRowIndex >= 0) {
       // Update existing row
-      const range = `'${sheetInfo.title}'!A${existingRowIndex + 1}:G${existingRowIndex + 1}`
+      const range = `${quoteSheetTitle(sheetInfo.title)}!A${existingRowIndex + 1}:G${existingRowIndex + 1}`
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range,
@@ -567,7 +571,7 @@ export const updateOrAppendStudentTracker = async (
       // Append new row
       await sheets.spreadsheets.values.append({
         spreadsheetId,
-        range: `'${sheetInfo.title}'!A:G`,
+        range: `${quoteSheetTitle(sheetInfo.title)}!A:G`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [rowData],

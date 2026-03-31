@@ -6,10 +6,14 @@ const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
+  ".heic": "image/heic",
+  ".heif": "image/heif",
   ".webp": "image/webp",
   ".gif": "image/gif",
   ".bmp": "image/bmp",
   ".svg": "image/svg+xml",
+  ".pdf": "application/pdf",
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
 const getMimeType = (fileName: string) => {

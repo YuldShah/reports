@@ -223,7 +223,7 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
     const timeout = setTimeout(() => {
       console.log("[v0] Telegram WebApp timeout - not running in Telegram")
       finish(null)
-    }, 5000) // 5 second timeout
+    }, 3000) // 3 second timeout
 
     const check = () => {
       if (hasResolved) {

@@ -24,6 +24,58 @@ interface ReportFormProps {
 }
 
 const MAX_PHOTOS_PER_FIELD = 5
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+const MAX_FILE_SIZE_MB = 50
+
+const ACCEPTED_UPLOAD_EXTENSIONS = [".docx", ".pdf", ".jpeg", ".jpg", ".png", ".heic", ".heif"]
+const ACCEPTED_UPLOAD_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+])
+const FILE_INPUT_ACCEPT = ".docx,.pdf,.jpeg,.jpg,.png,.heic,.heif"
+
+const getFileExtension = (fileName: string) => {
+  const dotIndex = fileName.lastIndexOf(".")
+  if (dotIndex < 0) {
+    return ""
+  }
+  return fileName.slice(dotIndex).toLowerCase()
+}
+
+const isAllowedUploadFile = (file: File) => {
+  const mime = (file.type || "").toLowerCase()
+  const extension = getFileExtension(file.name || "")
+
+  if (ACCEPTED_UPLOAD_MIME_TYPES.has(mime)) {
+    return true
+  }
+
+  return ACCEPTED_UPLOAD_EXTENSIONS.includes(extension)
+}
+
+const isImageFileUrl = (value: string) => {
+  if (!value) {
+    return false
+  }
+
+  const normalized = value.split("?")[0].toLowerCase()
+  return normalized.endsWith(".jpg") || normalized.endsWith(".jpeg") || normalized.endsWith(".png") || normalized.endsWith(".heic") || normalized.endsWith(".heif")
+}
+
+const getFileNameFromUrl = (fileUrl: string) => {
+  try {
+    const pathname = new URL(fileUrl).pathname
+    const name = pathname.split("/").pop() || fileUrl
+    return decodeURIComponent(name)
+  } catch {
+    const name = fileUrl.split("/").pop() || fileUrl
+    return decodeURIComponent(name)
+  }
+}
 
 export default function ReportForm({ user, templateId, onCancel, onSuccess }: ReportFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -83,7 +135,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             const initialFormData: Record<string, any> = {}
             const fields = templateData.template.questions || templateData.template.fields || []
             fields.forEach((field: TemplateField) => {
-              if (field.type === 'photo') {
+              if (field.type === 'photo' || field.type === 'file') {
                 initialFormData[field.id] = []
               } else {
                 initialFormData[field.id] = ''
@@ -130,7 +182,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [previewPhotoUrl])
 
-  const normalizePhotoValue = (value: unknown): string[] => {
+  const normalizeFileValue = (value: unknown): string[] => {
     if (Array.isArray(value)) {
       return value.filter((item) => typeof item === "string" && item.trim().length > 0)
     }
@@ -164,24 +216,47 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
       return
     }
 
-    const currentUrls = normalizePhotoValue(formData[fieldId])
+    const currentUrls = normalizeFileValue(formData[fieldId])
     const remainingSlots = MAX_PHOTOS_PER_FIELD - currentUrls.length
 
     if (remainingSlots <= 0) {
       toast({
-        title: "Photo limit reached",
-        description: `You can upload up to ${MAX_PHOTOS_PER_FIELD} photos for this field.`,
+        title: "File limit reached",
+        description: `You can upload up to ${MAX_PHOTOS_PER_FIELD} files for this field.`,
         variant: "destructive",
       })
       return
     }
 
-    const filesToUpload = files.slice(0, remainingSlots)
+    const allowedFiles = files.filter((file) => isAllowedUploadFile(file))
+    const oversizedFiles = allowedFiles.filter((file) => file.size > MAX_FILE_SIZE_BYTES)
+
+    if (oversizedFiles.length > 0) {
+      toast({
+        title: "File too large",
+        description: `Each file must be at most ${MAX_FILE_SIZE_MB}MB.`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (allowedFiles.length < files.length) {
+      toast({
+        title: "Unsupported file skipped",
+        description: "Only .docx, .pdf, .jpeg/.jpg, .png, .heic, and .heif are allowed.",
+      })
+    }
+
+    const filesToUpload = allowedFiles.slice(0, remainingSlots)
+
+    if (filesToUpload.length === 0) {
+      return
+    }
 
     if (filesToUpload.length < files.length) {
       toast({
         title: "Upload limit applied",
-        description: `Only the first ${remainingSlots} photo(s) were uploaded.`,
+        description: `Only the first ${remainingSlots} file(s) were uploaded.`,
       })
     }
 
@@ -197,7 +272,8 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
       })
 
       if (!uploadResponse.ok) {
-        throw new Error("Upload request failed")
+        const errorPayload = await uploadResponse.json().catch(() => null)
+        throw new Error(typeof errorPayload?.error === "string" ? errorPayload.error : "Upload request failed")
       }
 
       const uploadResult = await uploadResponse.json()
@@ -211,10 +287,10 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
 
       setFieldValue(fieldId, [...currentUrls, ...uploadedUrls].slice(0, MAX_PHOTOS_PER_FIELD))
     } catch (error) {
-      console.error("Photo upload failed:", error)
+      console.error("File upload failed:", error)
       toast({
         title: "Upload failed",
-        description: "Could not upload photos. Please try again.",
+        description: error instanceof Error ? error.message : "Could not upload files. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -376,7 +452,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     const fieldLabel = normalizeText(field.label || field.id)
     const fieldPlaceholder = normalizeText(field.placeholder)
     const isUploadingPhotos = !!uploadingPhotoFields[field.id]
-    const photoUrls = normalizePhotoValue(value)
+    const photoUrls = normalizeFileValue(value)
 
     const handleFieldChange = (newValue: any) => {
       setFieldValue(field.id, newValue)
@@ -461,10 +537,10 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
           </Select>
         )}
 
-        {field.type === 'photo' && (
+        {(field.type === 'photo' || field.type === 'file') && (
           <div className="space-y-4 rounded-xl border border-border/60 bg-muted/10 p-3">
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-              <span>5 tagacha</span>
+              <span>5 tagacha, {MAX_FILE_SIZE_MB}MB/file</span>
               <span>{photoUrls.length}/{MAX_PHOTOS_PER_FIELD}</span>
             </div>
 
@@ -474,7 +550,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
               }}
               id={`${field.id}_photo_input`}
               type="file"
-              accept="image/*"
+              accept={FILE_INPUT_ACCEPT}
               multiple
               disabled={isUploadingPhotos || photoUrls.length >= MAX_PHOTOS_PER_FIELD}
               className="hidden"
@@ -509,7 +585,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                   <ImagePlus className="h-6 w-6" />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Drag and drop photos here or
+                  Drag and drop files here or
                 </p>
                 <Button
                   type="button"
@@ -518,7 +594,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                   disabled={isUploadingPhotos || photoUrls.length >= MAX_PHOTOS_PER_FIELD}
                   onClick={() => photoInputRefs.current[field.id]?.click()}
                 >
-                  Choose photos
+                  Choose files
                 </Button>
               </div>
             </div>
@@ -526,27 +602,57 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
             {isUploadingPhotos && (
               <div className="inline-flex items-center gap-2 rounded-md bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Uploading photos...
+                Uploading files...
               </div>
             )}
 
             {photoUrls.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              <div className="space-y-2">
                 {photoUrls.map((photoUrl: string, photoIndex: number) => (
-                  <div key={`${photoUrl}-${photoIndex}`} className="group relative aspect-square overflow-hidden rounded-xl border border-border/60 bg-background">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photoUrl}
-                      alt={`Uploaded photo ${photoIndex + 1}`}
-                      className="h-full w-full cursor-zoom-in object-cover transition-transform duration-200 group-hover:scale-105"
-                      onClick={() => setPreviewPhotoUrl(photoUrl)}
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div key={`${photoUrl}-${photoIndex}`} className="flex items-center gap-3 rounded-xl border border-border/60 bg-background p-2">
+                    {isImageFileUrl(photoUrl) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photoUrl}
+                        alt={`Uploaded file ${photoIndex + 1}`}
+                        className="h-14 w-14 cursor-zoom-in rounded-md object-cover"
+                        onClick={() => setPreviewPhotoUrl(photoUrl)}
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">{getFileNameFromUrl(photoUrl)}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <a
+                          href={photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-primary underline-offset-2 hover:underline"
+                        >
+                          Open
+                        </a>
+                        {isImageFileUrl(photoUrl) && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewPhotoUrl(photoUrl)}
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            <Expand className="h-3 w-3" />
+                            Preview
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                     <Button
                       type="button"
                       variant="destructive"
                       size="sm"
-                      className="absolute right-1.5 top-1.5 z-10 h-6 w-6 rounded-full p-0"
+                      className="h-7 w-7 rounded-full p-0"
                       onClick={() => {
                         const remaining = photoUrls.filter((_, indexValue) => indexValue !== photoIndex)
                         handleFieldChange(remaining)
@@ -554,15 +660,6 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                     >
                       <X className="h-3.5 w-3.5" />
                     </Button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPreviewPhotoUrl(photoUrl)}
-                      className="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100"
-                    >
-                      <Expand className="h-3 w-3" />
-                      View
-                    </button>
                   </div>
                 ))}
               </div>

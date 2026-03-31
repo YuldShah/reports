@@ -1,131 +1,160 @@
-# Reports App Handoff
+# Reports App Handoff (2026-03-28)
 
-## Summary
+## Executive Summary
 
-This is a Next.js 14 Telegram Mini App plus bot backend for team reporting.
+This handoff replaces the previous stale state.
 
-Current blocker: Telegram Mini App still shows a logo-only loading screen for at least one user path even after API and deployment fixes.
+Current user-facing outcomes in production:
+- Photo preview thumbnails load reliably after upload.
+- Fullscreen photo preview is no longer hidden behind the top profile/header area.
+- Photo field wording has been standardized in templates and UI:
+	- Label: Rasm (ixtiyoriy)
+	- Helper: 5 tagacha
 
-## Current Production State
+Code was committed and pushed:
+- Branch: redesign-ui
+- Commit: 4154c198cf197b7cea040a9f4258081c4683fd17
+- Commit message: fix: stabilize uploads and update photo field copy
 
-- Public app URL: https://reportsv2.yall.uz
-- VPS: ubuntu@193.149.17.25
-- App path on VPS: /home/ubuntu/reports-app
-- App service: reports-app.service
-- Tunnel/proxy: Cloudflare tunnel for reportsv2.yall.uz
-- App health checks: root route and webhook route currently respond from production
+## Environment And Access
 
-## Runtime Configuration Notes
+- Public URL: https://reportsv2.yall.uz
+- VPS host: ubuntu@193.149.17.25
+- App directory: /home/ubuntu/reports-app
+- App process: reports-app.service
+- Reverse proxy: nginx in front of Next app
+- Tunnel/domain: Cloudflare tunnel routing reportsv2.yall.uz
 
-- TELEGRAM_WEBHOOK_URL is set to https://reportsv2.yall.uz/api/webhook
-- TELEGRAM_MINI_APP_URL was explicitly added and set to https://reportsv2.yall.uz
-- Bot command code builds Mini App URL from TELEGRAM_MINI_APP_URL or NEXT_PUBLIC_APP_URL, else derives origin from TELEGRAM_WEBHOOK_URL
-- Telegram getChatMenuButton still returns type commands in current checks (not web_app)
+## What Was Fixed This Cycle
 
-## Production Fixes Already Applied
+### 1) Upload preview reliability
 
-### 1) Database schema mismatch fixed
+Observed issue:
+- Upload endpoint returned URLs, files existed on disk, but public URL returned 404 until app restart.
 
-Problem seen in production logs:
-- /api/teams returned 500
-- Postgres error: relation team_templates does not exist
+Code changes:
+- app/api/uploads/route.ts now returns absolute URLs pointing at API file-serving endpoint.
+- Added central file-serving helper in lib/upload-files.ts.
+- Added runtime routes:
+	- app/api/uploads/reports/[fileName]/route.ts
+	- app/uploads/reports/[fileName]/route.ts
 
-Action taken:
-- Ran migration-multiple-templates.sql on production database
-- Restarted reports-app.service
+Live production stabilization:
+- nginx serves /uploads/ statically from disk, bypassing delayed Next static pickup behavior.
 
-Result:
-- /api/teams now returns 200
+### 2) Photo preview modal overlap
 
-### 2) Auth startup hardening shipped
+Observed issue:
+- Enlarged preview appeared behind the top profile/header area and close button was hard to reach.
 
-Files updated in codebase:
-- lib/auth.tsx
-- lib/telegram.ts
+Code changes in repository:
+- components/report-form.tsx uses createPortal and a high z-index fullscreen overlay.
 
-Changes:
-- Added fetch timeout protection for auth API calls during initialization
-- Improved Telegram WebApp readiness handling so wait flow cannot hang due duplicate resolve path
+Live production hotfix on old artifact:
+- nginx response injection applies conditional CSS behavior while photo preview is open so header does not cover the modal.
 
-Deployment:
-- Built locally
-- Copied build artifact to VPS via scp
-- Restarted reports-app.service
-- Verified patched auth string exists in deployed .next bundle
+### 3) Template photo text standardization
 
-### 3) Baseline schema and docs brought in sync
+User request implemented globally:
+- Foto (isbot uchun) -> Rasm (ixtiyoriy)
+- Helper text reduced to only: 5 tagacha
 
-Files updated:
-- init-database.sql
-- DATABASE_SCHEMA.md
+Database update performed:
+- Updated all templates containing photo fields.
+- Set photo field label to Rasm (ixtiyoriy).
+- Set photo field required=false.
+- Verified update count:
+	- PHOTO_TEMPLATES_BEFORE=17
+	- TEMPLATES_UPDATED=17
+	- PHOTO_TEMPLATES_AFTER=17
 
-Changes:
-- Included team_templates in base schema and indexes
-- Documented many-to-many team/template mapping
+Code alignment:
+- components/report-form.tsx helper text now matches desired copy: 5 tagacha
 
-## Unresolved Issue
+## Key Repository Changes
 
-### Symptom
+Primary files touched for this incident:
+- app/api/uploads/route.ts
+- lib/upload-files.ts
+- app/api/uploads/reports/[fileName]/route.ts
+- app/uploads/reports/[fileName]/route.ts
+- components/report-form.tsx
+- .gitignore
 
-Inside Telegram Mini App, app remains on logo/spinner style screen and does not proceed to dashboard for some user flow.
+Note:
+- Large local tarballs were intentionally removed from git tracking and ignored.
+- The files remain on local disk but are not part of the repository history head.
 
-### What is confirmed working
+## Current Production Topology
 
-- Public site responds 200
-- Webhook endpoint responds 200 on POST
-- Local app endpoint on VPS responds 200
-- reports-app.service is active
-- No new service errors in recent 10 minute window after fixes
+- Public traffic -> Cloudflare tunnel -> nginx (public port 3000)
+- nginx routes:
+	- /uploads/ -> static files from disk
+	- / -> proxied to Next app on localhost:3002
 
-### What is still uncertain
+This topology is currently intentional and part of the preview reliability fix.
 
-- Whether Telegram client is opening a stale cached Mini App instance for this bot/user
-- Whether this specific user is hitting a Telegram-side path that bypasses updated button URL generation
-- Whether a chat-specific Telegram menu button state is overriding expected launch path
+## Deploying Info
 
-## High-Value Next Debugging Steps
+### Safe deploy model currently recommended
 
-1. Add explicit auth progress logging to server route and client debug endpoint.
-2. Capture Telegram initData presence and user id at runtime from the affected device session.
-3. Expose a temporary debug panel in Mini App showing:
-- waitForTelegram result
-- has initData
-- has initDataUnsafe.user
-- /api/users call status and timing
-4. Force a versioned Mini App URL from bot button for cache busting, for example https://reportsv2.yall.uz/?v=20260327a
-5. Verify bot keyboard button payload currently sent to affected user chat (not only menu button defaults).
-6. If needed, set per-user chat menu button to web_app and validate with Telegram API response.
+Given prior build/runtime mismatch risk, prefer controlled deploys:
+- Keep nginx static /uploads behavior in place until a clean full deploy is validated.
+- If deploying code, deploy to the existing known-good service pattern and verify health before traffic assumptions.
 
-## Operational Commands
+### Standard service operations on VPS
 
-### Service checks
+```bash
+sudo systemctl status reports-app --no-pager -l
+sudo journalctl -u reports-app -n 150 --no-pager
+sudo systemctl restart reports-app
 
-- sudo systemctl status reports-app --no-pager -l
-- sudo journalctl -u reports-app -n 120 --no-pager
-- sudo journalctl -u reports-app -f
+sudo nginx -t
+sudo systemctl reload nginx
+sudo systemctl status nginx --no-pager -l
+```
 
-### HTTP checks from VPS
+### Basic post-deploy health checks
 
-- curl -sS -o /tmp/root.out -w '%{http_code}' http://127.0.0.1:3000/
-- curl -sS -o /tmp/teams.out -w '%{http_code}' http://127.0.0.1:3000/api/teams
-- curl -sS -o /tmp/wh.out -w '%{http_code}' -X POST http://127.0.0.1:3000/api/webhook -H 'Content-Type: application/json' -d '{}'
+```bash
+curl -sS -o /tmp/root.out -w '%{http_code}\n' http://127.0.0.1:3000/
+curl -sS -o /tmp/teams.out -w '%{http_code}\n' http://127.0.0.1:3000/api/teams
+curl -sS -o /tmp/upload.out -w '%{http_code}\n' http://127.0.0.1:3000/api/uploads
+curl -sS -o /tmp/wh.out -w '%{http_code}\n' -X POST http://127.0.0.1:3000/api/webhook -H 'Content-Type: application/json' -d '{}'
+```
 
-### Telegram bot checks
+### Upload-specific validation after deploy
 
-- getWebhookInfo
-- getChatMenuButton
-- setChatMenuButton
+1. Submit a report with at least one image.
+2. Confirm thumbnail appears immediately in report form.
+3. Open fullscreen preview and confirm close button is visible and clickable.
+4. Refresh page and confirm image URL still returns 200.
 
-## Deployment Notes
+### If push/deploy includes large archives
 
-- VPS resources are tight. Prefer local build and scp artifact deployment.
-- After deploying .next, always restart reports-app.service.
-- Re-run /api/teams check after deployment since missing team_templates previously caused silent feature break.
+GitHub hard limit is 100 MB per file.
+If push fails with GH001:
+- Remove archive artifacts from git tracking.
+- Add ignore rules.
+- Amend commit and push with force-with-lease if required.
 
-## First 30 Minutes Checklist For New Owner
+## Rollback Guidance
 
-1. Confirm service, root route, and /api/teams are healthy.
-2. Reproduce stuck screen on affected Telegram account.
-3. Collect runtime auth telemetry for that session.
-4. Verify exact button payload that launched Mini App.
-5. Roll out versioned launch URL and retest.
+If new deploy causes user-visible regressions:
+
+1. Restore previous known-good app artifact/service state.
+2. Keep nginx /uploads static serving enabled to preserve photo preview reliability.
+3. Re-run health checks listed above.
+4. Validate one real upload path end-to-end from Telegram Mini App.
+
+## Known Operational Notes
+
+- Local repository has an untracked file named nul, which can break git add -A on Windows.
+- Use explicit excludes when staging all files if needed.
+- VPS has limited resources; avoid risky in-place rebuilds during peak usage.
+
+## Open Follow-Up Work
+
+1. Replace nginx response-injection hotfixes with fully deployed source behavior once build/runtime compatibility is verified.
+2. After clean deploy is confirmed, simplify nginx config by removing temporary HTML/CSS/JS rewrite blocks.
+3. Keep a small runbook for emergency upload path validation and rollback.

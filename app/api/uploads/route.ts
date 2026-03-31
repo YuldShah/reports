@@ -6,6 +6,26 @@ import path from "path"
 export const runtime = "nodejs"
 
 const MAX_FILES_PER_REQUEST = 5
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
+
+const ALLOWED_EXTENSIONS = new Set([
+  ".pdf",
+  ".docx",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".heic",
+  ".heif",
+])
+
+const ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+])
 
 const resolvePublicBaseUrl = (request: NextRequest) => {
   const configuredUrl = process.env.TELEGRAM_MINI_APP_URL || process.env.NEXT_PUBLIC_APP_URL
@@ -34,12 +54,29 @@ const normalizeExtension = (fileName: string, mimeType: string) => {
     return rawExtension
   }
 
+  if (mimeType === "application/pdf") return ".pdf"
+  if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return ".docx"
   if (mimeType === "image/jpeg") return ".jpg"
   if (mimeType === "image/png") return ".png"
-  if (mimeType === "image/webp") return ".webp"
-  if (mimeType === "image/gif") return ".gif"
+  if (mimeType === "image/heic") return ".heic"
+  if (mimeType === "image/heif") return ".heif"
 
-  return ".jpg"
+  return ".bin"
+}
+
+const isAllowedFile = (file: File) => {
+  const mimeType = (file.type || "").toLowerCase()
+  const extension = path.extname(file.name || "").toLowerCase()
+
+  if (ALLOWED_MIME_TYPES.has(mimeType)) {
+    return true
+  }
+
+  if (ALLOWED_EXTENSIONS.has(extension)) {
+    return true
+  }
+
+  return false
 }
 
 export async function POST(request: NextRequest) {
@@ -63,8 +100,22 @@ export async function POST(request: NextRequest) {
     const urls: string[] = []
 
     for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        return NextResponse.json({ error: "Only image files are allowed" }, { status: 400 })
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        return NextResponse.json(
+          {
+            error: `File ${file.name || "(unknown)"} exceeds the 50MB limit`,
+          },
+          { status: 400 },
+        )
+      }
+
+      if (!isAllowedFile(file)) {
+        return NextResponse.json(
+          {
+            error: "Only .docx, .pdf, .jpeg/.jpg, .png, .heic, and .heif files are allowed",
+          },
+          { status: 400 },
+        )
       }
 
       const extension = normalizeExtension(file.name, file.type)
@@ -80,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ urls })
   } catch (error) {
-    console.error("Photo upload error:", error)
+    console.error("File upload error:", error)
     return NextResponse.json({ error: "Failed to upload files" }, { status: 500 })
   }
 }

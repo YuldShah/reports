@@ -120,6 +120,49 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
 
   const answers = report.answers || report.templateData || {}
   const templateFields = template ? ((template as any).questions || (template as any).fields || []) : []
+  const isHttpUrl = (rawValue: string) => /^https?:\/\//i.test(rawValue)
+
+  const renderAnswerValue = (rawValue: unknown) => {
+    if (rawValue === undefined || rawValue === null || rawValue === '') {
+      return <span className="text-muted-foreground italic">No answer provided</span>
+    }
+
+    if (Array.isArray(rawValue)) {
+      if (rawValue.length === 0) {
+        return <span className="text-muted-foreground italic">No answer provided</span>
+      }
+
+      return (
+        <div className="space-y-1">
+          {rawValue.map((entry, index) => {
+            const stringValue = String(entry)
+            return (
+              <div key={`${stringValue}-${index}`} className="text-sm">
+                {isHttpUrl(stringValue) ? (
+                  <a href={stringValue} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline break-all">
+                    {stringValue}
+                  </a>
+                ) : (
+                  <span>{normalizeText(stringValue)}</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )
+    }
+
+    const stringValue = String(rawValue)
+    if (isHttpUrl(stringValue)) {
+      return (
+        <a href={stringValue} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline break-all">
+          {stringValue}
+        </a>
+      )
+    }
+
+    return <span>{normalizeText(stringValue)}</span>
+  }
 
   return (
     <div className="space-y-6">
@@ -254,12 +297,9 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     {normalizeText(field.label || field.question || field.id)}
                   </p>
-                  <p className="text-base">
-                    {value !== undefined && value !== null && value !== ''
-                      ? normalizeText(String(value))
-                      : <span className="text-muted-foreground italic">No answer provided</span>
-                    }
-                  </p>
+                  <div className="text-base">
+                    {renderAnswerValue(value)}
+                  </div>
                 </div>
               )
             })
@@ -270,12 +310,9 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
                 <p className="text-sm font-medium text-muted-foreground mb-1">
                   {normalizeText(key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                 </p>
-                <p className="text-base">
-                  {value !== undefined && value !== null && value !== ''
-                    ? normalizeText(String(value))
-                    : <span className="text-muted-foreground italic">No answer provided</span>
-                  }
-                </p>
+                <div className="text-base">
+                  {renderAnswerValue(value)}
+                </div>
               </div>
             ))
           )}

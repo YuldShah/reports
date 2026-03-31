@@ -48,7 +48,7 @@ export interface ReportTemplate {
 export interface TemplateField {
   id: string
   label: string
-  type: "text" | "number" | "date" | "textarea" | "select" | "photo" | "email" | "tel" | "radio" | "checkbox"
+  type: "text" | "number" | "date" | "textarea" | "select" | "photo" | "file" | "email" | "tel" | "radio" | "checkbox"
   required: boolean
   placeholder?: string
   validation?: {

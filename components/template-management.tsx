@@ -115,7 +115,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           return { valid: false, error: `Question ${i + 1}: Missing required field 'type'` }
         }
         // Valid types
-        const validTypes = ['text', 'textarea', 'number', 'email', 'tel', 'date', 'select', 'radio', 'checkbox', 'photo']
+        const validTypes = ['text', 'textarea', 'number', 'email', 'tel', 'date', 'select', 'radio', 'checkbox', 'photo', 'file']
         if (!validTypes.includes(q.type)) {
           return { valid: false, error: `Question ${i + 1}: Invalid type '${q.type}'. Must be one of: ${validTypes.join(', ')}` }
         }
@@ -479,7 +479,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                   <p className="text-xs text-destructive mt-1">{jsonError}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, photo. Fields with options (select/radio/checkbox) require an &quot;options&quot; array.
+                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, file, photo. Fields with options (select/radio/checkbox) require an &quot;options&quot; array.
                 </p>
               </div>
 
@@ -665,7 +665,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                       <p className="text-xs text-destructive mt-1">{jsonError}</p>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, photo
+                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, file, photo
                     </p>
                   </div>
 

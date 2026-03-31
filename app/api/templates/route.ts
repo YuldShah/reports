@@ -8,6 +8,20 @@ import {
 } from "@/lib/database"
 import { randomUUID } from "crypto"
 
+const normalizeQuestionTypes = (questions: any[] = []) => {
+  return questions.map((question) => {
+    if (!question || typeof question !== "object") {
+      return question
+    }
+
+    if (question.type === "photo") {
+      return { ...question, type: "file" }
+    }
+
+    return question
+  })
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -18,11 +32,20 @@ export async function GET(request: NextRequest) {
       if (!template) {
         return NextResponse.json({ error: "Template not found" }, { status: 404 })
       }
-      return NextResponse.json({ template })
+
+      return NextResponse.json({
+        template: {
+          ...template,
+          questions: normalizeQuestionTypes(template.questions),
+        },
+      })
     }
 
     const templates = await getAllTemplates()
-    return NextResponse.json({ templates })
+    return NextResponse.json({ templates: templates.map((template) => ({
+      ...template,
+      questions: normalizeQuestionTypes(template.questions),
+    })) })
   } catch (error) {
     console.error("Error fetching templates:", error)
     return NextResponse.json({ error: "Failed to fetch templates" }, { status: 500 })
@@ -42,16 +65,22 @@ export async function POST(request: NextRequest) {
     }
 
     const templateId = randomUUID()
+    const normalizedQuestions = normalizeQuestionTypes(questions)
     const template = await createTemplate({
       id: templateId,
       name,
       description: description || null,
-      questions,
+      questions: normalizedQuestions,
       isStudentTracker: isStudentTracker || false,
       createdBy: createdBy || null
     })
 
-    return NextResponse.json({ template }, { status: 201 })
+    return NextResponse.json({
+      template: {
+        ...template,
+        questions: normalizeQuestionTypes(template.questions),
+      },
+    }, { status: 201 })
   } catch (error) {
     console.error("Error creating template:", error)
     return NextResponse.json({ error: "Failed to create template" }, { status: 500 })
@@ -70,7 +99,7 @@ export async function PATCH(request: NextRequest) {
     const updates: any = {}
     if (name !== undefined) updates.name = name
     if (description !== undefined) updates.description = description
-    if (questions !== undefined) updates.questions = questions
+    if (questions !== undefined) updates.questions = normalizeQuestionTypes(questions)
     if (isStudentTracker !== undefined) updates.isStudentTracker = isStudentTracker
 
     const updatedTemplate = await updateTemplate(id, updates)
@@ -79,7 +108,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Template not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ template: updatedTemplate })
+    return NextResponse.json({ template: {
+      ...updatedTemplate,
+      questions: normalizeQuestionTypes(updatedTemplate.questions),
+    } })
   } catch (error) {
     console.error("Error updating template:", error)
     return NextResponse.json({ error: "Failed to update template" }, { status: 500 })
