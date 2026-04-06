@@ -41,3 +41,5 @@ newkey.json
 next-env.d.ts
 .tmp/*.tar.gz
 reports-app-migration.tar.gz
+*.tar
+nul
