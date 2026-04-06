@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -456,15 +457,6 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                 <Button onClick={handleCreateTeam} className="flex-1">
                   Create Team
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setNewTeam({ name: "", description: "" })
-                    setIsCreateDialogOpen(false)
-                  }}
-                >
-                  Cancel
-                </Button>
               </div>
             </div>
           </DialogContent>
@@ -584,11 +576,8 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                             </Select>
                           </div>
                           <div className="flex gap-2">
-                            <Button onClick={handleAddMember} disabled={!selectedUserId}>
+                            <Button onClick={handleAddMember} disabled={!selectedUserId} className="flex-1">
                               Add Member
-                            </Button>
-                            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
-                              Cancel
                             </Button>
                           </div>
                         </div>
@@ -645,78 +634,66 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
       </div>
 
       {/* Template Assignment Dialog */}
-      {isTemplateDialogOpen && (
-        <div className="fixed inset-0 bg-[#10161f]/50 flex items-center justify-center z-50">
-          <div className="bg-background glass border-glass-border rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold">Assign Report Templates</h3>
-                <p className="text-sm text-muted-foreground">Select multiple templates for this team</p>
-              </div>
-
-              <div className="space-y-3">
-                <Label>Select Templates</Label>
-                {templates.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No templates available</p>
-                ) : (
-                  <div className="space-y-2">
-                    {templates.map((template) => (
-                      <div key={template.id} className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md">
-                        <Checkbox
-                          id={`template-${template.id}`}
-                          checked={selectedTemplateIds.includes(template.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedTemplateIds([...selectedTemplateIds, template.id])
-                            } else {
-                              setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
-                            }
-                          }}
-                        />
-                        <div className="flex-1">
-                          <Label
-                            htmlFor={`template-${template.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            {normalizeText(template.name)}
-                          </Label>
-                          {template.description && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {normalizeText(template.description)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={(open) => {
+        setIsTemplateDialogOpen(open)
+        if (!open) setSelectedTemplateIds([])
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Report Templates</DialogTitle>
+            <DialogDescription>Select templates for this team</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label>Select Templates</Label>
+            {templates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No templates available</p>
+            ) : (
+              <div className="space-y-2">
+                {templates.map((template) => (
+                  <div key={template.id} className="flex items-start space-x-3 p-2 hover:bg-muted/50 rounded-md">
+                    <Checkbox
+                      id={`template-${template.id}`}
+                      checked={selectedTemplateIds.includes(template.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedTemplateIds([...selectedTemplateIds, template.id])
+                        } else {
+                          setSelectedTemplateIds(selectedTemplateIds.filter(id => id !== template.id))
+                        }
+                      }}
+                    />
+                    <div className="flex-1">
+                      <Label
+                        htmlFor={`template-${template.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {normalizeText(template.name)}
+                      </Label>
+                      {template.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {normalizeText(template.description)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                )}
-                <p className="text-xs text-muted-foreground mt-2">
-                  Selected: {selectedTemplateIds.length} template{selectedTemplateIds.length !== 1 ? 's' : ''}
-                </p>
+                ))}
               </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleAssignTemplates}
-                  disabled={!selectedTeam}
-                  className="flex-1"
-                >
-                  Assign Templates
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsTemplateDialogOpen(false)
-                    setSelectedTemplateIds([])
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Selected: {selectedTemplateIds.length} template{selectedTemplateIds.length !== 1 ? 's' : ''}
+            </p>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button
+              onClick={handleAssignTemplates}
+              disabled={!selectedTeam}
+              className="flex-1"
+            >
+              Assign Templates
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Empty State */}
       {teams.length === 0 && (

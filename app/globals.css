@@ -326,9 +326,11 @@
 @keyframes glowPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 
 [data-radix-popper-content-wrapper] { z-index: 50 !important; transition: none !important; }
-[data-radix-portal] > *[data-state="open"] { animation: fadeIn 0.18s cubic-bezier(0.4,0,0.2,1); }
-[data-radix-portal] > *[data-state="closed"] { animation: fadeOut 0.12s cubic-bezier(0.4,0,0.2,1); }
-[data-radix-portal] * { transition: none; }
+[data-radix-popper-content-wrapper] + [data-state="open"],
+[data-radix-portal] > *:not([role="region"]) > *[data-state="open"] { animation: fadeIn 0.18s cubic-bezier(0.4,0,0.2,1); }
+[data-radix-popper-content-wrapper] + [data-state="closed"],
+[data-radix-portal] > *:not([role="region"]) > *[data-state="closed"] { animation: fadeOut 0.12s cubic-bezier(0.4,0,0.2,1); }
+[data-radix-portal] *:not([role="region"], [role="region"] *) { transition: none; }
 @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {

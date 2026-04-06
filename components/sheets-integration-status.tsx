@@ -46,10 +46,12 @@ export default function SheetsIntegrationStatus() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <CardTitle className="font-heading">Google Sheets Integration</CardTitle>
-              {status.configured ? (
-                <CheckCircle className="w-5 h-5 text-success" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-warning" />
+              {!loading && (
+                status.configured ? (
+                  <CheckCircle className="w-5 h-5 text-success" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-warning" />
+                )
               )}
             </div>
             <CardDescription className="mt-1">Reports are automatically saved to Google Sheets</CardDescription>
@@ -61,16 +63,23 @@ export default function SheetsIntegrationStatus() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Badge variant={status.configured ? "default" : "secondary"}>
-            {status.configured ? "Connected" : "Not Configured"}
-          </Badge>
-          {status.spreadsheetId && (
-            <Badge variant="outline" className="font-mono text-xs">
-              {status.spreadsheetId.slice(0, 8)}...
-            </Badge>
-          )}
-        </div>
+        {loading ? (
+          <div className="flex items-center gap-2 py-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+            <span className="text-sm text-muted-foreground">Checking connection...</span>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <Badge variant={status.configured ? "default" : "secondary"}>
+                {status.configured ? "Connected" : "Not Configured"}
+              </Badge>
+              {status.spreadsheetId && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  {status.spreadsheetId.slice(0, 8)}...
+                </Badge>
+              )}
+            </div>
 
         {status.error && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -102,6 +111,8 @@ export default function SheetsIntegrationStatus() {
               <div>GOOGLE_SERVICE_ACCOUNT_KEY=&lt;service_account_json&gt; (or set GOOGLE_SERVICE_ACCOUNT_KEY_PATH)</div>
             </div>
           </div>
+        )}
+          </>
         )}
       </CardContent>
     </Card>

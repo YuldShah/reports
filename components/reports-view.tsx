@@ -39,6 +39,7 @@ import { normalizeText } from "@/lib/utils";
 export default function ReportsView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [teamFilter, setTeamFilter] = useState("all");
+  const [userFilter, setUserFilter] = useState("all");
   const [reports, setReports] = useState<Report[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -137,15 +138,16 @@ export default function ReportsView() {
           .toLowerCase()
           .includes(normalizedSearchTerm);
       const matchesTeam = teamFilter === "all" || report.teamId === teamFilter;
+      const matchesUser = userFilter === "all" || String(report.userId) === userFilter;
 
-      return matchesSearch && matchesTeam;
+      return matchesSearch && matchesTeam && matchesUser;
     });
-  }, [reports, searchTerm, teamFilter]);
+  }, [reports, searchTerm, teamFilter, userFilter]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, teamFilter]);
+  }, [searchTerm, teamFilter, userFilter]);
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
@@ -245,7 +247,7 @@ export default function ReportsView() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -256,7 +258,7 @@ export default function ReportsView() {
               />
             </div>
 
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <Select value={teamFilter} onValueChange={(v) => { setTeamFilter(v); setUserFilter("all"); }}>
               <SelectTrigger className="transition-colors focus:border-primary">
                 <SelectValue placeholder="Team" />
               </SelectTrigger>
@@ -267,6 +269,22 @@ export default function ReportsView() {
                     {normalizeText(team.name)}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={userFilter} onValueChange={setUserFilter}>
+              <SelectTrigger className="transition-colors focus:border-primary">
+                <SelectValue placeholder="User" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Users</SelectItem>
+                {users
+                  .filter((u) => teamFilter === "all" || u.teamId === teamFilter)
+                  .map((u) => (
+                    <SelectItem key={u.telegramId} value={String(u.telegramId)}>
+                      {normalizeText(u.firstName)}{u.lastName ? " " + normalizeText(u.lastName) : ""}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

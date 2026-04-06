@@ -267,6 +267,16 @@ export const getAllUsers = async (): Promise<User[]> => {
   return result.rows.map(mapUserRow)
 }
 
+export const deleteUser = async (telegramId: number): Promise<boolean> => {
+  // Delete reports first to avoid FK constraint violation
+  await runQuery(`DELETE FROM reports WHERE user_id = $1`, [telegramId])
+  const result = await runQuery(
+    `DELETE FROM users WHERE telegram_id = $1`,
+    [telegramId],
+  )
+  return (result.rowCount ?? 0) > 0
+}
+
 // Template operations
 export const createTemplate = async (templateData: Omit<Template, 'createdAt'>): Promise<Template> => {
   const { id, name, description, questions, isStudentTracker, createdBy } = templateData

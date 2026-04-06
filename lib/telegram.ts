@@ -79,6 +79,7 @@ export interface TelegramWebApp {
   onEvent?: (eventType: string, callback: (...args: unknown[]) => void) => void
   offEvent?: (eventType: string, callback: (...args: unknown[]) => void) => void
   setHeaderColor?: (color: string) => void
+  setBackgroundColor?: (color: string) => void
   setBottomBarColor?: (color: string) => void
   requestFullscreen?: () => Promise<void>
   lockOrientation?: (orientation: "portrait" | "landscape") => Promise<void> | void
@@ -101,6 +102,10 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
       return
     }
     const DEFAULT_HEADER_COLOR = "#10161f"
+    const THEME_COLORS: Record<string, string> = {
+      light: "#f9f6f1",
+      dark: "#1a1814",
+    }
 
     const normalizeColorHex = (value: string): string | null => {
       if (!value) return null
@@ -133,44 +138,49 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
     }
 
     const getHeaderColor = (): string => {
+      // Read the actual theme from the DOM (next-themes sets class on <html>)
+      const htmlEl = document.documentElement
+      const isDark = htmlEl.classList.contains("dark")
+      return isDark ? THEME_COLORS.dark : THEME_COLORS.light
+    }
+
+    const applyColors = (webApp: TelegramWebApp) => {
+      const color = getHeaderColor()
       try {
-        const doc = window.document
-        const body = doc.body
-        if (!body) {
-          return DEFAULT_HEADER_COLOR
+        if (typeof webApp.setHeaderColor === "function") {
+          webApp.setHeaderColor(color)
         }
-        const color = window.getComputedStyle(body).backgroundColor
-        return normalizeColorHex(color) ?? DEFAULT_HEADER_COLOR
-      } catch (error) {
-        console.warn("[v0] Unable to derive header color:", error)
-        return DEFAULT_HEADER_COLOR
-      }
+      } catch (e) { /* ignore */ }
+      try {
+        if (typeof webApp.setBackgroundColor === "function") {
+          webApp.setBackgroundColor(color)
+        }
+      } catch (e) { /* ignore */ }
+      try {
+        if (typeof webApp.setBottomBarColor === "function") {
+          webApp.setBottomBarColor(color)
+        }
+      } catch (e) { /* ignore */ }
+      console.log("[v0] Telegram chrome colors set to", color, "(dark:", document.documentElement.classList.contains("dark") + ")")
     }
 
     const applyWebAppPreferences = (webApp: TelegramWebApp) => {
       try {
-        const headerColor = getHeaderColor()
-        
-        // Check Telegram version - header/bottom bar colors require v6.1+
-        const version = parseFloat(webApp.version || "0")
-        const supportsTheming = version >= 6.1
-        
-        if (supportsTheming) {
-          if (typeof webApp.setHeaderColor === "function") {
-            webApp.setHeaderColor(headerColor)
-            console.log("[v0] Telegram header color set to", headerColor)
-          }
-          
-          // Set bottom bar color after a short delay to ensure it applies
-          setTimeout(() => {
-            if (typeof webApp.setBottomBarColor === "function") {
-              webApp.setBottomBarColor(headerColor)
-              console.log("[v0] Telegram bottom bar color set to", headerColor)
-            }
-          }, 100)
-        } else {
-          console.log("[v0] Telegram version", webApp.version, "does not support header/bottom bar colors (requires 6.1+)")
+        // Apply colors immediately
+        applyColors(webApp)
+
+        // Re-apply after a short delay for desktop clients that need the DOM ready
+        setTimeout(() => applyColors(webApp), 150)
+        setTimeout(() => applyColors(webApp), 500)
+
+        // Re-apply when Telegram theme changes
+        if (typeof webApp.onEvent === "function") {
+          webApp.onEvent("themeChanged", () => applyColors(webApp))
         }
+
+        // Re-apply when app theme toggles (next-themes changes class on <html>)
+        const observer = new MutationObserver(() => applyColors(webApp))
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
 
         // Ensure back button starts hidden on every app load
         webApp.BackButton.hide()
@@ -292,17 +302,20 @@ let cachedAdminIds: number[] | null = null
 let cachedAdminSignature: string | null = null
 
 const parseAdminTelegramIds = (): number[] => {
+  // Next.js only inlines NEXT_PUBLIC_* when accessed as literal process.env.NEXT_PUBLIC_X
+  // Dynamic access via env[key] does NOT get replaced at build time
+  const inlinedPublicIds = process.env.NEXT_PUBLIC_ADMIN_TELEGRAM_IDS ?? ""
+  
   const env = getEnv()
+  const serverIds = env.ADMIN_TELEGRAM_IDS ?? env.ADMIN_TELEGRAM_ID ?? ""
 
-  const normalizedValues = ADMIN_ENV_KEYS
-    .map((key) => env[key]?.trim())
-    .filter((value): value is string => Boolean(value && value.length > 0))
+  const raw = [inlinedPublicIds, serverIds]
+    .filter(Boolean)
+    .join(",")
 
-  if (normalizedValues.length === 0) {
+  if (!raw) {
     return []
   }
-
-  const raw = normalizedValues.join(",")
 
   const parsedIds = raw
     .split(/[\,\s]+/)

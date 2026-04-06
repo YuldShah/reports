@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuthContext } from "@/components/auth-provider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -9,12 +9,43 @@ export default function ProfileCard() {
   const { telegramUser, dbUser, isAdmin, isBrowserDebug } = useAuthContext();
   const [isLoaded, setIsLoaded] = useState(false);
   const [teamName, setTeamName] = useState<string>("");
+  const pillRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (telegramUser) {
       setIsLoaded(true);
     }
   }, [telegramUser]);
+
+  // Sync toast position to the actual rendered glass pill position.
+  // Runs after isLoaded (transition starts), waits 600ms (500ms transition
+  // + ~100ms buffer for async requestFullscreen to settle), then measures.
+  // Re-measures on resize and Telegram viewportChanged events.
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const measure = () => {
+      if (!pillRef.current) return;
+      const rect = pillRef.current.getBoundingClientRect();
+      document.documentElement.style.setProperty('--toast-top', `${rect.top}px`);
+    };
+
+    const t = setTimeout(measure, 600);
+    window.addEventListener('resize', measure);
+
+    const webApp = window.Telegram?.WebApp;
+    if (typeof webApp?.onEvent === 'function') {
+      webApp.onEvent('viewportChanged', measure);
+    }
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', measure);
+      if (typeof webApp?.offEvent === 'function') {
+        webApp.offEvent('viewportChanged', measure);
+      }
+    };
+  }, [isLoaded]);
 
   useEffect(() => {
     const fetchTeamName = async () => {
@@ -52,13 +83,13 @@ export default function ProfileCard() {
     : "";
 
   return (
-    <div className="mx-1 mb-0.5">
+    <div className="mx-1 mb-0.5" data-profile-card>
       <div
         className={`transition-all duration-500 ease-out ${
           isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
         }`}
       >
-        <div className="glass-floating flex items-center gap-3 rounded-[26px] px-3.5 py-2.5 sm:px-4 sm:py-3">
+        <div ref={pillRef} className="glass-floating flex items-center gap-3 rounded-[26px] px-3.5 py-2.5 sm:px-4 sm:py-3">
           <div className="shrink-0">
             <Avatar className="h-11 w-11 ring-1 ring-white/15 shadow-sm">
               <AvatarImage

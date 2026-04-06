@@ -17,35 +17,37 @@ export function Toaster() {
 
   return (
     <ToastProvider duration={3000}>
-      {toasts.map(({ id, title, description, action, variant, ...props }) => {
-        // Infer success from title if variant not set
-        const titleStr = title?.toString().toLowerCase() ?? ""
-        const resolvedVariant =
-          variant === "destructive" ? "destructive"
-          : (titleStr.includes("success") || titleStr.includes("muvaffaq")) ? "success"
-          : "default"
+      {toasts
+        .filter((t) => t.open !== false)
+        .map(({ id, title, description, action, variant, ...props }) => {
+          // Infer success from title if variant not set
+          const titleStr = title?.toString().toLowerCase() ?? ""
+          const resolvedVariant =
+            variant === "destructive" ? "destructive"
+            : (titleStr.includes("success") || titleStr.includes("muvaffaq")) ? "success"
+            : "default"
 
-        const Icon = variantIcons[resolvedVariant]
-        const iconColor = variantIconColors[resolvedVariant]
+          const Icon = variantIcons[resolvedVariant]
+          const iconColor = variantIconColors[resolvedVariant]
 
-        return (
-          <Toast key={id} variant={resolvedVariant} {...props}>
-            {/* Icon circle ΓÇö mirrors the Avatar in the profile card */}
-            <div className={`shrink-0 flex h-11 w-11 items-center justify-center rounded-full bg-muted/40 ${iconColor}`}>
-              <Icon className="h-5 w-5" />
-            </div>
+          return (
+            <Toast key={id} variant={resolvedVariant} {...props}>
+              {/* Icon circle */}
+              <div className={`shrink-0 mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-muted/40 ${iconColor}`}>
+                <Icon className="h-4 w-4" />
+              </div>
 
-            {/* Text */}
-            <div className="flex-1 min-w-0">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && <ToastDescription>{description}</ToastDescription>}
-            </div>
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                {title && <ToastTitle>{title}</ToastTitle>}
+                {description && <ToastDescription>{description}</ToastDescription>}
+              </div>
 
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
+              {action}
+              <ToastClose />
+            </Toast>
+          )
+        })}
       <ToastViewport />
     </ToastProvider>
   )

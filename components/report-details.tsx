@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, User, Building, FileText, Clock } from "lucide-react"
+import { Calendar, User, Building, FileText, Clock } from "lucide-react"
 import type { Report, User as UserType, Team, ReportTemplate } from "@/lib/types"
 import { normalizeText } from "@/lib/utils"
+import { useTelegramBackButton } from "@/hooks/use-telegram-back-button"
 
 interface ReportDetailsProps {
   reportId: string
@@ -19,6 +19,8 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   const [team, setTeam] = useState<Team | null>(null)
   const [template, setTemplate] = useState<ReportTemplate | null>(null)
   const [loading, setLoading] = useState(true)
+
+  useTelegramBackButton(true, onBack)
 
   useEffect(() => {
     const fetchReportDetails = async () => {
@@ -89,10 +91,6 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   if (loading) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
@@ -103,10 +101,6 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
   if (!report) {
     return (
       <div className="space-y-6">
-        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
         <Card className="glass border-glass-border">
           <CardContent className="text-center py-12">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -124,12 +118,12 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
 
   const renderAnswerValue = (rawValue: unknown) => {
     if (rawValue === undefined || rawValue === null || rawValue === '') {
-      return <span className="text-muted-foreground italic">No answer provided</span>
+      return <span className="text-muted-foreground italic text-sm">No answer provided</span>
     }
 
     if (Array.isArray(rawValue)) {
       if (rawValue.length === 0) {
-        return <span className="text-muted-foreground italic">No answer provided</span>
+        return <span className="text-muted-foreground italic text-sm">No answer provided</span>
       }
 
       return (
@@ -137,13 +131,13 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
           {rawValue.map((entry, index) => {
             const stringValue = String(entry)
             return (
-              <div key={`${stringValue}-${index}`} className="text-sm">
+              <div key={`${stringValue}-${index}`}>
                 {isHttpUrl(stringValue) ? (
-                  <a href={stringValue} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline break-all">
+                  <a href={stringValue} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline break-all text-[15px]">
                     {stringValue}
                   </a>
                 ) : (
-                  <span>{normalizeText(stringValue)}</span>
+                  <span className="text-[15px]">{normalizeText(stringValue)}</span>
                 )}
               </div>
             )
@@ -155,162 +149,111 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
     const stringValue = String(rawValue)
     if (isHttpUrl(stringValue)) {
       return (
-        <a href={stringValue} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline break-all">
+        <a href={stringValue} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline break-all text-[15px]">
           {stringValue}
         </a>
       )
     }
 
-    return <span>{normalizeText(stringValue)}</span>
+    return <span className="text-[15px]">{normalizeText(stringValue)}</span>
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack} className="hover:bg-primary/10 hover:text-primary">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-      </div>
+  const userName = user
+    ? `${normalizeText(user.firstName)}${user.lastName ? ` ${normalizeText(user.lastName)}` : ''}`
+    : 'Unknown'
 
-      {/* Report Title Card */}
+  return (
+    <div className="space-y-4">
+      {/* Report Header */}
       <Card className="glass border-glass-border">
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <CardTitle className="font-heading text-2xl">{normalizeText(report.title)}</CardTitle>
-              {report.description && (
-                <CardDescription className="mt-2 text-base">
-                  {normalizeText(report.description)}
-                </CardDescription>
-              )}
+        <CardContent className="pt-6 pb-5 space-y-4">
+          {/* Title & Template */}
+          <div>
+            <h1 className="font-heading text-xl font-semibold tracking-tight">
+              {normalizeText(report.title)}
+            </h1>
+            {report.description && (
+              <p className="text-muted-foreground text-sm mt-1">
+                {normalizeText(report.description)}
+              </p>
+            )}
+          </div>
+
+          {/* Meta row */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <User className="w-3.5 h-3.5" />
+              <span className="text-foreground font-medium">{userName}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Building className="w-3.5 h-3.5" />
+              <span className="text-foreground font-medium">{normalizeText(team?.name || 'Unknown')}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>{report.createdAt.toLocaleDateString()}</span>
+              <span className="text-muted-foreground/50">·</span>
+              <span>{report.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
           </div>
-        </CardHeader>
-      </Card>
 
-      {/* Metadata */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glass border-glass-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Submitted by</p>
-                <p className="font-medium">
-                  {user ? `${normalizeText(user.firstName)}${user.lastName ? ` ${normalizeText(user.lastName)}` : ''}` : 'Unknown'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass border-glass-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Building className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Team</p>
-                <p className="font-medium">{normalizeText(team?.name || 'Unknown')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass border-glass-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Created</p>
-                <p className="font-medium">
-                  {report.createdAt.toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass border-glass-border">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Clock className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Time</p>
-                <p className="font-medium">
-                  {report.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Template Info */}
-      {template && (
-        <Card className="glass border-glass-border">
-          <CardHeader>
-            <CardTitle className="font-heading flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Template Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div>
-              <span className="text-sm text-muted-foreground">Template Name: </span>
-              <span className="font-medium">{normalizeText(template.name)}</span>
-            </div>
-            {template.description && (
-              <div>
-                <span className="text-sm text-muted-foreground">Description: </span>
-                <span className="text-sm">{normalizeText(template.description)}</span>
-              </div>
+          {/* Badges row */}
+          <div className="flex flex-wrap gap-2">
+            {template && (
+              <Badge variant="secondary" className="font-normal">
+                <FileText className="w-3 h-3 mr-1" />
+                {normalizeText(template.name)}
+              </Badge>
             )}
-          </CardContent>
-        </Card>
-      )}
+            {report.category && (
+              <Badge variant="secondary">{normalizeText(report.category)}</Badge>
+            )}
+            {report.priority && (
+              <Badge
+                variant={
+                  report.priority === "high"
+                    ? "destructive"
+                    : report.priority === "medium"
+                    ? "default"
+                    : "secondary"
+                }
+              >
+                {report.priority}
+              </Badge>
+            )}
+            {report.status && (
+              <Badge variant="outline">{report.status}</Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Report Answers */}
       <Card className="glass border-glass-border">
-        <CardHeader>
-          <CardTitle className="font-heading">Report Details</CardTitle>
-          <CardDescription>
-            {template ? `Answers from ${normalizeText(template.name)} template` : 'Report data'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-5 pb-5 space-y-5">
           {templateFields.length > 0 ? (
-            // Display template-based answers with field labels
-            templateFields.map((field: any) => {
+            templateFields.map((field: any, idx: number) => {
               const value = answers[field.id]
               return (
-                <div key={field.id} className="border-b last:border-0 pb-4 last:pb-0">
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div key={field.id}>
+                  {idx > 0 && <div className="border-t border-border/40 mb-5" />}
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                     {normalizeText(field.label || field.question || field.id)}
                   </p>
-                  <div className="text-base">
+                  <div className="text-foreground">
                     {renderAnswerValue(value)}
                   </div>
                 </div>
               )
             })
           ) : (
-            // Display raw answers if no template
-            Object.entries(answers).map(([key, value]) => (
-              <div key={key} className="border-b last:border-0 pb-4 last:pb-0">
-                <p className="text-sm font-medium text-muted-foreground mb-1">
+            Object.entries(answers).map(([key, value], idx) => (
+              <div key={key}>
+                {idx > 0 && <div className="border-t border-border/40 mb-5" />}
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                   {normalizeText(key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
                 </p>
-                <div className="text-base">
+                <div className="text-foreground">
                   {renderAnswerValue(value)}
                 </div>
               </div>
@@ -323,50 +266,11 @@ export default function ReportDetails({ reportId, onBack }: ReportDetailsProps) 
         </CardContent>
       </Card>
 
-      {/* Additional Metadata */}
-      <Card className="glass border-glass-border">
-        <CardHeader>
-          <CardTitle className="font-heading">Additional Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Report ID:</span>
-            <span className="font-mono text-xs">{report.id}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Last Updated:</span>
-            <span>{report.updatedAt.toLocaleString()}</span>
-          </div>
-          {report.category && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Category:</span>
-              <Badge variant="secondary">{normalizeText(report.category)}</Badge>
-            </div>
-          )}
-          {report.priority && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Priority:</span>
-              <Badge
-                variant={
-                  report.priority === "high"
-                    ? "destructive"
-                    : report.priority === "medium"
-                    ? "default"
-                    : "secondary"
-                }
-              >
-                {report.priority}
-              </Badge>
-            </div>
-          )}
-          {report.status && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Status:</span>
-              <Badge variant="outline">{report.status}</Badge>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Footer meta */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground px-1 pb-2">
+        <span className="font-mono truncate max-w-[200px]" title={report.id}>{report.id}</span>
+        <span>Updated {report.updatedAt.toLocaleString()}</span>
+      </div>
     </div>
   )
 }

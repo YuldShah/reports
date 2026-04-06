@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Send, AlertCircle, FileText, Loader2, ImagePlus, X, Expand } from "lucide-react"
+import { Send, AlertCircle, FileText, Loader2, ImagePlus, X } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import type { User, Team, ReportTemplate, TemplateField } from "@/lib/types"
 import { normalizeText } from "@/lib/utils"
@@ -84,7 +84,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
   const [team, setTeam] = useState<Team | null>(null)
   const [template, setTemplate] = useState<ReportTemplate | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({})
-  const [uploadingPhotoFields, setUploadingPhotoFields] = useState<Record<string, boolean>>({})
+  const [uploadingPhotoFields, setUploadingPhotoFields] = useState<Record<string, number>>({})
   const [draggingPhotoField, setDraggingPhotoField] = useState<string | null>(null)
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
@@ -260,7 +260,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
       })
     }
 
-    setUploadingPhotoFields((prev) => ({ ...prev, [fieldId]: true }))
+    setUploadingPhotoFields((prev) => ({ ...prev, [fieldId]: filesToUpload.length }))
 
     try {
       const payload = new FormData()
@@ -294,7 +294,7 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
         variant: "destructive",
       })
     } finally {
-      setUploadingPhotoFields((prev) => ({ ...prev, [fieldId]: false }))
+      setUploadingPhotoFields((prev) => ({ ...prev, [fieldId]: 0 }))
     }
   }
 
@@ -451,7 +451,8 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
     const hasError = !!formErrors[field.id]
     const fieldLabel = normalizeText(field.label || field.id)
     const fieldPlaceholder = normalizeText(field.placeholder)
-    const isUploadingPhotos = !!uploadingPhotoFields[field.id]
+    const uploadingCount = uploadingPhotoFields[field.id] || 0
+    const isUploadingPhotos = uploadingCount > 0
     const photoUrls = normalizeFileValue(value)
 
     const handleFieldChange = (newValue: any) => {
@@ -599,67 +600,45 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
               </div>
             </div>
 
-            {isUploadingPhotos && (
-              <div className="inline-flex items-center gap-2 rounded-md bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Uploading files...
-              </div>
-            )}
-
-            {photoUrls.length > 0 && (
-              <div className="space-y-2">
+            {(photoUrls.length > 0 || isUploadingPhotos) && (
+              <div className="flex gap-3 overflow-x-auto pb-2 pt-1">
                 {photoUrls.map((photoUrl: string, photoIndex: number) => (
-                  <div key={`${photoUrl}-${photoIndex}`} className="flex items-center gap-3 rounded-xl border border-border/60 bg-background p-2">
+                  <div key={`${photoUrl}-${photoIndex}`} className="relative shrink-0 h-20 w-20">
                     {isImageFileUrl(photoUrl) ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={photoUrl}
                         alt={`Uploaded file ${photoIndex + 1}`}
-                        className="h-14 w-14 cursor-zoom-in rounded-md object-cover"
+                        className="h-20 w-20 cursor-zoom-in rounded-lg object-cover"
                         onClick={() => setPreviewPhotoUrl(photoUrl)}
                       />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                        <FileText className="h-5 w-5" />
-                      </div>
+                      <a
+                        href={photoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg bg-muted text-muted-foreground"
+                      >
+                        <FileText className="h-6 w-6" />
+                        <span className="w-16 truncate text-center text-[10px] leading-tight">{getFileNameFromUrl(photoUrl).split('.').pop()?.toUpperCase()}</span>
+                      </a>
                     )}
 
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-medium">{getFileNameFromUrl(photoUrl)}</p>
-                      <div className="mt-1 flex items-center gap-2">
-                        <a
-                          href={photoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary underline-offset-2 hover:underline"
-                        >
-                          Open
-                        </a>
-                        {isImageFileUrl(photoUrl) && (
-                          <button
-                            type="button"
-                            onClick={() => setPreviewPhotoUrl(photoUrl)}
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                          >
-                            <Expand className="h-3 w-3" />
-                            Preview
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <Button
+                    <button
                       type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="h-7 w-7 rounded-full p-0"
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm"
                       onClick={() => {
                         const remaining = photoUrls.filter((_, indexValue) => indexValue !== photoIndex)
                         handleFieldChange(remaining)
                       }}
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {isUploadingPhotos && Array.from({ length: uploadingCount }).map((_, i) => (
+                  <div key={`skeleton-${i}`} className="shrink-0 h-20 w-20 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/50" />
                   </div>
                 ))}
               </div>
@@ -921,10 +900,19 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex items-center"
+                className="flex items-center gap-1"
               >
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Submitting...
+                <span>Submitting</span>
+                <span className="flex gap-0.5">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="inline-block h-1 w-1 rounded-full bg-current"
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                    />
+                  ))}
+                </span>
               </motion.div>
             ) : (
               <motion.div
@@ -951,29 +939,23 @@ export default function ReportForm({ user, templateId, onCancel, onSuccess }: Re
                   className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/85 p-4"
                   onClick={() => setPreviewPhotoUrl(null)}
                 >
-                  <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    className="relative w-full max-w-4xl"
-                    onClick={(event) => event.stopPropagation()}
+                  <button
+                    type="button"
+                    className="absolute z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm"
+                    style={{ top: "calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px) + 12px)", right: "16px" }}
+                    onClick={() => setPreviewPhotoUrl(null)}
                   >
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="icon"
-                      className="absolute right-2 top-2 z-20"
-                      onClick={() => setPreviewPhotoUrl(null)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={previewPhotoUrl}
-                      alt="Photo preview"
-                      className="max-h-[85vh] w-full rounded-xl object-contain"
-                    />
-                  </motion.div>
+                    <X className="h-5 w-5" />
+                  </button>
+                  <motion.img
+                    initial={{ scale: 0.92, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.92, opacity: 0 }}
+                    src={previewPhotoUrl}
+                    alt="Photo preview"
+                    className="max-h-[85vh] max-w-full rounded-xl object-contain"
+                    onClick={(event) => event.stopPropagation()}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>,

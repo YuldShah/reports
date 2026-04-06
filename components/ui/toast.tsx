@@ -9,30 +9,24 @@ import { cn } from "@/lib/utils"
 
 const ToastProvider = ToastPrimitives.Provider
 
-// Viewport sits exactly where the profile card is ΓÇö top of page + safe area inset
+// Viewport sits above the bottom-nav, respecting safe areas
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
 >(({ className, style, ...props }, ref) => {
-  // Start with non-mobile default; update on mount once platform is known
-  const [topOffset, setTopOffset] = React.useState("calc(var(--tg-safe-area-inset-top,0px) + 8px)")
-
-  React.useEffect(() => {
-    const platform = window.Telegram?.WebApp?.platform?.toLowerCase() ?? ""
-    // iOS/Android show the Logo component above the profile card (~44px total)
-    const isMobile = ["ios", "android"].some((p) => platform.includes(p))
-    setTopOffset(
-      isMobile
-        ? "calc(var(--tg-safe-area-inset-top,0px) + 44px)"
-        : "calc(var(--tg-safe-area-inset-top,0px) + 8px)",
-    )
-  }, [])
-
   return (
     <ToastPrimitives.Viewport
       ref={ref}
-      className={cn("fixed z-[100] flex flex-col left-0 right-0 px-5", className)}
-      style={{ top: topOffset, ...style }}
+      className={cn(
+        "fixed z-[100] flex flex-col left-0 right-0",
+        className,
+      )}
+      style={{
+        top: "var(--toast-top, calc(8px + var(--tg-safe-area-inset-top, 0px)))",
+        paddingLeft: "calc(1rem + 0.25rem)",
+        paddingRight: "calc(1rem + 0.25rem)",
+        ...style,
+      }}
       {...props}
     />
   )
@@ -40,11 +34,14 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  // Match glass-floating pill ΓÇö same border-radius as profile card (rounded-[26px])
-  "group pointer-events-auto relative w-full flex items-center gap-3 glass-floating rounded-[26px] px-3.5 py-2.5 transition-all duration-200 " +
-  "data-[state=open]:animate-in data-[state=closed]:animate-out " +
-  "data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 " +
-  "data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full data-[state=open]:fade-in-0",
+  // Match glass-floating pill — same border-radius as profile card (rounded-[26px])
+  // Tailwind animate-in/animate-out handles enter/exit via data-state
+  "group pointer-events-auto relative w-full flex items-start gap-3 glass-floating rounded-[26px] px-3.5 py-2.5 " +
+  "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-8 data-[state=open]:duration-300 data-[state=open]:ease-out " +
+  "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-8 data-[state=closed]:duration-200 data-[state=closed]:ease-in " +
+  "data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] " +
+  "data-[swipe=cancel]:transition-[transform] data-[swipe=cancel]:duration-200 " +
+  "data-[swipe=end]:opacity-0 data-[swipe=end]:transition-opacity data-[swipe=end]:duration-150",
   {
     variants: {
       variant: {

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllUsers, getUserByTelegramId, updateUser, createUser } from "@/lib/database"
+import { getAllUsers, getUserByTelegramId, updateUser, createUser, deleteUser } from "@/lib/database"
 import { isAdmin } from "@/lib/telegram"
 
 export async function GET(request: NextRequest) {
@@ -73,5 +73,27 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error("Error updating user:", error)
     return NextResponse.json({ error: "Failed to update user" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const telegramId = searchParams.get("telegramId")
+
+    if (!telegramId) {
+      return NextResponse.json({ error: "Telegram ID is required" }, { status: 400 })
+    }
+
+    const deleted = await deleteUser(Number(telegramId))
+
+    if (!deleted) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting user:", error)
+    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 })
   }
 }

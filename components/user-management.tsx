@@ -37,6 +37,7 @@ import {
   Edit3,
   Shield,
   Hash,
+  Trash2,
 } from "lucide-react";
 import { useTelegramBackButton } from "@/hooks/use-telegram-back-button";
 import { type User, type Team } from "@/lib/types";
@@ -58,11 +59,13 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newRole, setNewRole] = useState("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useTelegramBackButton(isEditDialogOpen, () => {
     setIsEditDialogOpen(false);
     setEditingUser(null);
     setNewRole("");
+    setConfirmDelete(false);
   });
 
   useEffect(() => {
@@ -106,7 +109,44 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setNewRole(user.role);
+    setConfirmDelete(false);
     setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const response = await fetch(
+        `/api/users?telegramId=${editingUser.telegramId}`,
+        { method: "DELETE" },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
+
+      toast({
+        title: "User deleted",
+        description: `${editingUser.firstName} has been removed`,
+        duration: 3000,
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingUser(null);
+      setNewRole("");
+      setConfirmDelete(false);
+      await fetchData();
+      onDataChange?.();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   const handleSaveRole = async () => {
@@ -411,7 +451,10 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
       )}
 
       {/* Edit Role Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open);
+        if (!open) { setEditingUser(null); setNewRole(""); setConfirmDelete(false); }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User Role</DialogTitle>
@@ -445,6 +488,41 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
               </div>
             </div>
 
+            <div className="border-b pb-4">
+              {!confirmDelete ? (
+                <Button
+                  variant="outline"
+                  className="w-full border-destructive/30 bg-transparent text-destructive hover:bg-destructive/10 hover:border-destructive/60 hover:text-destructive"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete User
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-center text-destructive font-medium">
+                    Delete {editingUser?.firstName} permanently?
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      No, keep
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={handleDeleteUser}
+                    >
+                      Yes, delete
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Input
@@ -461,17 +539,6 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
             <div className="flex gap-2 pt-4">
               <Button onClick={handleSaveRole} className="flex-1">
                 Save Role
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setEditingUser(null);
-                  setNewRole("");
-                }}
-              >
-                Cancel
               </Button>
             </div>
           </div>

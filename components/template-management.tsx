@@ -17,10 +17,13 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Plus, FileText, Trash2, Upload, Eye, FileJson, Copy, Check, Users } from "lucide-react"
+import { Plus, FileText, Trash2, Upload, Eye, FileJson, Copy, Check, Users, Pencil, ChevronDown } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 import { useAuthContext } from "@/components/auth-provider"
 import { normalizeText } from "@/lib/utils"
+import { useTelegramBackButton } from "@/hooks/use-telegram-back-button"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface Template {
   id: string
@@ -49,9 +52,9 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [viewingTemplate, setViewingTemplate] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null)
   const [newTemplate, setNewTemplate] = useState({ name: "", description: "", questions: "[]", isStudentTracker: false })
   const [isEditMode, setIsEditMode] = useState(false)
@@ -60,6 +63,17 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { telegramUser, dbUser } = useAuthContext()
+  const [showJsonSection, setShowJsonSection] = useState(false)
+
+  const handleBackFromView = () => {
+    setViewingTemplate(false)
+    setSelectedTemplate(null)
+    setIsEditMode(false)
+    setJsonError(null)
+    setShowJsonSection(false)
+  }
+
+  useTelegramBackButton(viewingTemplate, handleBackFromView)
 
   useEffect(() => {
     fetchTemplates()
@@ -299,7 +313,7 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
 
       setJsonError(null)
       setIsEditMode(false)
-      setIsViewDialogOpen(false)
+      setViewingTemplate(false)
       setSelectedTemplate(null)
 
       toast({
@@ -357,7 +371,6 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
   if (loading) {
     return (
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div>
             <h2 className="font-heading text-xl font-semibold">Template Management</h2>
@@ -368,9 +381,286 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
             Create Template
           </Button>
         </div>
-
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+        </div>
+      </div>
+    )
+  }
+
+  // Template detail/preview page
+  if (viewingTemplate && selectedTemplate) {
+    const renderFormPreview = () => {
+      const questions = selectedTemplate.questions || []
+      if (questions.length === 0) {
+        return <p className="text-sm text-muted-foreground py-4 text-center">No fields defined</p>
+      }
+
+      return (
+        <div className="space-y-5">
+          {questions.map((field: any, idx: number) => (
+            <div key={field.id || idx} className="space-y-2">
+              <Label className="text-sm font-medium">
+                {normalizeText(field.label || field.question || field.id)}
+                {field.required && <span className="text-destructive ml-1">*</span>}
+              </Label>
+              {field.type === 'textarea' ? (
+                <Textarea disabled placeholder={field.placeholder || ''} rows={3} className="opacity-60" />
+              ) : field.type === 'select' ? (
+                <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm opacity-60">
+                  <span className="text-muted-foreground">{field.placeholder || 'Select an option...'}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </div>
+              ) : field.type === 'radio' ? (
+                <RadioGroup disabled className="opacity-60">
+                  {(field.options || []).map((opt: string, i: number) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <RadioGroupItem value={opt} id={`preview-${field.id}-${i}`} />
+                      <Label htmlFor={`preview-${field.id}-${i}`} className="font-normal text-sm">
+                        {normalizeText(opt)}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              ) : field.type === 'checkbox' ? (
+                <div className="space-y-2 opacity-60">
+                  {(field.options || []).map((opt: string, i: number) => (
+                    <div key={i} className="flex items-center space-x-2">
+                      <Checkbox id={`preview-${field.id}-${i}`} disabled />
+                      <Label htmlFor={`preview-${field.id}-${i}`} className="font-normal text-sm">
+                        {normalizeText(opt)}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ) : field.type === 'date' ? (
+                <Input type="date" disabled className="opacity-60" />
+              ) : field.type === 'photo' || field.type === 'file' ? (
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center opacity-60">
+                  <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    {field.type === 'photo' ? 'Photo upload' : 'File upload'}
+                  </p>
+                </div>
+              ) : (
+                <Input
+                  type={field.type || 'text'}
+                  disabled
+                  placeholder={field.placeholder || ''}
+                  className="opacity-60"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    // Edit mode page
+    if (isEditMode) {
+      return (
+        <div className="space-y-4">
+          <Card className="glass border-glass-border">
+            <CardContent className="pt-5 pb-5 space-y-4">
+              <div>
+                <Label htmlFor="edit-template-name">Template Name*</Label>
+                <Input
+                  id="edit-template-name"
+                  value={editedTemplate.name}
+                  onChange={(e) => setEditedTemplate({ ...editedTemplate, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-template-description">Description</Label>
+                <Textarea
+                  id="edit-template-description"
+                  value={editedTemplate.description}
+                  onChange={(e) => setEditedTemplate({ ...editedTemplate, description: e.target.value })}
+                  rows={2}
+                />
+              </div>
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <Users className="w-5 h-5 text-primary" />
+                  <div>
+                    <Label htmlFor="edit-student-tracker" className="font-medium">Talaba taqsimoti tracker</Label>
+                    <p className="text-xs text-muted-foreground">Tutorlar uchun talaba taqsimoti formasi</p>
+                  </div>
+                </div>
+                <Switch
+                  id="edit-student-tracker"
+                  checked={editedTemplate.isStudentTracker}
+                  onCheckedChange={(checked) => {
+                    setEditedTemplate({
+                      ...editedTemplate,
+                      isStudentTracker: checked,
+                      questions: checked ? JSON.stringify(STUDENT_TRACKER_QUESTIONS, null, 2) : editedTemplate.questions
+                    })
+                  }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-template-questions">Questions (JSON Array)*</Label>
+                <Textarea
+                  id="edit-template-questions"
+                  value={editedTemplate.questions}
+                  onChange={(e) => {
+                    setEditedTemplate({ ...editedTemplate, questions: e.target.value })
+                    setJsonError(null)
+                  }}
+                  rows={15}
+                  className={`font-mono text-sm ${jsonError ? 'border-destructive' : ''}`}
+                />
+                {jsonError && <p className="text-xs text-destructive mt-1">{jsonError}</p>}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, file, photo
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleUpdateTemplate} className="flex-1">Save Changes</Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditMode(false)
+                    setJsonError(null)
+                    setEditedTemplate({
+                      name: selectedTemplate.name,
+                      description: selectedTemplate.description || "",
+                      questions: JSON.stringify(selectedTemplate.questions, null, 2),
+                      isStudentTracker: selectedTemplate.isStudentTracker || false
+                    })
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )
+    }
+
+    // View mode page
+    return (
+      <div className="space-y-4">
+        {/* Template header */}
+        <Card className="glass border-glass-border">
+          <CardContent className="pt-5 pb-5 space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <h1 className="font-heading text-xl font-semibold tracking-tight">
+                  {normalizeText(selectedTemplate.name)}
+                </h1>
+                {selectedTemplate.description && (
+                  <p className="text-sm text-muted-foreground mt-1">{normalizeText(selectedTemplate.description)}</p>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsEditMode(true)}
+                className="shrink-0 ml-3"
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Edit
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary">{selectedTemplate.questions.length} fields</Badge>
+              {selectedTemplate.isStudentTracker && (
+                <Badge variant="default" className="bg-blue-500">
+                  <Users className="w-3 h-3 mr-1" />
+                  Talaba Tracker
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs">
+                Created {selectedTemplate.createdAt.toLocaleDateString()}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Form preview */}
+        <Card className="glass border-glass-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="font-heading text-base flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Form Preview
+            </CardTitle>
+            <CardDescription>How this template appears when filling out a report</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {renderFormPreview()}
+          </CardContent>
+        </Card>
+
+        {/* JSON section (collapsible) */}
+        <Card className="glass border-glass-border">
+          <button
+            onClick={() => setShowJsonSection(!showJsonSection)}
+            className="w-full px-6 py-4 flex items-center justify-between text-left"
+          >
+            <div className="flex items-center gap-2">
+              <FileJson className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Questions JSON</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showJsonSection ? 'rotate-180' : ''}`} />
+          </button>
+          {showJsonSection && (
+            <CardContent className="pt-0">
+              <div className="bg-muted/30 rounded-lg overflow-hidden border border-border">
+                <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileJson className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">JSON</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+                    onClick={() => {
+                      const jsonContent = JSON.stringify(selectedTemplate.questions, null, 2)
+                      navigator.clipboard.writeText(jsonContent)
+                      setCopied(true)
+                      setTimeout(() => setCopied(false), 2000)
+                      toast({ title: "Copied!", description: "JSON copied to clipboard", duration: 2000 })
+                    }}
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                    <span className="text-xs">{copied ? 'Copied' : 'Copy'}</span>
+                  </Button>
+                </div>
+                <div className="p-4 overflow-x-auto">
+                  <pre className="text-sm text-foreground font-mono leading-relaxed">
+                    <code>{JSON.stringify(selectedTemplate.questions, null, 2).split('\n').map((line, index) => (
+                      <div key={index} className="flex">
+                        <span className="text-muted-foreground select-none text-right pr-4 w-8 shrink-0 inline-block">{index + 1}</span>
+                        <span className="whitespace-pre-wrap break-all flex-1">{line}</span>
+                      </div>
+                    ))}</code>
+                  </pre>
+                </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          <Button onClick={() => setIsEditMode(true)} className="flex-1">
+            <Pencil className="w-4 h-4 mr-2" />
+            Edit Template
+          </Button>
+          <Button
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={() => {
+              setTemplateToDelete(selectedTemplate)
+              setIsDeleteDialogOpen(true)
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     )
@@ -487,16 +777,6 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                 <Button onClick={handleCreateTemplate} className="flex-1">
                   Create Template
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setNewTemplate({ name: "", description: "", questions: "[]", isStudentTracker: false })
-                    setJsonError(null)
-                    setIsCreateDialogOpen(false)
-                  }}
-                >
-                  Cancel
-                </Button>
               </div>
             </div>
           </DialogContent>
@@ -551,7 +831,8 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
                     })
                     setIsEditMode(false)
                     setJsonError(null)
-                    setIsViewDialogOpen(true)
+                    setShowJsonSection(false)
+                    setViewingTemplate(true)
                   }}
                   className="flex-1"
                 >
@@ -589,183 +870,6 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
         </Card>
       )}
 
-      {/* View/Edit Template Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
-        setIsViewDialogOpen(open)
-        if (!open) {
-          setIsEditMode(false)
-          setJsonError(null)
-        }
-      }}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isEditMode ? 'Edit Template' : normalizeText(selectedTemplate?.name)}</DialogTitle>
-            <DialogDescription>
-              {isEditMode ? 'Update template details and questions' : normalizeText(selectedTemplate?.description)}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedTemplate && (
-            <div className="space-y-4">
-              {isEditMode ? (
-                <>
-                  <div>
-                    <Label htmlFor="edit-template-name">Template Name*</Label>
-                    <Input
-                      id="edit-template-name"
-                      value={editedTemplate.name}
-                      onChange={(e) => setEditedTemplate({ ...editedTemplate, name: e.target.value })}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-template-description">Description</Label>
-                    <Textarea
-                      id="edit-template-description"
-                      value={editedTemplate.description}
-                      onChange={(e) => setEditedTemplate({ ...editedTemplate, description: e.target.value })}
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <Users className="w-5 h-5 text-primary" />
-                      <div>
-                        <Label htmlFor="edit-student-tracker" className="font-medium">Talaba taqsimoti tracker</Label>
-                        <p className="text-xs text-muted-foreground">Tutorlar uchun talaba taqsimoti formasi</p>
-                      </div>
-                    </div>
-                    <Switch
-                      id="edit-student-tracker"
-                      checked={editedTemplate.isStudentTracker}
-                      onCheckedChange={(checked) => {
-                        setEditedTemplate({
-                          ...editedTemplate,
-                          isStudentTracker: checked,
-                          questions: checked ? JSON.stringify(STUDENT_TRACKER_QUESTIONS, null, 2) : editedTemplate.questions
-                        })
-                      }}
-                    />
-                  </div>
-
-
-                  <div>
-                    <Label htmlFor="edit-template-questions">Questions (JSON Array)*</Label>
-                    <Textarea
-                      id="edit-template-questions"
-                      value={editedTemplate.questions}
-                      onChange={(e) => {
-                        setEditedTemplate({ ...editedTemplate, questions: e.target.value })
-                        setJsonError(null)
-                      }}
-                      rows={15}
-                      className={`font-mono text-sm ${jsonError ? 'border-destructive' : ''}`}
-                    />
-                    {jsonError && (
-                      <p className="text-xs text-destructive mt-1">{jsonError}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Valid types: text, textarea, number, email, tel, date, select, radio, checkbox, file, photo
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button onClick={handleUpdateTemplate} className="flex-1">
-                      Save Changes
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsEditMode(false)
-                        setJsonError(null)
-                        setEditedTemplate({
-                          name: selectedTemplate.name,
-                          description: selectedTemplate.description || "",
-                          questions: JSON.stringify(selectedTemplate.questions, null, 2),
-                          isStudentTracker: selectedTemplate.isStudentTracker || false
-                        })
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-4 text-sm">
-                      <Badge variant="secondary">{selectedTemplate.questions.length} fields</Badge>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-medium">Questions JSON</h4>
-                        <Badge variant="secondary" className="text-xs">Read-only</Badge>
-                      </div>
-                        <div className="bg-muted/30 rounded-lg overflow-hidden border border-border">
-                          <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileJson className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">JSON</span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-                            onClick={() => {
-                              const jsonContent = JSON.stringify(selectedTemplate.questions, null, 2)
-                              navigator.clipboard.writeText(jsonContent)
-                              setCopied(true)
-                              setTimeout(() => setCopied(false), 2000)
-                              toast({
-                                title: "Copied!",
-                                description: "JSON copied to clipboard",
-                                duration: 2000,
-                              })
-                            }}
-                          >
-                            {copied ? (
-                              <Check className="w-3.5 h-3.5 mr-1" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 mr-1" />
-                            )}
-                            <span className="text-xs">{copied ? 'Copied' : 'Copy'}</span>
-                          </Button>
-                        </div>
-                        <div className="p-4 overflow-y-auto max-h-[50vh]">
-                          <pre className="text-sm text-foreground font-mono leading-relaxed">
-                            <code>{JSON.stringify(selectedTemplate.questions, null, 2).split('\n').map((line, index) => (
-                              <div key={index} className="flex">
-                                <span className="text-muted-foreground select-none text-right pr-4 w-8 shrink-0 inline-block">{index + 1}</span>
-                                <span className="whitespace-pre-wrap break-all flex-1">{line}</span>
-                              </div>
-                            ))}</code>
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <Button onClick={() => setIsEditMode(true)} className="flex-1">
-                      Edit Template
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setIsViewDialogOpen(false)
-                        setSelectedTemplate(null)
-                      }}
-                    >
-                      Close
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -778,21 +882,13 @@ export default function TemplateManagement({ onDataChange }: TemplateManagementP
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteDialogOpen(false)
-                setTemplateToDelete(null)
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
               variant="destructive"
+              className="flex-1"
               onClick={() => {
                 handleDeleteTemplate()
               }}
             >
-              Delete
+              Delete Template
             </Button>
           </DialogFooter>
         </DialogContent>
