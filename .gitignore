@@ -72,15 +72,22 @@ verify_fix.js
 list-tabs.js
 get_template_headers.js
 
-# internal deployment / handoff docs
+# internal AI instructions and deployment docs
+CLAUDE.md
+DATABASE_SCHEMA.md
 HANDOFF.md
 FIXES_SUMMARY.md
 IMPLEMENTATION_SUMMARY.md
 deploy-vps.sh
 
-# unused lib backups
-lib/database-json-backup.ts
-lib/google-sheets-client.ts
+# one-time VPS setup scripts (not app code)
+setup-cloudflared.sh
+setup-systemd.sh
+setup-template-system.sh
+
+# unused scripts
+scripts/setup-google-sheets.js
+scripts/sync-db-to-sheets.ts
 
 # database dumps / backups
 reports_*.sql
