@@ -146,36 +146,66 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
 
     const applyColors = (webApp: TelegramWebApp) => {
       const color = getHeaderColor()
-      try {
-        if (typeof webApp.setHeaderColor === "function") {
-          webApp.setHeaderColor(color)
-        }
-      } catch (e) { /* ignore */ }
-      try {
-        if (typeof webApp.setBackgroundColor === "function") {
-          webApp.setBackgroundColor(color)
-        }
-      } catch (e) { /* ignore */ }
-      try {
-        if (typeof webApp.setBottomBarColor === "function") {
-          webApp.setBottomBarColor(color)
-        }
-      } catch (e) { /* ignore */ }
+      try { if (typeof webApp.setHeaderColor === "function") webApp.setHeaderColor(color) } catch (e) { /* ignore */ }
+      try { if (typeof webApp.setBackgroundColor === "function") webApp.setBackgroundColor(color) } catch (e) { /* ignore */ }
+      try { if (typeof webApp.setBottomBarColor === "function") webApp.setBottomBarColor(color) } catch (e) { /* ignore */ }
       console.log("[v0] Telegram chrome colors set to", color, "(dark:", document.documentElement.classList.contains("dark") + ")")
+    }
+
+    // Auto-sync initial app theme with Telegram's colorScheme so header/bg match on first load
+    const syncInitialTheme = (webApp: TelegramWebApp) => {
+      try {
+        const tgScheme = webApp.colorScheme // "light" | "dark"
+        if (!tgScheme) return
+        const isDark = document.documentElement.classList.contains("dark")
+        const appScheme = isDark ? "dark" : "light"
+        if (appScheme !== tgScheme) {
+          // Flip the app theme to match Telegram without triggering a full page re-render flash
+          if (tgScheme === "dark") {
+            document.documentElement.classList.add("dark")
+            document.documentElement.classList.remove("light")
+          } else {
+            document.documentElement.classList.remove("dark")
+            document.documentElement.classList.add("light")
+          }
+          // Persist to next-themes storage so it survives refresh
+          try { localStorage.setItem("theme", tgScheme) } catch { /* ignore */ }
+          console.log("[v0] App theme synced to Telegram colorScheme:", tgScheme)
+        }
+      } catch (e) { /* ignore — don't break if colorScheme undefined */ }
     }
 
     const applyWebAppPreferences = (webApp: TelegramWebApp) => {
       try {
+        // Sync app theme with Telegram's colorScheme on first load
+        syncInitialTheme(webApp)
+
         // Apply colors immediately
         applyColors(webApp)
 
-        // Re-apply after a short delay for desktop clients that need the DOM ready
-        setTimeout(() => applyColors(webApp), 150)
-        setTimeout(() => applyColors(webApp), 500)
+        // Re-apply at multiple intervals to handle fullscreen animation + desktop rendering lag
+        for (const delay of [100, 300, 600, 1200, 2500]) {
+          setTimeout(() => applyColors(webApp), delay)
+        }
 
-        // Re-apply when Telegram theme changes
+        // Re-apply when Telegram theme changes (user switches Telegram dark/light)
         if (typeof webApp.onEvent === "function") {
-          webApp.onEvent("themeChanged", () => applyColors(webApp))
+          webApp.onEvent("themeChanged", () => {
+            syncInitialTheme(webApp)
+            applyColors(webApp)
+            // Extra reapply after class mutation propagates
+            setTimeout(() => applyColors(webApp), 100)
+          })
+          // Re-apply when viewport state changes (e.g. fullscreen activated/deactivated)
+          webApp.onEvent("viewportChanged", () => {
+            applyColors(webApp)
+            setTimeout(() => applyColors(webApp), 200)
+          })
+          // Re-apply when fullscreen state changes
+          webApp.onEvent("fullscreenChanged", () => {
+            applyColors(webApp)
+            setTimeout(() => applyColors(webApp), 200)
+          })
         }
 
         // Re-apply when app theme toggles (next-themes changes class on <html>)
@@ -199,9 +229,15 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
           }
 
           if (typeof webApp.requestFullscreen === "function") {
-            webApp.requestFullscreen().catch((error) => {
-              console.warn("[v0] Unable to request fullscreen:", error)
-            })
+            webApp.requestFullscreen()
+              .then(() => {
+                // Re-apply colors once fullscreen is fully active
+                applyColors(webApp)
+                setTimeout(() => applyColors(webApp), 300)
+              })
+              .catch((error) => {
+                console.warn("[v0] Unable to request fullscreen:", error)
+              })
           }
 
           if (typeof webApp.lockOrientation === "function") {

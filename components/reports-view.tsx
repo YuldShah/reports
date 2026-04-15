@@ -35,6 +35,7 @@ import {
 import { type User, type Team, type Report } from "@/lib/types";
 import ReportDetails from "@/components/report-details";
 import { useAuth } from "@/lib/auth";
+import { useTelegramBackButton } from "@/hooks/use-telegram-back-button";
 import { normalizeText } from "@/lib/utils";
 
 export default function ReportsView() {
@@ -52,6 +53,8 @@ export default function ReportsView() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useTelegramBackButton(!!selectedReportId, () => setSelectedReportId(null));
 
   useEffect(() => {
     fetchData();
