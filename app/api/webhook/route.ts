@@ -9,16 +9,17 @@ export async function POST(request: NextRequest) {
     if (body.message) {
       const { chat, from, text } = body.message
 
-      // Handle all messages (not just commands)
       if (text) {
-        await handleBotCommand(
-          chat.id, 
-          text, 
+        // Return the reply inline — avoids outbound fetch to api.telegram.org
+        const reply = await handleBotCommand(
+          chat.id,
+          text,
           from.id,
           from.first_name,
           from.last_name,
           from.username
         )
+        return NextResponse.json(reply)
       }
     }
 
