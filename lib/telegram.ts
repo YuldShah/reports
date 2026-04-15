@@ -152,15 +152,17 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
       console.log("[v0] Telegram chrome colors set to", color, "(dark:", document.documentElement.classList.contains("dark") + ")")
     }
 
-    // Auto-sync initial app theme with Telegram's colorScheme so header/bg match on first load
+    // Auto-sync initial app theme with Telegram's colorScheme — only if user hasn't manually chosen one
     const syncInitialTheme = (webApp: TelegramWebApp) => {
       try {
         const tgScheme = webApp.colorScheme // "light" | "dark"
         if (!tgScheme) return
+        // Respect user's manual choice — only auto-sync if nothing is saved
+        const savedTheme = localStorage.getItem("theme")
+        if (savedTheme) return
         const isDark = document.documentElement.classList.contains("dark")
         const appScheme = isDark ? "dark" : "light"
         if (appScheme !== tgScheme) {
-          // Flip the app theme to match Telegram without triggering a full page re-render flash
           if (tgScheme === "dark") {
             document.documentElement.classList.add("dark")
             document.documentElement.classList.remove("light")
@@ -168,7 +170,6 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
             document.documentElement.classList.remove("dark")
             document.documentElement.classList.add("light")
           }
-          // Persist to next-themes storage so it survives refresh
           try { localStorage.setItem("theme", tgScheme) } catch { /* ignore */ }
           console.log("[v0] App theme synced to Telegram colorScheme:", tgScheme)
         }
@@ -191,9 +192,7 @@ export const waitForTelegram = async (): Promise<TelegramWebApp | null> => {
         // Re-apply when Telegram theme changes (user switches Telegram dark/light)
         if (typeof webApp.onEvent === "function") {
           webApp.onEvent("themeChanged", () => {
-            syncInitialTheme(webApp)
             applyColors(webApp)
-            // Extra reapply after class mutation propagates
             setTimeout(() => applyColors(webApp), 100)
           })
           // Re-apply when viewport state changes (e.g. fullscreen activated/deactivated)
