@@ -39,6 +39,15 @@ export default function RootLayout({
         {/* Load Telegram SDK synchronously — must be available before React hydrates */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="https://telegram.org/js/telegram-web-app.js" />
+        {/* Disable Ctrl+scroll and pinch-to-zoom */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey) e.preventDefault();
+          }, { passive: false });
+          document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+          }, { passive: false });
+        `}} />
       </head>
       <body className="font-syne antialiased noise">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
