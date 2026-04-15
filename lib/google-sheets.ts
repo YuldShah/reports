@@ -219,7 +219,9 @@ const ensureSheetHeaders = async (
   }
 
   if (headersChanged) {
-    if (useA1Fallback && sheetTitle) {
+    if (sheetTitle) {
+      // Always prefer A1-range writes — batchUpdateByDataFilter rejects
+      // header arrays wider than the sheet's current column count.
       await sheets.spreadsheets.values.update({
         spreadsheetId,
         range: `${quoteSheetTitle(sheetTitle)}!A1`,
@@ -464,9 +466,19 @@ export const appendToGoogleSheet = async (
       return answerMap.get(header) ?? ''
     })
 
-    const response = await sheets.spreadsheets.values.append({
+    // Determine the next empty row by counting existing rows in column A.
+    // Using values.update at a specific row is safer than values.append with !A1
+    // because append with OVERWRITE mode can overwrite row 1 when table detection
+    // misidentifies the table boundary.
+    const countResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `${quoteSheetTitle(sheetInfo.title)}!A1`,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A:A`,
+    })
+    const nextRow = (countResponse.data.values || []).length + 1
+
+    const response = await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A${nextRow}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [rowValues],
@@ -522,8 +534,22 @@ export const updateOrAppendStudentTracker = async (
     const { sheets } = await getGoogleSheetsClient()
     const sheetInfo = await ensureTemplateSheet(templateKey, templateName, sheets)
 
-    // Ensure headers are set up for student tracker
-    await ensureSheetHeaders(sheetInfo.sheetId, STUDENT_TRACKER_HEADERS, sheets, sheetInfo.title)
+    // Ensure headers are set up for student tracker (bypass BASE_HEADERS injection)
+    const headerCheck = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A1:G1`,
+    })
+    const existingHeaders = headerCheck.data.values?.[0] ?? []
+    const headersMatch = STUDENT_TRACKER_HEADERS.every((h, i) => existingHeaders[i] === h)
+    if (!headersMatch) {
+      await sheets.spreadsheets.values.clear({ spreadsheetId, range: `${quoteSheetTitle(sheetInfo.title)}!1:1` })
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${quoteSheetTitle(sheetInfo.title)}!A1:G1`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [STUDENT_TRACKER_HEADERS] },
+      })
+    }
 
     // Get all rows to find existing tutor row
     const readResponse = await sheets.spreadsheets.values.get({
@@ -536,10 +562,10 @@ export const updateOrAppendStudentTracker = async (
     // Find the column index for Tutor name (first column)
     const tutorColIndex = 0 // Tutor ismi is always first
 
-    // Find existing row with this tutor's name
+    // Find existing row with this tutor's name (trim both sides to handle trailing spaces)
     let existingRowIndex = -1
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i][tutorColIndex]?.toLowerCase() === trackerData.tutorName.toLowerCase()) {
+      if (rows[i][tutorColIndex]?.trim().toLowerCase() === trackerData.tutorName.trim().toLowerCase()) {
         existingRowIndex = i
         break
       }
@@ -587,6 +613,95 @@ export const updateOrAppendStudentTracker = async (
   }
 }
 
+
+/**
+ * Find the row for a given reportId and update all answer columns in place.
+ * Preserves "Report ID" and "Submitted At" columns; updates everything else.
+ */
+export const updateRowInGoogleSheet = async (
+  templateInfo: { templateKey: string; templateName: string },
+  reportId: string,
+  updatedData: {
+    teamName: string
+    userName: string
+    answers: SheetAnswer[]
+  },
+) => {
+  const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
+
+  if (!spreadsheetId) {
+    console.warn('Google Sheets spreadsheet ID not configured, skipping row update')
+    return
+  }
+
+  try {
+    const { templateKey, templateName } = templateInfo
+    const { sheets } = await getGoogleSheetsClient()
+    const sheetInfo = await ensureTemplateSheet(templateKey, templateName, sheets)
+
+    // Read column A to find the row with the matching Report ID
+    const colAResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A:A`,
+    })
+    const colAValues = colAResponse.data.values || []
+
+    let targetRowIndex = -1
+    for (let i = 1; i < colAValues.length; i++) {
+      if (colAValues[i]?.[0] === reportId) {
+        targetRowIndex = i
+        break
+      }
+    }
+
+    if (targetRowIndex < 0) {
+      console.warn(`Report ID "${reportId}" not found in sheet "${sheetInfo.title}", skipping update`)
+      return
+    }
+
+    // Read current headers
+    const headerResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${quoteSheetTitle(sheetInfo.title)}!1:1`,
+    })
+    const headers: string[] = headerResponse.data.values?.[0] ?? []
+
+    // Read the current row to preserve any columns not in our answer map
+    const rowRange = `${quoteSheetTitle(sheetInfo.title)}!${targetRowIndex + 1}:${targetRowIndex + 1}`
+    const rowResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: rowRange,
+    })
+    const currentRow: string[] = rowResponse.data.values?.[0] ?? []
+
+    const answerMap = new Map(
+      updatedData.answers.map((a) => [a.label, a.value === undefined || a.value === null ? '' : String(a.value)]),
+    )
+
+    const updatedRow = headers.map((header, colIndex) => {
+      // Always preserve Report ID and Submitted At
+      if (header === 'Report ID' || header === 'Submitted At') {
+        return currentRow[colIndex] ?? ''
+      }
+      if (header === 'Team Name') return updatedData.teamName
+      if (header === 'User Name') return updatedData.userName
+      return answerMap.has(header) ? (answerMap.get(header) ?? '') : (currentRow[colIndex] ?? '')
+    })
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A${targetRowIndex + 1}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [updatedRow] },
+    })
+
+    console.log(`Updated sheet row for report: ${reportId}`)
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating row in Google Sheets:', error)
+    throw error
+  }
+}
 
 export const getAllSheetsData = async () => {
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')

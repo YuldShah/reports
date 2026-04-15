@@ -34,9 +34,11 @@ import {
 } from "lucide-react";
 import { type User, type Team, type Report } from "@/lib/types";
 import ReportDetails from "@/components/report-details";
+import { useAuth } from "@/lib/auth";
 import { normalizeText } from "@/lib/utils";
 
 export default function ReportsView() {
+  const auth = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [teamFilter, setTeamFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
@@ -194,6 +196,9 @@ export default function ReportsView() {
         <ReportDetails
           reportId={selectedReportId}
           onBack={() => setSelectedReportId(null)}
+          canEdit={true}
+          currentUserId={auth.dbUser?.telegramId}
+          onEditSuccess={fetchData}
         />
       </motion.div>
     );

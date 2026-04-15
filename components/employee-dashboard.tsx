@@ -354,6 +354,9 @@ export default function EmployeeDashboard({ user }: EmployeeDashboardProps) {
             <ReportDetails
               reportId={selectedReportId}
               onBack={() => setSelectedReportId(null)}
+              canEdit={userReports.some((r: any) => r.id === selectedReportId)}
+              currentUserId={user.telegramId}
+              onEditSuccess={refreshData}
             />
           </motion.div>
         ) : (

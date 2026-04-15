@@ -40,6 +40,7 @@ export interface Report {
   answers: Record<string, any>
   templateData: Record<string, any>
   createdAt: Date
+  updatedAt: Date
 }
 
 const databaseUrl = process.env.DATABASE_URL
@@ -123,6 +124,7 @@ const mapReportRow = (row: any): Report => ({
   answers: parseJsonField<Record<string, any>>(row.answers, {}),
   templateData: parseJsonField<Record<string, any>>(row.template_data, {}),
   createdAt: toDate(row.created_at),
+  updatedAt: toDate(row.updated_at ?? row.created_at),
 })
 
 const runQuery = async <T extends Record<string, unknown> = Record<string, unknown>>(
@@ -514,15 +516,14 @@ export const deleteTeam = async (id: string): Promise<boolean> => {
   }
 }
 
-// Report operations
-export const createReport = async (reportData: Omit<Report, 'id' | 'createdAt'>): Promise<Report> => {
+export const createReport = async (reportData: Omit<Report, 'id' | 'createdAt' | 'updatedAt'>): Promise<Report> => {
   const reportId = randomUUID()
   const { userId, teamId, templateId, title, answers, templateData } = reportData
 
   const result = await runQuery(
     `INSERT INTO reports (id, user_id, team_id, template_id, title, answers, template_data)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at`,
+     RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at, updated_at`,
     [
       reportId,
       userId,
@@ -539,7 +540,7 @@ export const createReport = async (reportData: Omit<Report, 'id' | 'createdAt'>)
 
 export const getAllReports = async (): Promise<Report[]> => {
   const result = await runQuery(
-    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at, updated_at
      FROM reports
      ORDER BY created_at DESC`,
   )
@@ -549,7 +550,7 @@ export const getAllReports = async (): Promise<Report[]> => {
 
 export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
   const result = await runQuery(
-    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at, updated_at
      FROM reports
      WHERE team_id = $1
      ORDER BY created_at DESC`,
@@ -561,7 +562,7 @@ export const getReportsByTeam = async (teamId: string): Promise<Report[]> => {
 
 export const getReportsByUser = async (userId: number): Promise<Report[]> => {
   const result = await runQuery(
-    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at, updated_at
      FROM reports
      WHERE user_id = $1
      ORDER BY created_at DESC`,
@@ -569,6 +570,17 @@ export const getReportsByUser = async (userId: number): Promise<Report[]> => {
   )
 
   return result.rows.map(mapReportRow)
+}
+
+export const getReportById = async (id: string): Promise<Report | null> => {
+  const result = await runQuery(
+    `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at, updated_at
+     FROM reports
+     WHERE id = $1`,
+    [id],
+  )
+
+  return result.rows.length ? mapReportRow(result.rows[0]) : null
 }
 
 export const updateReport = async (id: string, updates: Partial<Report>): Promise<Report | null> => {
@@ -591,7 +603,7 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
 
   if (fields.length === 0) {
     const result = await runQuery(
-      `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at
+      `SELECT id, user_id, team_id, template_id, title, answers, template_data, created_at, updated_at
        FROM reports
        WHERE id = $1`,
       [id],
@@ -599,11 +611,14 @@ export const updateReport = async (id: string, updates: Partial<Report>): Promis
     return result.rows.length ? mapReportRow(result.rows[0]) : null
   }
 
+  // Always update updated_at when making changes
+  fields.push(`updated_at = NOW()`)
+
   values.push(id)
   const result = await runQuery(
     `UPDATE reports SET ${fields.join(', ')}
      WHERE id = $${paramIndex}
-     RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at`,
+     RETURNING id, user_id, team_id, template_id, title, answers, template_data, created_at, updated_at`,
     values,
   )
 

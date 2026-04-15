@@ -24,10 +24,12 @@ import UserManagement from "@/components/user-management"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useTelegramBackButton } from "@/hooks/use-telegram-back-button"
+import { useAuth } from "@/lib/auth"
 import { type Report, type Team, type User } from "@/lib/types"
 import { normalizeText } from "@/lib/utils"
 
 export default function AdminDashboard() {
+  const auth = useAuth()
   const [activeSection, setActiveSection] = useState("overview")
   const [users, setUsers] = useState<User[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -149,7 +151,13 @@ export default function AdminDashboard() {
         exit={{ opacity: 0, y: -10 }}
         className="mx-auto max-w-4xl pb-12"
       >
-        <ReportDetails reportId={selectedReportId} onBack={() => setSelectedReportId(null)} />
+        <ReportDetails
+          reportId={selectedReportId}
+          onBack={() => setSelectedReportId(null)}
+          canEdit={true}
+          currentUserId={auth.dbUser?.telegramId}
+          onEditSuccess={refreshData}
+        />
       </motion.div>
     )
   }

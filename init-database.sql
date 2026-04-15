@@ -60,7 +60,8 @@ CREATE TABLE reports (
     title TEXT NOT NULL,
     answers JSONB NOT NULL,
     template_data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Useful indexes for common queries
