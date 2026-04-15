@@ -39,7 +39,60 @@ newkey.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.tmp/*.tar.gz
-reports-app-migration.tar.gz
+# temp directories and artifacts
+.tmp/
+*.tar.gz
 *.tar
 nul
+
+# lock files (using bun.lock)
+package-lock.json
+yarn.lock
+
+# log files
+*.log
+devserver.*
+prodserver.*
+
+# one-off scripts (not application code)
+fix-*.js
+fix_*.js
+check-*.js
+sync-*.js
+delete-*.js
+audit-*.js
+build-dashboard.js
+dashboard_data.js
+diagnose_*.js
+count_rows_tmp.js
+check_headers_tmp.js
+pg_direct_copy_tmp.js
+retry-failed.js
+verify_fix.js
+list-tabs.js
+get_template_headers.js
+
+# internal deployment / handoff docs
+HANDOFF.md
+FIXES_SUMMARY.md
+IMPLEMENTATION_SUMMARY.md
+deploy-vps.sh
+
+# unused lib backups
+lib/database-json-backup.ts
+lib/google-sheets-client.ts
+
+# database dumps / backups
+reports_*.sql
+*_backup*.sql
+*_dump*.sql
+
+# temp shell scripts
+tmp_*.sh
+
+# data files not belonging to the app
+*.docx
+*.csv
+
+# migration generator scripts
+generate_migration.py
