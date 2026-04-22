@@ -14,7 +14,7 @@ export interface User {
   username?: string
   photoUrl?: string
   teamId?: string
-  role: "admin" | "employee"
+  role: "admin" | "employee" | "lead" | string
   createdAt: Date
 }
 

@@ -8,8 +8,8 @@ import type { TelegramUser, User } from "@/lib/telegram"
 declare global {
   interface Window {
     __reportsDebugAuth?: {
-      setRole: (role: "admin" | "employee") => void
-      getRole: () => "admin" | "employee"
+      setRole: (role: "admin" | "employee" | "lead") => void
+      getRole: () => "admin" | "employee" | "lead"
     }
   }
 }
@@ -20,6 +20,7 @@ export interface AuthState {
   telegramUser: TelegramUser | null
   dbUser: User | null
   isAdmin: boolean
+  isLead: boolean
   isBrowserDebug?: boolean
   error: string | null
 }
@@ -31,6 +32,7 @@ export const useAuth = (): AuthState => {
     telegramUser: null,
     dbUser: null,
     isAdmin: false,
+    isLead: false,
     isBrowserDebug: false,
     error: null,
   })
@@ -52,6 +54,7 @@ export const useAuth = (): AuthState => {
         telegramUser: null,
         dbUser: null,
         isAdmin: false,
+        isLead: false,
         error: message,
       })
     }
@@ -85,12 +88,15 @@ export const useAuth = (): AuthState => {
       }
     }
 
-    const getStoredDebugRole = (): "admin" | "employee" => {
+    const getStoredDebugRole = (): "admin" | "employee" | "lead" => {
       if (typeof window === "undefined") return "employee"
-      return window.localStorage?.getItem("reportsDebugRole") === "admin" ? "admin" : "employee"
+      const stored = window.localStorage?.getItem("reportsDebugRole")
+      if (stored === "admin") return "admin"
+      if (stored === "lead") return "lead"
+      return "employee"
     }
 
-    const persistDebugRole = (role: "admin" | "employee") => {
+    const persistDebugRole = (role: "admin" | "employee" | "lead") => {
       if (typeof window === "undefined") return
       try {
         window.localStorage?.setItem("reportsDebugRole", role)
@@ -102,7 +108,7 @@ export const useAuth = (): AuthState => {
     const registerDebugRoleController = (telegramUser: TelegramUser) => {
       if (typeof window === "undefined") return
 
-      const applyRole = (role: "admin" | "employee") => {
+      const applyRole = (role: "admin" | "employee" | "lead") => {
         persistDebugRole(role)
         setAuthState((prevState: AuthState) => {
           const updatedDbUser = prevState.dbUser
@@ -121,24 +127,24 @@ export const useAuth = (): AuthState => {
             ...prevState,
             dbUser: updatedDbUser,
             isAdmin: role === "admin",
+            isLead: role === "lead",
           }
         })
       }
 
       window.__reportsDebugAuth = {
-        setRole: (role: "admin" | "employee") => {
-          if (role !== "admin" && role !== "employee") {
-            console.warn('[v0] Debug auth: role must be "admin" or "employee"')
+        setRole: (role: "admin" | "employee" | "lead") => {
+          if (role !== "admin" && role !== "employee" && role !== "lead") {
+            console.warn('[v0] Debug auth: role must be "admin", "employee", or "lead"')
             return
           }
           console.log(`[v0] Debug auth: switching role to ${role}`)
           applyRole(role)
         },
-        getRole: () =>
-          window.localStorage?.getItem("reportsDebugRole") === "admin" ? "admin" : "employee",
+        getRole: () => getStoredDebugRole(),
       }
 
-      console.info('[v0] Debug auth ready: window.__reportsDebugAuth.setRole("admin" | "employee")')
+      console.info('[v0] Debug auth ready: window.__reportsDebugAuth.setRole("admin" | "employee" | "lead")')
     }
     const authenticateWithTelegramUser = async (
       telegramUser: TelegramUser,
@@ -270,6 +276,7 @@ export const useAuth = (): AuthState => {
             telegramUser,
             dbUser: fallbackUser,
             isAdmin: debugRole === "admin",
+            isLead: debugRole === "lead",
             error: null,
           })
 
@@ -285,6 +292,7 @@ export const useAuth = (): AuthState => {
             telegramUser,
             dbUser,
             isAdmin: dbUser?.role === "admin" || envSaysAdmin,
+            isLead: dbUser?.role === "lead",
             error: null,
           })
         }
@@ -313,6 +321,7 @@ export const useAuth = (): AuthState => {
               createdAt: new Date(),
             },
             isAdmin: debugRole === "admin",
+            isLead: debugRole === "lead",
             error: null,
           })
 

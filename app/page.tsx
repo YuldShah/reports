@@ -7,9 +7,10 @@ import ProfileCard from "@/components/profile-card";
 import Logo from "@/components/logo";
 import AdminDashboard from "@/components/admin-dashboard";
 import EmployeeDashboard from "@/components/employee-dashboard";
+import LeadDashboard from "@/components/lead-dashboard";
 
 export default function HomePage() {
-  const { isAdmin, dbUser } = useAuthContext();
+  const { isAdmin, isLead, dbUser } = useAuthContext();
   const detectShouldShowLogo = () => {
     if (typeof window === "undefined" || !window.Telegram?.WebApp) {
       return false;
@@ -49,6 +50,10 @@ export default function HomePage() {
           <div className="fade-in mx-auto max-w-6xl">
             {isAdmin ? (
               <AdminDashboard />
+            ) : isLead ? (
+              <ProtectedRoute requireTeam>
+                <LeadDashboard user={dbUser!} />
+              </ProtectedRoute>
             ) : dbUser ? (
               <ProtectedRoute requireTeam>
                 <EmployeeDashboard user={dbUser} />

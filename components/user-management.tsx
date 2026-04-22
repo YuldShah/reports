@@ -216,9 +216,11 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
       const matchesRole =
         roleFilter === "all" ||
         (roleFilter === "employee" && user.role === "employee") ||
+        (roleFilter === "lead" && user.role === "lead") ||
         (roleFilter === "custom" &&
           user.role !== "admin" &&
-          user.role !== "employee");
+          user.role !== "employee" &&
+          user.role !== "lead");
 
       const matchesTeam =
         teamFilter === "all" ||
@@ -246,7 +248,8 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
   const getRoleBadgeVariant = (role: string) => {
     if (role === "admin") return "destructive";
     if (role === "employee") return "default";
-    return "secondary"; // For custom roles
+    if (role === "lead") return "secondary";
+    return "outline";
   };
 
   if (loading) {
@@ -308,6 +311,7 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="employee">Employee</SelectItem>
+                <SelectItem value="lead">Lead</SelectItem>
                 <SelectItem value="custom">Custom Roles</SelectItem>
               </SelectContent>
             </Select>
@@ -525,14 +529,30 @@ export default function UserManagement({ onDataChange }: UserManagementProps) {
 
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
+              <div className="flex gap-2">
+                {["employee", "lead"].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setNewRole(r)}
+                    className={`rounded-md border px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+                      newRole === r
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
               <Input
                 id="role"
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                placeholder="Enter role (e.g., admin, employee, manager, etc.)"
+                placeholder="Or enter a custom role name"
               />
               <p className="text-sm text-muted-foreground">
-                You can enter any custom role name
+                You can also type a custom role name
               </p>
             </div>
 

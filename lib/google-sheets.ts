@@ -614,14 +614,10 @@ export const updateOrAppendStudentTracker = async (
 }
 
 
-/**
- * Find the row for a given reportId and update all answer columns in place.
- * Preserves "Report ID" and "Submitted At" columns; updates everything else.
- */
 export const updateRowInGoogleSheet = async (
   templateInfo: { templateKey: string; templateName: string },
   reportId: string,
-  updatedData: {
+  rowUpdate: {
     teamName: string
     userName: string
     answers: SheetAnswer[]
@@ -630,7 +626,7 @@ export const updateRowInGoogleSheet = async (
   const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
 
   if (!spreadsheetId) {
-    console.warn('Google Sheets spreadsheet ID not configured, skipping row update')
+    console.error("Google Sheets spreadsheet ID not configured")
     return
   }
 
@@ -639,68 +635,138 @@ export const updateRowInGoogleSheet = async (
     const { sheets } = await getGoogleSheetsClient()
     const sheetInfo = await ensureTemplateSheet(templateKey, templateName, sheets)
 
-    // Read column A to find the row with the matching Report ID
+    // Read existing headers
+    const headerResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: `${quoteSheetTitle(sheetInfo.title)}!1:1`,
+    })
+    const headers: string[] = headerResponse.data.values?.[0] ?? []
+    if (headers.length === 0) return
+
+    // Read column A to find the matching Report ID row
     const colAResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: `${quoteSheetTitle(sheetInfo.title)}!A:A`,
     })
     const colAValues = colAResponse.data.values || []
 
-    let targetRowIndex = -1
+    let rowIndex = -1
     for (let i = 1; i < colAValues.length; i++) {
-      if (colAValues[i]?.[0] === reportId) {
-        targetRowIndex = i
+      if (String(colAValues[i][0] ?? '').trim() === reportId.trim()) {
+        rowIndex = i + 1 // 1-based row number in Sheets
         break
       }
     }
 
-    if (targetRowIndex < 0) {
-      console.warn(`Report ID "${reportId}" not found in sheet "${sheetInfo.title}", skipping update`)
+    if (rowIndex < 0) {
+      console.warn(`updateRowInGoogleSheet: report ${reportId} not found in sheet "${sheetInfo.title}"`)
       return
     }
 
-    // Read current headers
-    const headerResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${quoteSheetTitle(sheetInfo.title)}!1:1`,
-    })
-    const headers: string[] = headerResponse.data.values?.[0] ?? []
-
-    // Read the current row to preserve any columns not in our answer map
-    const rowRange = `${quoteSheetTitle(sheetInfo.title)}!${targetRowIndex + 1}:${targetRowIndex + 1}`
-    const rowResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: rowRange,
-    })
-    const currentRow: string[] = rowResponse.data.values?.[0] ?? []
+    const baseValueMap: Record<string, string> = {
+      'Report ID': reportId,
+      'Team Name': rowUpdate.teamName,
+      'User Name': rowUpdate.userName,
+    }
 
     const answerMap = new Map(
-      updatedData.answers.map((a) => [a.label, a.value === undefined || a.value === null ? '' : String(a.value)]),
+      rowUpdate.answers.map((a) => [a.label, a.value === undefined || a.value === null ? '' : String(a.value)]),
     )
 
-    const updatedRow = headers.map((header, colIndex) => {
-      // Always preserve Report ID and Submitted At
-      if (header === 'Report ID' || header === 'Submitted At') {
-        return currentRow[colIndex] ?? ''
-      }
-      if (header === 'Team Name') return updatedData.teamName
-      if (header === 'User Name') return updatedData.userName
-      return answerMap.has(header) ? (answerMap.get(header) ?? '') : (currentRow[colIndex] ?? '')
+    const rowValues = headers.map((header) => {
+      if (baseValueMap[header] !== undefined) return baseValueMap[header]
+      if (header === 'Submitted At') return undefined // preserve original timestamp
+      return answerMap.get(header) ?? ''
     })
 
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${quoteSheetTitle(sheetInfo.title)}!A${targetRowIndex + 1}`,
+      range: `${quoteSheetTitle(sheetInfo.title)}!A${rowIndex}`,
       valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [updatedRow] },
+      requestBody: { values: [rowValues] },
     })
 
-    console.log(`Updated sheet row for report: ${reportId}`)
-    return { success: true }
+    return { success: true, rowIndex }
   } catch (error) {
-    console.error('Error updating row in Google Sheets:', error)
+    console.error("Error updating row in Google Sheets:", error)
     throw error
   }
+}
+
+export const getSheetStatsData = async () => {
+  const spreadsheetId = getEnvVar('GOOGLE_SHEETS_ID')
+
+  if (!spreadsheetId) {
+    throw new Error("Google Sheets spreadsheet ID not configured")
+  }
+
+  const { sheets } = await getGoogleSheetsClient()
+
+  const spreadsheet = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets(properties(sheetId,title))',
+  })
+
+  const sheetList = spreadsheet.data.sheets || []
+
+  const results: Array<{
+    title: string
+    sheetId: number
+    rowCount: number
+    headers: string[]
+    columnTotals: Record<string, number>
+  }> = []
+
+  for (const sheet of sheetList) {
+    const title = sheet.properties?.title
+    const sheetId = sheet.properties?.sheetId
+    if (!title || sheetId == null) continue
+
+    try {
+      const dataResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${quoteSheetTitle(title)}`,
+      })
+
+      const rows = dataResponse.data.values || []
+      if (rows.length < 1) {
+        results.push({ title, sheetId, rowCount: 0, headers: [], columnTotals: {} })
+        continue
+      }
+
+      const headers = rows[0] as string[]
+      const dataRows = rows.slice(1)
+      const columnTotals: Record<string, number> = {}
+
+      for (let col = 0; col < headers.length; col++) {
+        const header = headers[col]
+        if (!header || header.trim() === '') continue
+
+        let sum = 0
+        let hasNumeric = false
+        for (const row of dataRows) {
+          const val = row[col]
+          if (val !== undefined && val !== null && val !== '') {
+            const num = Number(val)
+            if (!isNaN(num)) {
+              sum += num
+              hasNumeric = true
+            }
+          }
+        }
+
+        if (hasNumeric) {
+          columnTotals[header] = sum
+        }
+      }
+
+      results.push({ title, sheetId, rowCount: dataRows.length, headers, columnTotals })
+    } catch (err) {
+      console.warn(`Failed to read sheet "${title}":`, err)
+    }
+  }
+
+  return results
 }
 
 export const getAllSheetsData = async () => {

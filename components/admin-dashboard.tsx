@@ -9,6 +9,7 @@ import {
   FileJson,
   FileText,
   LayoutDashboard,
+  TableProperties,
   UserCheck,
   Users,
   Zap,
@@ -36,6 +37,10 @@ export default function AdminDashboard() {
   const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null)
+  const [sheetStats, setSheetStats] = useState<Array<{
+    title: string; sheetId: number; rowCount: number; headers: string[]; columnTotals: Record<string, number>
+  }>>([])
+  const [statsLoading, setStatsLoading] = useState(true)
 
   const switchSection = (id: string) => {
     setActiveSection(id)
@@ -90,6 +95,12 @@ export default function AdminDashboard() {
     }
 
     fetchData()
+
+    fetch("/api/sheets/stats")
+      .then((r) => r.ok ? r.json() : { stats: [] })
+      .then((d) => setSheetStats(d.stats || []))
+      .catch(() => {})
+      .finally(() => setStatsLoading(false))
   }, [])
 
   const stats = {
@@ -213,6 +224,44 @@ export default function AdminDashboard() {
               </Card>
 
               <SheetsIntegrationStatus />
+
+              {/* Google Sheets aggregated stats */}
+              {!statsLoading && sheetStats.length > 0 && (
+                <div className="space-y-4">
+                  {sheetStats.map((sheet) => {
+                    const totals = Object.entries(sheet.columnTotals)
+                    if (totals.length === 0) return null
+                    return (
+                      <Card key={sheet.sheetId} className="surface-panel border-glass-border/80">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center gap-2 font-heading text-base">
+                            <TableProperties className="h-4 w-4 text-primary" />
+                            {sheet.title}
+                          </CardTitle>
+                          <CardDescription className="text-xs">
+                            {sheet.rowCount} {sheet.rowCount === 1 ? "entry" : "entries"} in sheet
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                            {totals.map(([col, total]) => (
+                              <div
+                                key={col}
+                                className="rounded-[calc(var(--radius)+2px)] border border-border/70 bg-background/60 p-3"
+                              >
+                                <div className="truncate text-xs text-muted-foreground">{col}</div>
+                                <div className="mt-1 font-heading text-xl font-bold tracking-tight">
+                                  {total.toLocaleString()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
 
               <Card className="surface-panel border-glass-border/80">
                 <CardHeader className="pb-3">
