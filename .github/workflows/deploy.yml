@@ -35,6 +35,8 @@ jobs:
           source: ".next,package.json,bun.lock,public,node_modules"
           target: /home/ubuntu/reports-app
           rm: false
+          timeout: 180s
+          command_timeout: 20m
 
       - name: Restart service
         uses: appleboy/ssh-action@v1
@@ -42,6 +44,8 @@ jobs:
           host: ${{ vars.VPS_HOST }}
           username: ${{ vars.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 180s
+          command_timeout: 5m
           script: |
             sudo systemctl restart reports-app
             sleep 3
