@@ -2,6 +2,14 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getAllReports, createReport, updateReport, getReportById, getReportsByUser, getReportsByTeam, getTeamById, getTemplateById, getUserByTelegramId } from "@/lib/database"
 import { appendToGoogleSheet, updateOrAppendStudentTracker, updateRowInGoogleSheet } from "@/lib/google-sheets"
 
+const scheduleSheetSync = (label: string, task: () => Promise<void>) => {
+  setTimeout(() => {
+    task().catch((error) => {
+      console.error(`Background Google Sheets sync failed (${label}):`, error)
+    })
+  }, 0)
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -62,7 +70,8 @@ export async function POST(request: NextRequest) {
 
     // Sync to Google Sheets if enabled
     if (body.syncToSheets !== false) {
-      try {
+      scheduleSheetSync("report create", async () => {
+        try {
         // Get related data for Google Sheets
         const user = await getUserByTelegramId(userId)
         const template = await getTemplateById(resolvedTemplateId)
@@ -155,6 +164,7 @@ export async function POST(request: NextRequest) {
         console.error("Failed to sync to Google Sheets:", sheetError)
         // Continue anyway - report was created successfully
       }
+      })
     }
 
     return NextResponse.json({ report }, { status: 201 })
@@ -199,7 +209,8 @@ export async function PATCH(request: NextRequest) {
 
     // Sync the updated row to Google Sheets (unless explicitly disabled)
     if (syncToSheets !== false) {
-      try {
+      scheduleSheetSync("report update", async () => {
+        try {
         const user = await getUserByTelegramId(updatedReport.userId)
         const team = await getTeamById(updatedReport.teamId)
         const template = await getTemplateById(updatedReport.templateId)
@@ -273,6 +284,7 @@ export async function PATCH(request: NextRequest) {
         console.error("Failed to sync update to Google Sheets:", sheetError)
         // Report was updated successfully; sheet sync failure is non-fatal
       }
+      })
     }
 
     return NextResponse.json({ report: updatedReport })
