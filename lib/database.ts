@@ -127,7 +127,7 @@ const mapReportRow = (row: any): Report => ({
   updatedAt: toDate(row.updated_at ?? row.created_at),
 })
 
-const runQuery = async <T extends Record<string, unknown> = Record<string, unknown>>(
+export const runQuery = async <T extends Record<string, unknown> = Record<string, unknown>>(
   text: string,
   params: any[] = [],
 ): Promise<QueryResult<T>> => {

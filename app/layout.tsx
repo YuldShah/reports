@@ -3,7 +3,6 @@ import type { Metadata, Viewport } from "next"
 import { Syne } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
-import AuthProvider from "@/components/auth-provider"
 import ErrorBoundary from "@/components/error-boundary"
 import { ThemeProvider } from "@/components/theme-provider"
 
@@ -52,10 +51,8 @@ export default function RootLayout({
       <body className="font-syne antialiased noise">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <ErrorBoundary>
-            <AuthProvider>
-              {children}
-              <Toaster />
-            </AuthProvider>
+            {children}
+            <Toaster />
           </ErrorBoundary>
         </ThemeProvider>
       </body>
