@@ -25,7 +25,7 @@ export interface AuthState {
   error: string | null
 }
 
-export const useAuth = (): AuthState => {
+export const useAuth = ({ allowDebug = false }: { allowDebug?: boolean } = {}): AuthState => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     isLoading: true,
@@ -41,7 +41,6 @@ export const useAuth = (): AuthState => {
     const runtimeEnv = (
       (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process?.env
     ) ?? {}
-    const isProduction = runtimeEnv.NODE_ENV === "production"
 
     const showProductionFallback = (message: string) => {
       if (typeof window !== "undefined" && window.__reportsDebugAuth) {
@@ -277,6 +276,7 @@ export const useAuth = (): AuthState => {
             dbUser: fallbackUser,
             isAdmin: debugRole === "admin",
             isLead: debugRole === "lead",
+            isBrowserDebug: true,
             error: null,
           })
 
@@ -293,6 +293,7 @@ export const useAuth = (): AuthState => {
             dbUser,
             isAdmin: dbUser?.role === "admin" || envSaysAdmin,
             isLead: dbUser?.role === "lead",
+            isBrowserDebug: false,
             error: null,
           })
         }
@@ -322,6 +323,7 @@ export const useAuth = (): AuthState => {
             },
             isAdmin: debugRole === "admin",
             isLead: debugRole === "lead",
+            isBrowserDebug: true,
             error: null,
           })
 
@@ -346,13 +348,12 @@ export const useAuth = (): AuthState => {
         const webApp = await waitForTelegram()
 
         if (!webApp) {
-          console.log("[v0] Telegram WebApp not detected - using debug browser authentication")
-
-          if (isProduction) {
-            showProductionFallback("Telegram WebApp not detected")
+          if (!allowDebug) {
+            showProductionFallback("This app must be opened from Telegram.")
             return
           }
 
+          console.log("[v0] Telegram WebApp not detected - using debug browser authentication")
           await authenticateWithTelegramUser(getDebugTelegramUser(), { isDebugFallback: true })
           return
         }
@@ -368,13 +369,12 @@ export const useAuth = (): AuthState => {
         const hasValidInitData = typeof webApp.initData === "string" && webApp.initData.trim().length > 0
 
         if (!hasValidInitData || !telegramUser) {
-          console.log("[v0] No valid Telegram init data - falling back")
-
-          if (isProduction) {
-            showProductionFallback("Telegram authentication required")
+          if (!allowDebug) {
+            showProductionFallback("Telegram authentication required.")
             return
           }
 
+          console.log("[v0] No valid Telegram init data - using debug browser authentication")
           await authenticateWithTelegramUser(getDebugTelegramUser(), { isDebugFallback: true })
           return
         }
@@ -392,7 +392,7 @@ export const useAuth = (): AuthState => {
     }
 
     initAuth()
-  }, [])
+  }, [allowDebug])
 
   return authState
 }

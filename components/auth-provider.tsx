@@ -5,8 +5,14 @@ import { useAuth, type AuthState } from "@/lib/auth"
 
 const AuthContext = createContext<AuthState | null>(null)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const auth = useAuth()
+export function AuthProvider({
+  children,
+  allowDebug = false,
+}: {
+  children: ReactNode
+  allowDebug?: boolean
+}) {
+  const auth = useAuth({ allowDebug })
 
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>
 }
