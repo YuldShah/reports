@@ -8,15 +8,18 @@ export const dynamic = "force-dynamic"
 const OAUTH_COOKIE_OPTS = (secure: boolean) =>
   ({ httpOnly: true, secure, sameSite: "lax" as const, path: "/", maxAge: 600 })
 
+function appBase(req: NextRequest): string {
+  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || req.nextUrl.origin
+}
+
 function redirectUriFor(req: NextRequest): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || req.nextUrl.origin
-  return `${base}/api/dashboard/auth/callback`
+  return `${appBase(req)}/api/dashboard/auth/callback`
 }
 
 export function GET(req: NextRequest) {
   const { clientId, clientSecret } = getOAuthConfig()
   if (!clientId || !clientSecret) {
-    return NextResponse.redirect(new URL("/dashboard/login?error=oauth_not_configured", req.nextUrl.origin))
+    return NextResponse.redirect(new URL("/dashboard/login?error=oauth_not_configured", appBase(req)))
   }
 
   const { verifier, challenge } = generatePkce()

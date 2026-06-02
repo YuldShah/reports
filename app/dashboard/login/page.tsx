@@ -8,7 +8,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   oauth_not_configured: "Telegram login isn't configured on the server yet.",
   invalid_state: "Your login session expired. Please try again.",
   token_exchange_failed: "Couldn't complete Telegram sign-in. Please try again.",
-  no_subject: "Telegram didn't return an account id.",
+  no_subject: "Telegram didn't return a usable account id.",
+  server_error: "Something went wrong on our side. Please try again.",
   access_denied: "Sign-in was cancelled.",
 }
 
