@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
-import { getServerSession, getSheets, sessionToScope } from "@/lib/dashboard-data"
+import { getScope, getSheets } from "@/lib/dashboard-data"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET() {
-  const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const scope = await getScope()
+  if (!scope) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   try {
-    const sheets = await getSheets(sessionToScope(session))
+    const sheets = await getSheets(scope)
     return NextResponse.json({ sheets })
   } catch (error) {
     console.error("dashboard/sheets failed:", error)

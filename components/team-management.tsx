@@ -393,6 +393,32 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
     }
   }
 
+  const handleSetLead = async (teamId: string, leadTelegramId: number | null) => {
+    try {
+      const response = await fetch('/api/teams', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, leadTelegramId }),
+      })
+      if (!response.ok) throw new Error('Failed to set team lead')
+      await fetchData()
+      toast({
+        title: "Success",
+        description: leadTelegramId ? "Team lead assigned" : "Team lead cleared",
+        duration: 3000,
+      })
+      onDataChange?.()
+    } catch (error) {
+      console.error('Error setting team lead:', error)
+      toast({
+        title: "Error",
+        description: "Failed to set team lead",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
+  }
+
   const unassignedUsers = users.filter((user) => !user.teamId && user.role !== "admin")
 
   if (loading) {
@@ -526,6 +552,28 @@ export default function TeamManagement({ onDataChange }: TeamManagementProps) {
                   ) : (
                     <span className="text-xs text-muted-foreground ml-1">None assigned</span>
                   )}
+                </div>
+
+                {/* Team Lead section */}
+                <div className="mt-3">
+                  <span className="text-xs text-muted-foreground">Team Lead:</span>
+                  <Select
+                    value={team.leadTelegramId ? String(team.leadTelegramId) : "none"}
+                    onValueChange={(v) => handleSetLead(team.id, v === "none" ? null : Number(v))}
+                  >
+                    <SelectTrigger className="mt-1 h-9">
+                      <SelectValue placeholder="No lead assigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No lead</SelectItem>
+                      {teamMembers.map((m) => (
+                        <SelectItem key={m.telegramId} value={String(m.telegramId)}>
+                          {normalizeText(m.firstName)} {normalizeText(m.lastName)}
+                          {m.username ? ` (@${m.username})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
 

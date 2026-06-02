@@ -39,6 +39,7 @@ CREATE TABLE teams (
     name TEXT NOT NULL,
     description TEXT,
     template_id UUID REFERENCES templates(id),
+    lead_telegram_id BIGINT REFERENCES users(telegram_id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by BIGINT REFERENCES users(telegram_id)
 );

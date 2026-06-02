@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { getServerSession, getSheetRows, sessionToScope } from "@/lib/dashboard-data"
+import { getScope, getSheetRows } from "@/lib/dashboard-data"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ templateId: string }> }) {
-  const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const scope = await getScope()
+  if (!scope) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   const { templateId } = await params
   const q = req.nextUrl.searchParams
   try {
-    const sheet = await getSheetRows(sessionToScope(session), templateId, {
+    const sheet = await getSheetRows(scope, templateId, {
       from: q.get("from") ?? undefined,
       to: q.get("to") ?? undefined,
     })

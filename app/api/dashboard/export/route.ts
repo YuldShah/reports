@@ -3,8 +3,7 @@ import type { NextRequest } from "next/server"
 import * as XLSX from "xlsx"
 import {
   getReportsForExport,
-  getServerSession,
-  sessionToScope,
+  getScope,
   type EnrichedReportRow,
   type ReportFilters,
 } from "@/lib/dashboard-data"
@@ -16,6 +15,7 @@ function parseFilters(req: NextRequest): ReportFilters {
   const q = req.nextUrl.searchParams
   const userIdRaw = q.get("userId")
   const userId = userIdRaw ? Number(userIdRaw) : undefined
+  const submitter = q.get("submitter")
   return {
     teamId: q.get("teamId") ?? undefined,
     userId: userId != null && Number.isFinite(userId) ? userId : undefined,
@@ -23,6 +23,7 @@ function parseFilters(req: NextRequest): ReportFilters {
     from: q.get("from") ?? undefined,
     to: q.get("to") ?? undefined,
     search: q.get("search") ?? undefined,
+    submitter: submitter === "self" || submitter === "others" ? submitter : undefined,
   }
 }
 
@@ -94,15 +95,15 @@ function buildAoa(rows: EnrichedReportRow[]): (string | number)[][] {
 }
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession()
-  if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  const scope = await getScope()
+  if (!scope) return NextResponse.json({ error: "unauthorized" }, { status: 401 })
 
   const format = (req.nextUrl.searchParams.get("format") ?? "xlsx").toLowerCase()
   const filters = parseFilters(req)
 
   let reports: EnrichedReportRow[]
   try {
-    reports = await getReportsForExport(sessionToScope(session), filters)
+    reports = await getReportsForExport(scope, filters)
   } catch (error) {
     console.error("dashboard/export failed:", error)
     return NextResponse.json({ error: "Failed to build export" }, { status: 500 })

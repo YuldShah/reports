@@ -9,20 +9,39 @@ import {
   LogOut,
   Table2,
   User2,
+  Users,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useDashboardSession } from "@/components/dashboard/session-provider"
+import { useDashboardSession, type DashboardRole } from "@/components/dashboard/session-provider"
 
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/dashboard/reports", label: "Reports", icon: FileText },
   { href: "/dashboard/sheets", label: "Sheets", icon: Table2 },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/dashboard/team", label: "Team", icon: Users },
   { href: "/dashboard/me", label: "My Records", icon: User2 },
 ]
 
-const ROLE_LABEL: Record<string, string> = { admin: "Admin", lead: "Lead", employee: "Employee" }
+const ROLE_LABEL: Record<string, string> = { admin: "Admin", lead: "Team Lead", member: "Member", none: "" }
+
+// Which nav items each role sees.
+function visibleHrefs(role: DashboardRole | undefined): Set<string> {
+  const common = ["/dashboard", "/dashboard/reports", "/dashboard/sheets", "/dashboard/analytics"]
+  switch (role) {
+    case "admin":
+      return new Set(common)
+    case "lead":
+      return new Set([...common, "/dashboard/team"])
+    case "member":
+      return new Set([...common, "/dashboard/team", "/dashboard/me"])
+    case "none":
+      return new Set(["/dashboard/me"])
+    default:
+      return new Set(common) // while session is loading
+  }
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -36,8 +55,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
 
-  // "My Records" is only meaningful for employees — admins/leads don't submit reports.
-  const navItems = NAV.filter((item) => item.href !== "/dashboard/me" || me?.role === "employee")
+  const allowed = visibleHrefs(me?.role)
+  const navItems = NAV.filter((item) => allowed.has(item.href))
 
   return (
     <div className="min-h-screen">
@@ -62,9 +81,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   </span>
                 )}
                 <span className="text-sm font-medium leading-tight">{me.name}</span>
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary-foreground">
-                  {ROLE_LABEL[me.role] ?? me.role}
-                </span>
+                {ROLE_LABEL[me.role] && (
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary-foreground">
+                    {ROLE_LABEL[me.role]}
+                  </span>
+                )}
               </div>
             )}
             <ThemeToggle />

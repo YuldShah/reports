@@ -1,5 +1,5 @@
 import { cookies } from "next/headers"
-import { runQuery } from "@/lib/database"
+import { runQuery, getTeamIdsLedBy } from "@/lib/database"
 import { isAdmin } from "@/lib/telegram"
 import { normalizeText } from "@/lib/utils"
 import { SESSION_COOKIE, verifySession, type DashboardRole, type SessionPayload } from "@/lib/session"
@@ -8,10 +8,12 @@ import { SESSION_COOKIE, verifySession, type DashboardRole, type SessionPayload 
 // Types
 // ---------------------------------------------------------------------------
 
+export type ScopeRole = "admin" | "lead" | "member" | "none"
+
 export interface ScopeContext {
-  role: DashboardRole
+  role: ScopeRole
   telegramId: number
-  teamId?: string
+  teamIds: string[] | null // null = all teams (admin); [] = no access
 }
 
 export interface DashboardUser {
@@ -50,6 +52,7 @@ export interface ReportFilters {
   from?: string
   to?: string
   search?: string
+  submitter?: "self" | "others" // self = my submissions, others = team members'
   page?: number
   pageSize?: number
 }
@@ -113,8 +116,39 @@ export async function getServerSession(): Promise<SessionPayload | null> {
   return verifySession(token)
 }
 
-export function sessionToScope(session: SessionPayload): ScopeContext {
-  return { role: session.role, telegramId: session.sub, teamId: session.teamId }
+/**
+ * Resolve a user's live access scope from the DB (not the session, so lead/team
+ * assignment changes take effect immediately):
+ *  - admin: env ADMIN_TELEGRAM_IDS or users.role text == "admin" → all teams
+ *  - lead: assigned as lead of >= 1 team (teams.lead_telegram_id) → those teams
+ *  - member: has a team_id → that team
+ *  - none: no team and not a lead → no team-wide access
+ */
+export async function resolveScope(telegramId: number): Promise<ScopeContext> {
+  const userRes = await runQuery<{ role: string; team_id: string | null }>(
+    `SELECT role, team_id FROM users WHERE telegram_id = $1`,
+    [telegramId],
+  )
+  const user = userRes.rows[0]
+
+  if (isAdmin(telegramId) || user?.role === "admin") {
+    return { role: "admin", telegramId, teamIds: null }
+  }
+
+  const ledTeamIds = await getTeamIdsLedBy(telegramId)
+  const teamSet = new Set<string>(ledTeamIds)
+  if (user?.team_id) teamSet.add(user.team_id)
+  const teamIds = Array.from(teamSet)
+
+  const role: ScopeRole = ledTeamIds.length > 0 ? "lead" : user?.team_id ? "member" : "none"
+  return { role, telegramId, teamIds }
+}
+
+/** Convenience: current request's scope, or null if unauthenticated. */
+export async function getScope(): Promise<ScopeContext | null> {
+  const session = await getServerSession()
+  if (!session) return null
+  return resolveScope(session.sub)
 }
 
 /** Resolve a logged-in dashboard user (role + team) from the DB. Null if the user doesn't exist. */
@@ -233,12 +267,12 @@ function fillDailyTrend(
 /** Push scope restriction onto a WHERE-condition list for reports aliased `r`. */
 function pushScope(scope: ScopeContext, conditions: string[], params: any[]): void {
   if (scope.role === "admin") return
-  if (!scope.teamId) {
+  if (!scope.teamIds || scope.teamIds.length === 0) {
     conditions.push("FALSE")
     return
   }
-  params.push(scope.teamId)
-  conditions.push(`r.team_id = $${params.length}`)
+  params.push(scope.teamIds)
+  conditions.push(`r.team_id = ANY($${params.length}::uuid[])`)
 }
 
 // ---------------------------------------------------------------------------
@@ -248,7 +282,11 @@ function pushScope(scope: ScopeContext, conditions: string[], params: any[]): vo
 function buildReportConditions(scope: ScopeContext, filters: ReportFilters): { where: string; params: any[] } {
   const conditions: string[] = []
   const params: any[] = []
-  pushScope(scope, conditions, params)
+
+  // Viewing your own submissions ("My Records") bypasses team scope — you can always
+  // see what you submitted, even from a team you've since left.
+  const viewingOwn = filters.userId != null && Number(filters.userId) === scope.telegramId
+  if (!viewingOwn) pushScope(scope, conditions, params)
 
   if (scope.role === "admin" && filters.teamId) {
     params.push(filters.teamId)
@@ -274,6 +312,13 @@ function buildReportConditions(scope: ScopeContext, filters: ReportFilters): { w
     params.push(`%${filters.search.trim()}%`)
     const i = params.length
     conditions.push(`(r.title ILIKE $${i} OR r.answers::text ILIKE $${i})`)
+  }
+  if (filters.submitter === "self") {
+    params.push(scope.telegramId)
+    conditions.push(`r.user_id = $${params.length}`)
+  } else if (filters.submitter === "others") {
+    params.push(scope.telegramId)
+    conditions.push(`r.user_id <> $${params.length}`)
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
@@ -393,11 +438,11 @@ export async function getSummary(scope: ScopeContext): Promise<SummaryKpis> {
     )
     teams = t.rows[0]?.teams ?? 0
     templates = t.rows[0]?.templates ?? 0
-  } else if (scope.teamId) {
-    teams = 1
+  } else if (scope.teamIds && scope.teamIds.length > 0) {
+    teams = scope.teamIds.length
     const t = await runQuery<{ templates: number }>(
-      `SELECT count(*)::int AS templates FROM team_templates WHERE team_id = $1`,
-      [scope.teamId],
+      `SELECT count(DISTINCT template_id)::int AS templates FROM team_templates WHERE team_id = ANY($1::uuid[])`,
+      [scope.teamIds],
     )
     templates = t.rows[0]?.templates ?? 0
   }
@@ -448,15 +493,14 @@ export async function getSheets(scope: ScopeContext): Promise<SheetDescriptor[]>
     }))
   }
 
-  if (!scope.teamId) return []
+  if (!scope.teamIds || scope.teamIds.length === 0) return []
   const result = await runQuery<{ id: string; name: string; is_student_tracker: boolean; row_count: number }>(
-    `SELECT tp.id, tp.name, tp.is_student_tracker, count(r.id)::int AS row_count
+    `SELECT tp.id, tp.name, tp.is_student_tracker,
+            (SELECT count(*)::int FROM reports r WHERE r.template_id = tp.id AND r.team_id = ANY($1::uuid[])) AS row_count
      FROM templates tp
-     INNER JOIN team_templates tt ON tt.template_id = tp.id AND tt.team_id = $1
-     LEFT JOIN reports r ON r.template_id = tp.id AND r.team_id = $1
-     GROUP BY tp.id, tp.name, tp.is_student_tracker
+     WHERE tp.id IN (SELECT template_id FROM team_templates WHERE team_id = ANY($1::uuid[]))
      ORDER BY tp.name`,
-    [scope.teamId],
+    [scope.teamIds],
   )
   return result.rows.map((row) => ({
     templateId: row.id,
@@ -647,16 +691,16 @@ export async function getFilterOptions(scope: ScopeContext): Promise<{
     }
   }
 
-  if (!scope.teamId) return { teams: [], templates: [], users: [] }
+  if (!scope.teamIds || scope.teamIds.length === 0) return { teams: [], templates: [], users: [] }
   const [team, templates, users] = await Promise.all([
-    runQuery<{ id: string; name: string }>(`SELECT id, name FROM teams WHERE id = $1`, [scope.teamId]),
+    runQuery<{ id: string; name: string }>(`SELECT id, name FROM teams WHERE id = ANY($1::uuid[])`, [scope.teamIds]),
     runQuery<{ id: string; name: string }>(
-      `SELECT tp.id, tp.name FROM templates tp INNER JOIN team_templates tt ON tt.template_id = tp.id WHERE tt.team_id = $1 ORDER BY tp.name`,
-      [scope.teamId],
+      `SELECT DISTINCT tp.id, tp.name FROM templates tp INNER JOIN team_templates tt ON tt.template_id = tp.id WHERE tt.team_id = ANY($1::uuid[]) ORDER BY tp.name`,
+      [scope.teamIds],
     ),
     runQuery<{ telegram_id: string | number; first_name: string; last_name: string | null; username: string | null }>(
-      `SELECT telegram_id, first_name, last_name, username FROM users WHERE team_id = $1 ORDER BY first_name`,
-      [scope.teamId],
+      `SELECT telegram_id, first_name, last_name, username FROM users WHERE team_id = ANY($1::uuid[]) ORDER BY first_name`,
+      [scope.teamIds],
     ),
   ])
   return {
@@ -667,4 +711,86 @@ export async function getFilterOptions(scope: ScopeContext): Promise<{
       name: buildName(r.first_name, r.last_name) || (r.username ? `@${r.username}` : `#${r.telegram_id}`),
     })),
   }
+}
+
+// ---------------------------------------------------------------------------
+// Teams (members + lead) — the dashboard "Team" page
+// ---------------------------------------------------------------------------
+
+export interface TeamMember {
+  telegramId: number
+  name: string
+  username?: string
+  role: string // free-text job title
+  reportCount: number
+  isLead: boolean
+  isSelf: boolean
+}
+
+export interface TeamView {
+  id: string
+  name: string
+  leadTelegramId: number | null
+  leadName: string | null
+  youLead: boolean
+  members: TeamMember[]
+}
+
+export async function getTeams(scope: ScopeContext): Promise<TeamView[]> {
+  let teamRows: Array<{ id: string; name: string; lead_telegram_id: string | number | null }>
+  if (scope.role === "admin") {
+    teamRows = (
+      await runQuery<{ id: string; name: string; lead_telegram_id: string | number | null }>(
+        `SELECT id, name, lead_telegram_id FROM teams ORDER BY name`,
+      )
+    ).rows
+  } else {
+    if (!scope.teamIds || scope.teamIds.length === 0) return []
+    teamRows = (
+      await runQuery<{ id: string; name: string; lead_telegram_id: string | number | null }>(
+        `SELECT id, name, lead_telegram_id FROM teams WHERE id = ANY($1::uuid[]) ORDER BY name`,
+        [scope.teamIds],
+      )
+    ).rows
+  }
+
+  const views: TeamView[] = []
+  for (const t of teamRows) {
+    const leadId = t.lead_telegram_id != null ? Number(t.lead_telegram_id) : null
+    const members = await runQuery<{
+      telegram_id: string | number
+      first_name: string
+      last_name: string | null
+      username: string | null
+      role: string
+      report_count: number
+    }>(
+      `SELECT u.telegram_id, u.first_name, u.last_name, u.username, u.role,
+              (SELECT count(*)::int FROM reports r WHERE r.user_id = u.telegram_id AND r.team_id = $1) AS report_count
+       FROM users u WHERE u.team_id = $1 ORDER BY u.first_name`,
+      [t.id],
+    )
+    const memberList: TeamMember[] = members.rows.map((m) => {
+      const id = Number(m.telegram_id)
+      return {
+        telegramId: id,
+        name: buildName(m.first_name, m.last_name) || (m.username ? `@${m.username}` : `#${id}`),
+        username: m.username ?? undefined,
+        role: normalizeText(m.role || ""),
+        reportCount: m.report_count,
+        isLead: leadId != null && leadId === id,
+        isSelf: id === scope.telegramId,
+      }
+    })
+    const leadMember = memberList.find((m) => m.isLead)
+    views.push({
+      id: t.id,
+      name: normalizeText(t.name),
+      leadTelegramId: leadId,
+      leadName: leadMember?.name ?? null,
+      youLead: leadId != null && leadId === scope.telegramId,
+      members: memberList,
+    })
+  }
+  return views
 }

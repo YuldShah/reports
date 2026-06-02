@@ -14,6 +14,7 @@ export interface Team {
   name: string
   description?: string
   templateIds?: string[] // Array of template IDs (populated from junction table)
+  leadTelegramId?: number | null // Single team lead, assigned by an admin
   createdAt: Date
   createdBy: number | null
 }

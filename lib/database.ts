@@ -27,6 +27,7 @@ export interface Team {
   name: string
   description?: string
   templateIds?: string[] // Array of template IDs (populated from junction table)
+  leadTelegramId?: number | null // Single team lead, assigned by an admin
   createdAt: Date
   createdBy: number | null
 }
@@ -111,6 +112,7 @@ const mapTeamRow = (row: any): Team => ({
   name: row.name,
   description: row.description ?? undefined,
   templateIds: row.template_ids ? parseJsonField<string[]>(row.template_ids, []) : [],
+  leadTelegramId: row.lead_telegram_id != null ? toNumber(row.lead_telegram_id) : null,
   createdAt: toDate(row.created_at),
   createdBy: row.created_by !== null ? toNumber(row.created_by) : null,
 })
@@ -388,13 +390,14 @@ export const getAllTeams = async (): Promise<Team[]> => {
       t.description,
       t.created_by,
       t.created_at,
+      t.lead_telegram_id,
       COALESCE(
         json_agg(tt.template_id) FILTER (WHERE tt.template_id IS NOT NULL),
         '[]'
       ) AS template_ids
      FROM teams t
      LEFT JOIN team_templates tt ON t.id = tt.team_id
-     GROUP BY t.id, t.name, t.description, t.created_by, t.created_at
+     GROUP BY t.id, t.name, t.description, t.created_by, t.created_at, t.lead_telegram_id
      ORDER BY t.created_at DESC`,
   )
 
@@ -409,6 +412,7 @@ export const getTeamById = async (id: string): Promise<Team | null> => {
       t.description,
       t.created_by,
       t.created_at,
+      t.lead_telegram_id,
       COALESCE(
         json_agg(tt.template_id) FILTER (WHERE tt.template_id IS NOT NULL),
         '[]'
@@ -416,7 +420,7 @@ export const getTeamById = async (id: string): Promise<Team | null> => {
      FROM teams t
      LEFT JOIN team_templates tt ON t.id = tt.team_id
      WHERE t.id = $1
-     GROUP BY t.id, t.name, t.description, t.created_by, t.created_at`,
+     GROUP BY t.id, t.name, t.description, t.created_by, t.created_at, t.lead_telegram_id`,
     [id],
   )
 
@@ -434,6 +438,16 @@ export const getUsersByTeam = async (teamId: string): Promise<User[]> => {
   )
 
   return result.rows.map(mapUserRow)
+}
+
+// Team lead (single lead per team, assigned by an admin)
+export const setTeamLead = async (teamId: string, leadTelegramId: number | null): Promise<void> => {
+  await runQuery(`UPDATE teams SET lead_telegram_id = $1 WHERE id = $2`, [leadTelegramId, teamId])
+}
+
+export const getTeamIdsLedBy = async (telegramId: number): Promise<string[]> => {
+  const result = await runQuery<{ id: string }>(`SELECT id FROM teams WHERE lead_telegram_id = $1`, [telegramId])
+  return result.rows.map((r) => r.id)
 }
 
 // Team-Template relationship management

@@ -3,12 +3,12 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 
-export type DashboardRole = "admin" | "lead" | "employee"
+export type DashboardRole = "admin" | "lead" | "member" | "none"
 
 export interface DashboardMe {
   telegramId: number
   role: DashboardRole
-  teamId?: string
+  teamIds?: string[] | null
   name: string
   username?: string
   photoUrl?: string

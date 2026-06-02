@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, assignTemplatesToTeam, getTemplateById } from "@/lib/database"
+import { getAllTeams, createTeam, getTeamById, getUsersByTeam, deleteTeam, assignTemplatesToTeam, getTemplateById, setTeamLead } from "@/lib/database"
 
 export async function GET(request: NextRequest) {
   try {
@@ -71,30 +71,29 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { teamId, templateIds } = body
+    const { teamId, templateIds, leadTelegramId } = body
 
     if (!teamId) {
       return NextResponse.json({ error: "Team ID is required" }, { status: 400 })
     }
 
-    // Ensure templateIds is an array
-    const templateIdsArray = Array.isArray(templateIds) ? templateIds : []
-
-    // Validate all template IDs exist
-    if (templateIdsArray.length > 0) {
+    // Only touch template assignments when templateIds is provided
+    if (templateIds !== undefined) {
+      const templateIdsArray = Array.isArray(templateIds) ? templateIds : []
       for (const templateId of templateIdsArray) {
         const template = await getTemplateById(templateId)
         if (!template) {
-          return NextResponse.json(
-            { error: `Invalid template ID: ${templateId}` },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: `Invalid template ID: ${templateId}` }, { status: 400 })
         }
       }
+      await assignTemplatesToTeam(teamId, templateIdsArray)
     }
 
-    // Assign templates to team
-    await assignTemplatesToTeam(teamId, templateIdsArray)
+    // Assign/clear the single team lead when provided (null clears it)
+    if (leadTelegramId !== undefined) {
+      const lead = leadTelegramId === null || leadTelegramId === "" ? null : Number(leadTelegramId)
+      await setTeamLead(teamId, Number.isFinite(lead as number) ? (lead as number) : null)
+    }
 
     // Fetch updated team
     const updatedTeam = await getTeamById(teamId)
