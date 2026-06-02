@@ -99,12 +99,36 @@ export interface SummaryKpis {
 }
 
 export interface AnalyticsPayload {
-  range: { from: string; to: string }
+  range: { from: string; to: string; days: number }
+  kpis: {
+    total: number
+    totalPrev: number
+    totalDeltaPct: number | null
+    activeSubmitters: number
+    activeSubmittersPrev: number
+    avgPerDay: number
+    withPhotos: number
+    withPhotosPct: number
+    edited: number
+    editedPct: number
+    coverage: { members: number; submitted: number; pct: number }
+    busiestDay: { date: string; count: number } | null
+    peakHour: { hour: number; count: number } | null
+  }
   trend: Array<{ date: string; count: number }>
-  perTeam: Array<{ teamId: string; name: string; count: number }>
-  perTemplate: Array<{ templateId: string; name: string; count: number }>
+  dow: Array<{ name: string; count: number }>
+  hours: Array<{ name: string; count: number }>
+  heatmap: Array<{ dow: number; hour: number; count: number }>
+  perTeam: Array<{ teamId: string; name: string; count: number; members: number; avgPerMember: number }>
+  perTemplate: Array<{ templateId: string; name: string; count: number; pct: number }>
   leaderboard: Array<{ telegramId: number; name: string; count: number }>
-  studentTracker: Array<{ course: string; total: number }>
+  inactiveMembers: Array<{ telegramId: number; name: string; team: string }>
+  numericInsights: Array<{
+    templateId: string
+    templateName: string
+    reports: number
+    fields: Array<{ label: string; sum: number; avg: number; count: number }>
+  }>
 }
 
 // ---------------------------------------------------------------------------
@@ -577,90 +601,242 @@ export async function getSheetRows(
 // Analytics
 // ---------------------------------------------------------------------------
 
+const TZ = "Asia/Tashkent"
+const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0] // Mon..Sun for display
+
 export async function getAnalytics(
   scope: ScopeContext,
   range: { from?: string; to?: string } = {},
 ): Promise<AnalyticsPayload> {
   const now = Date.now()
-  const fromDate = range.from ? new Date(range.from) : new Date(now - 30 * DAY_MS)
   const toDate = range.to ? new Date(range.to) : new Date(now)
+  const fromDate = range.from ? new Date(range.from) : new Date(now - 30 * DAY_MS)
+  const spanMs = Math.max(DAY_MS, toDate.getTime() - fromDate.getTime())
+  const days = Math.max(1, Math.round(spanMs / DAY_MS))
+  const prevFrom = new Date(fromDate.getTime() - spanMs)
 
-  function baseConds(): { conds: string[]; params: any[] } {
+  // reports WHERE for an arbitrary [from, to] window (with scope)
+  const windowConds = (from: Date, to: Date) => {
     const conds: string[] = []
     const params: any[] = []
     pushScope(scope, conds, params)
-    params.push(fromDate.toISOString())
+    params.push(from.toISOString())
     conds.push(`r.created_at >= $${params.length}`)
-    params.push(toDate.toISOString())
+    params.push(to.toISOString())
     conds.push(`r.created_at <= $${params.length}`)
-    return { conds, params }
+    return { where: conds.join(" AND "), params }
   }
+  const cur = windowConds(fromDate, toDate)
+  const prev = windowConds(prevFrom, fromDate)
 
-  const trendQ = baseConds()
-  const trend = await runQuery<{ d: string; c: number }>(
-    `SELECT to_char(date_trunc('day', r.created_at), 'YYYY-MM-DD') AS d, count(*)::int AS c
-     FROM reports r WHERE ${trendQ.conds.join(" AND ")} GROUP BY 1 ORDER BY 1`,
-    trendQ.params,
-  )
-  const trendMap = new Map<string, number>(trend.rows.map((row) => [row.d, row.c]))
+  // members in scope (for coverage / inactive)
+  const mscope =
+    scope.role === "admin"
+      ? { where: "u.team_id IS NOT NULL", params: [] as any[] }
+      : !scope.teamIds || scope.teamIds.length === 0
+        ? { where: "FALSE", params: [] as any[] }
+        : { where: "u.team_id = ANY($1::uuid[])", params: [scope.teamIds] as any[] }
+  const memberParams = [...mscope.params, fromDate.toISOString(), toDate.toISOString()]
+  const mFromIdx = mscope.params.length + 1
+  const mToIdx = mscope.params.length + 2
 
-  const teamQ = baseConds()
-  const perTeam = await runQuery<{ id: string; name: string; c: number }>(
-    `SELECT t.id, t.name, count(*)::int AS c
-     FROM reports r JOIN teams t ON t.id = r.team_id
-     WHERE ${teamQ.conds.join(" AND ")} GROUP BY t.id, t.name ORDER BY c DESC`,
-    teamQ.params,
+  const [kpiR, prevR, trendR, dowR, hourR, heatR, teamR, memberCountR, tmplR, lbR, memberR, numericR] =
+    await Promise.all([
+      runQuery<{ total: number; submitters: number; with_photos: number; edited: number }>(
+        `SELECT count(*)::int AS total, count(DISTINCT r.user_id)::int AS submitters,
+                count(*) FILTER (WHERE r.answers::text ILIKE '%/api/uploads/%')::int AS with_photos,
+                count(*) FILTER (WHERE r.updated_at > r.created_at + interval '5 seconds')::int AS edited
+         FROM reports r WHERE ${cur.where}`,
+        cur.params,
+      ),
+      runQuery<{ total: number; submitters: number }>(
+        `SELECT count(*)::int AS total, count(DISTINCT r.user_id)::int AS submitters FROM reports r WHERE ${prev.where}`,
+        prev.params,
+      ),
+      runQuery<{ d: string; c: number }>(
+        `SELECT to_char(date_trunc('day', r.created_at), 'YYYY-MM-DD') AS d, count(*)::int AS c
+         FROM reports r WHERE ${cur.where} GROUP BY 1 ORDER BY 1`,
+        cur.params,
+      ),
+      runQuery<{ dow: number; c: number }>(
+        `SELECT EXTRACT(DOW FROM r.created_at AT TIME ZONE '${TZ}')::int AS dow, count(*)::int AS c
+         FROM reports r WHERE ${cur.where} GROUP BY 1`,
+        cur.params,
+      ),
+      runQuery<{ hour: number; c: number }>(
+        `SELECT EXTRACT(HOUR FROM r.created_at AT TIME ZONE '${TZ}')::int AS hour, count(*)::int AS c
+         FROM reports r WHERE ${cur.where} GROUP BY 1`,
+        cur.params,
+      ),
+      runQuery<{ dow: number; hour: number; c: number }>(
+        `SELECT EXTRACT(DOW FROM r.created_at AT TIME ZONE '${TZ}')::int AS dow,
+                EXTRACT(HOUR FROM r.created_at AT TIME ZONE '${TZ}')::int AS hour, count(*)::int AS c
+         FROM reports r WHERE ${cur.where} GROUP BY 1, 2`,
+        cur.params,
+      ),
+      runQuery<{ id: string; name: string; c: number }>(
+        `SELECT t.id, t.name, count(*)::int AS c FROM reports r JOIN teams t ON t.id = r.team_id
+         WHERE ${cur.where} GROUP BY t.id, t.name ORDER BY c DESC`,
+        cur.params,
+      ),
+      runQuery<{ team_id: string; n: number }>(
+        `SELECT team_id, count(*)::int AS n FROM users WHERE team_id IS NOT NULL GROUP BY team_id`,
+      ),
+      runQuery<{ id: string; name: string; c: number }>(
+        `SELECT tp.id, tp.name, count(*)::int AS c FROM reports r JOIN templates tp ON tp.id = r.template_id
+         WHERE ${cur.where} GROUP BY tp.id, tp.name ORDER BY c DESC`,
+        cur.params,
+      ),
+      runQuery<{ telegram_id: string | number; first_name: string; last_name: string | null; username: string | null; c: number }>(
+        `SELECT u.telegram_id, u.first_name, u.last_name, u.username, count(*)::int AS c
+         FROM reports r JOIN users u ON u.telegram_id = r.user_id
+         WHERE ${cur.where} GROUP BY u.telegram_id, u.first_name, u.last_name, u.username ORDER BY c DESC LIMIT 12`,
+        cur.params,
+      ),
+      runQuery<{ telegram_id: string | number; first_name: string; last_name: string | null; username: string | null; team_name: string | null; cnt: number }>(
+        `SELECT u.telegram_id, u.first_name, u.last_name, u.username, t.name AS team_name,
+                (SELECT count(*)::int FROM reports r WHERE r.user_id = u.telegram_id
+                   AND r.created_at >= $${mFromIdx} AND r.created_at <= $${mToIdx}) AS cnt
+         FROM users u LEFT JOIN teams t ON t.id = u.team_id
+         WHERE ${mscope.where} ORDER BY u.first_name`,
+        memberParams,
+      ),
+      runQuery<{ answers: unknown; tpl_id: string; tpl_name: string; questions: unknown }>(
+        `SELECT r.answers, tp.id AS tpl_id, tp.name AS tpl_name, tp.questions
+         FROM reports r JOIN templates tp ON tp.id = r.template_id WHERE ${cur.where}`,
+        cur.params,
+      ),
+    ])
+
+  const k = kpiR.rows[0] ?? { total: 0, submitters: 0, with_photos: 0, edited: 0 }
+  const kPrev = prevR.rows[0] ?? { total: 0, submitters: 0 }
+
+  // trend (UTC days, gap-filled)
+  const trendMap = new Map<string, number>(trendR.rows.map((row) => [row.d, row.c]))
+  const trend = fillDailyTrend(trendMap, fromDate, toDate)
+  const busiest = trend.reduce<{ date: string; count: number } | null>(
+    (best, d) => (best == null || d.count > best.count ? { date: d.date, count: d.count } : best),
+    null,
   )
 
-  const tplQ = baseConds()
-  const perTemplate = await runQuery<{ id: string; name: string; c: number }>(
-    `SELECT tp.id, tp.name, count(*)::int AS c
-     FROM reports r JOIN templates tp ON tp.id = r.template_id
-     WHERE ${tplQ.conds.join(" AND ")} GROUP BY tp.id, tp.name ORDER BY c DESC`,
-    tplQ.params,
+  // day-of-week (Mon..Sun)
+  const dowMap = new Map<number, number>(dowR.rows.map((r) => [r.dow, r.c]))
+  const dow = DOW_ORDER.map((i) => ({ name: DOW_LABELS[i], count: dowMap.get(i) ?? 0 }))
+
+  // hour-of-day (0..23)
+  const hourMap = new Map<number, number>(hourR.rows.map((r) => [r.hour, r.c]))
+  const hours = Array.from({ length: 24 }, (_, h) => ({ name: `${String(h).padStart(2, "0")}`, count: hourMap.get(h) ?? 0 }))
+  const peakHour = hourR.rows.reduce<{ hour: number; count: number } | null>(
+    (best, r) => (best == null || r.c > best.count ? { hour: r.hour, count: r.c } : best),
+    null,
   )
 
-  const lbQ = baseConds()
-  const leaderboard = await runQuery<{ telegram_id: string | number; first_name: string; last_name: string | null; username: string | null; c: number }>(
-    `SELECT u.telegram_id, u.first_name, u.last_name, u.username, count(*)::int AS c
-     FROM reports r JOIN users u ON u.telegram_id = r.user_id
-     WHERE ${lbQ.conds.join(" AND ")} GROUP BY u.telegram_id, u.first_name, u.last_name, u.username
-     ORDER BY c DESC LIMIT 10`,
-    lbQ.params,
-  )
+  const heatmap = heatR.rows.map((r) => ({ dow: r.dow, hour: r.hour, count: r.c }))
 
-  // Student tracker course totals: sum numeric answers per question label across ST templates.
-  const stQ = baseConds()
-  const stReports = await runQuery<{ answers: unknown; questions: unknown }>(
-    `SELECT r.answers, tp.questions
-     FROM reports r JOIN templates tp ON tp.id = r.template_id
-     WHERE ${stQ.conds.join(" AND ")} AND tp.is_student_tracker = TRUE`,
-    stQ.params,
-  )
-  const courseTotals = new Map<string, number>()
-  for (const row of stReports.rows) {
+  // per-team with member counts + avg
+  const memberCounts = new Map<string, number>(memberCountR.rows.map((r) => [r.team_id, r.n]))
+  const perTeam = teamR.rows.map((row) => {
+    const members = memberCounts.get(row.id) ?? 0
+    return {
+      teamId: row.id,
+      name: normalizeText(row.name),
+      count: row.c,
+      members,
+      avgPerMember: members > 0 ? Math.round((row.c / members) * 10) / 10 : 0,
+    }
+  })
+
+  const perTemplate = tmplR.rows.map((row) => ({
+    templateId: row.id,
+    name: normalizeText(row.name),
+    count: row.c,
+    pct: k.total > 0 ? Math.round((row.c / k.total) * 1000) / 10 : 0,
+  }))
+
+  const leaderboard = lbR.rows.map((row) => ({
+    telegramId: Number(row.telegram_id),
+    name: buildName(row.first_name, row.last_name) || (row.username ? `@${row.username}` : `#${row.telegram_id}`),
+    count: row.c,
+  }))
+
+  // coverage + inactive members
+  const members = memberR.rows
+  const submitted = members.filter((m) => m.cnt > 0).length
+  const inactiveMembers = members
+    .filter((m) => m.cnt === 0)
+    .map((m) => ({
+      telegramId: Number(m.telegram_id),
+      name: buildName(m.first_name, m.last_name) || (m.username ? `@${m.username}` : `#${m.telegram_id}`),
+      team: normalizeText(m.team_name ?? ""),
+    }))
+
+  // numeric insights — sum/avg of numeric answer fields per template (the "hidden" data)
+  const numericAgg = new Map<
+    string,
+    { name: string; reports: number; fields: Map<string, { sum: number; count: number }> }
+  >()
+  for (const row of numericR.rows) {
     const answers = parseJson<Record<string, unknown>>(row.answers, {})
     const questions = parseJson<any[]>(row.questions, [])
+    let entry = numericAgg.get(row.tpl_id)
+    if (!entry) {
+      entry = { name: normalizeText(row.tpl_name || ""), reports: 0, fields: new Map() }
+      numericAgg.set(row.tpl_id, entry)
+    }
+    entry.reports += 1
     for (const q of questions) {
       if (String(q?.type) !== "number") continue
       const fieldId = String(q?.id ?? q?.key ?? q?.name ?? "")
       const label = normalizeText(String(q?.label ?? fieldId))
       const n = toNumeric(answers[fieldId])
-      if (n != null) courseTotals.set(label, (courseTotals.get(label) ?? 0) + n)
+      if (n == null) continue
+      const f = entry.fields.get(label) ?? { sum: 0, count: 0 }
+      f.sum += n
+      f.count += 1
+      entry.fields.set(label, f)
     }
   }
+  const numericInsights = Array.from(numericAgg.entries())
+    .map(([templateId, entry]) => ({
+      templateId,
+      templateName: entry.name,
+      reports: entry.reports,
+      fields: Array.from(entry.fields.entries())
+        .map(([label, f]) => ({ label, sum: f.sum, avg: Math.round((f.sum / f.count) * 100) / 100, count: f.count }))
+        .sort((a, b) => b.sum - a.sum),
+    }))
+    .filter((t) => t.fields.length > 0)
+    .sort((a, b) => b.reports - a.reports)
+
+  const memberTotal = members.length
 
   return {
-    range: { from: fromDate.toISOString(), to: toDate.toISOString() },
-    trend: fillDailyTrend(trendMap, fromDate, toDate),
-    perTeam: perTeam.rows.map((row) => ({ teamId: row.id, name: normalizeText(row.name), count: row.c })),
-    perTemplate: perTemplate.rows.map((row) => ({ templateId: row.id, name: normalizeText(row.name), count: row.c })),
-    leaderboard: leaderboard.rows.map((row) => ({
-      telegramId: Number(row.telegram_id),
-      name: buildName(row.first_name, row.last_name) || (row.username ? `@${row.username}` : `#${row.telegram_id}`),
-      count: row.c,
-    })),
-    studentTracker: Array.from(courseTotals.entries()).map(([course, total]) => ({ course, total })),
+    range: { from: fromDate.toISOString(), to: toDate.toISOString(), days },
+    kpis: {
+      total: k.total,
+      totalPrev: kPrev.total,
+      totalDeltaPct: kPrev.total > 0 ? Math.round(((k.total - kPrev.total) / kPrev.total) * 1000) / 10 : null,
+      activeSubmitters: k.submitters,
+      activeSubmittersPrev: kPrev.submitters,
+      avgPerDay: Math.round((k.total / days) * 10) / 10,
+      withPhotos: k.with_photos,
+      withPhotosPct: k.total > 0 ? Math.round((k.with_photos / k.total) * 1000) / 10 : 0,
+      edited: k.edited,
+      editedPct: k.total > 0 ? Math.round((k.edited / k.total) * 1000) / 10 : 0,
+      coverage: { members: memberTotal, submitted, pct: memberTotal > 0 ? Math.round((submitted / memberTotal) * 1000) / 10 : 0 },
+      busiestDay: busiest && busiest.count > 0 ? busiest : null,
+      peakHour: peakHour && peakHour.count > 0 ? peakHour : null,
+    },
+    trend,
+    dow,
+    hours,
+    heatmap,
+    perTeam,
+    perTemplate,
+    leaderboard,
+    inactiveMembers,
+    numericInsights,
   }
 }
 

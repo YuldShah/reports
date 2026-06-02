@@ -116,6 +116,53 @@ export function HorizontalBars({ data }: { data: Array<{ name: string; count: nu
   )
 }
 
+const HEAT_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const HEAT_ROWS = [1, 2, 3, 4, 5, 6, 0] // Mon..Sun
+
+export function ActivityHeatmap({ data }: { data: Array<{ dow: number; hour: number; count: number }> }) {
+  const map = new Map<string, number>()
+  let max = 0
+  for (const d of data) {
+    map.set(`${d.dow}-${d.hour}`, d.count)
+    if (d.count > max) max = d.count
+  }
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[560px]">
+        <div className="mb-1 flex gap-0.5 pl-10">
+          {Array.from({ length: 24 }).map((_, h) => (
+            <div key={h} className="w-[18px] text-center text-[9px] text-muted-foreground">
+              {h % 3 === 0 ? h : ""}
+            </div>
+          ))}
+        </div>
+        {HEAT_ROWS.map((dow) => (
+          <div key={dow} className="mb-0.5 flex items-center gap-0.5">
+            <div className="w-10 pr-1 text-right text-[10px] text-muted-foreground">{HEAT_LABELS[dow]}</div>
+            {Array.from({ length: 24 }).map((_, h) => {
+              const c = map.get(`${dow}-${h}`) ?? 0
+              const intensity = max > 0 ? c / max : 0
+              return (
+                <div
+                  key={h}
+                  title={`${HEAT_LABELS[dow]} ${String(h).padStart(2, "0")}:00 — ${c} report${c === 1 ? "" : "s"}`}
+                  className="h-[18px] w-[18px] rounded-[3px]"
+                  style={{
+                    background:
+                      c > 0
+                        ? `color-mix(in srgb, var(--chart-1) ${Math.round(18 + intensity * 82)}%, transparent)`
+                        : "color-mix(in srgb, var(--muted-foreground) 12%, transparent)",
+                  }}
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function DistributionPie({ data }: { data: Array<{ name: string; count: number }> }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
