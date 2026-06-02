@@ -36,6 +36,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
 
+  // "My Records" is only meaningful for employees — admins/leads don't submit reports.
+  const navItems = NAV.filter((item) => item.href !== "/dashboard/me" || me?.role === "employee")
+
   return (
     <div className="min-h-screen">
       <header className="header-halo sticky top-0 z-40 border-b border-border/50">
@@ -78,7 +81,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         <nav className="mx-auto max-w-7xl overflow-x-auto px-3 pb-2">
           <div className="flex items-center gap-1">
-            {NAV.map((item) => {
+            {navItems.map((item) => {
               const active = isActive(item.href, item.exact)
               const Icon = item.icon
               return (

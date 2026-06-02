@@ -5,6 +5,7 @@ import { BarBreakdown, DistributionPie, HorizontalBars, TrendAreaChart } from "@
 import { CenterSpinner, EmptyPanel, ErrorPanel } from "@/components/dashboard/states"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
 import { cn } from "@/lib/utils"
 import type { AnalyticsPayload } from "@/lib/dashboard-data"
 
@@ -14,8 +15,6 @@ function daysAgoISO(n: number): string {
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
-
-const fieldClass = "surface-field h-9 rounded-[calc(var(--radius)+2px)] border px-3 text-sm text-foreground"
 
 export default function AnalyticsPage() {
   const [from, setFrom] = useState(daysAgoISO(30))
@@ -59,8 +58,12 @@ export default function AnalyticsPage() {
               {n}d
             </Button>
           ))}
-          <input type="date" className={fieldClass} value={from} max={to} onChange={(e) => setFrom(e.target.value)} aria-label="From" />
-          <input type="date" className={fieldClass} value={to} min={from} max={todayISO()} onChange={(e) => setTo(e.target.value)} aria-label="To" />
+          <div className="w-36">
+            <DatePicker value={from} onChange={(v) => v && setFrom(v)} placeholder="From" />
+          </div>
+          <div className="w-36">
+            <DatePicker value={to} onChange={(v) => v && setTo(v)} placeholder="To" />
+          </div>
         </div>
       </div>
 

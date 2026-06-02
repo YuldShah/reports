@@ -61,10 +61,7 @@ export async function GET(req: NextRequest) {
   const claims = await exchangeCode({ code, codeVerifier: verifier, redirectUri: redirectUriFor(req) })
   if (!claims) return backToLogin(req, "token_exchange_failed")
 
-  // Diagnostic: which claims did Telegram return, and which id did we resolve?
-  console.log("[oauth] id_token claims:", JSON.stringify(claims))
   const telegramId = extractTelegramId(claims)
-  console.log("[oauth] resolved telegramId:", telegramId)
   if (telegramId == null) return backToLogin(req, "no_subject")
 
   let user

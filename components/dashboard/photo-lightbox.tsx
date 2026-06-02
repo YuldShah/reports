@@ -49,7 +49,7 @@ export function PhotoLightbox({ urls, open, startIndex = 0, onClose }: PhotoLigh
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      className="pointer-events-auto fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <button

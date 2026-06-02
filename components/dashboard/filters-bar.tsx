@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
+import { DashSelect } from "@/components/dashboard/select"
 
 export interface ReportFiltersState {
   teamId?: string
@@ -26,9 +28,6 @@ interface FiltersBarProps {
   showUser?: boolean
   showTemplate?: boolean
 }
-
-const fieldClass =
-  "surface-field h-9 min-w-0 rounded-[calc(var(--radius)+2px)] border px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
 
 export function FiltersBar({
   value,
@@ -60,9 +59,7 @@ export function FiltersBar({
   }, [search])
 
   const set = (patch: Partial<ReportFiltersState>) => onChange({ ...value, ...patch })
-  const hasFilters =
-    !!(value.teamId || value.templateId || value.userId || value.from || value.to || value.search)
-
+  const hasFilters = !!(value.teamId || value.templateId || value.userId || value.from || value.to || value.search)
   const showTeamSelect = showTeam && options.teams.length > 1
 
   return (
@@ -74,49 +71,49 @@ export function FiltersBar({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search title or answers…"
-            className={`${fieldClass} w-full pl-9`}
+            className="surface-field h-9 w-full rounded-[calc(var(--radius)+2px)] border pl-9 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
           />
         </div>
 
         {showTeamSelect && (
-          <select className={fieldClass} value={value.teamId ?? ""} onChange={(e) => set({ teamId: e.target.value || undefined })}>
-            <option value="">All teams</option>
-            {options.teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+          <DashSelect
+            ariaLabel="Filter by team"
+            className="min-w-[150px]"
+            value={value.teamId ?? ""}
+            onValueChange={(v) => set({ teamId: v || undefined })}
+            allLabel="All teams"
+            options={options.teams.map((t) => ({ value: t.id, label: t.name }))}
+          />
         )}
 
         {showTemplate && (
-          <select
-            className={fieldClass}
+          <DashSelect
+            ariaLabel="Filter by template"
+            className="min-w-[150px]"
             value={value.templateId ?? ""}
-            onChange={(e) => set({ templateId: e.target.value || undefined })}
-          >
-            <option value="">All templates</option>
-            {options.templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+            onValueChange={(v) => set({ templateId: v || undefined })}
+            allLabel="All templates"
+            options={options.templates.map((t) => ({ value: t.id, label: t.name }))}
+          />
         )}
 
         {showUser && (
-          <select className={fieldClass} value={value.userId ?? ""} onChange={(e) => set({ userId: e.target.value || undefined })}>
-            <option value="">All people</option>
-            {options.users.map((u) => (
-              <option key={u.telegramId} value={String(u.telegramId)}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+          <DashSelect
+            ariaLabel="Filter by person"
+            className="min-w-[150px]"
+            value={value.userId ?? ""}
+            onValueChange={(v) => set({ userId: v || undefined })}
+            allLabel="All people"
+            options={options.users.map((u) => ({ value: String(u.telegramId), label: u.name }))}
+          />
         )}
 
-        <input type="date" className={fieldClass} value={value.from ?? ""} onChange={(e) => set({ from: e.target.value || undefined })} aria-label="From date" />
-        <input type="date" className={fieldClass} value={value.to ?? ""} onChange={(e) => set({ to: e.target.value || undefined })} aria-label="To date" />
+        <div className="w-36">
+          <DatePicker value={value.from} onChange={(v) => set({ from: v || undefined })} placeholder="From" />
+        </div>
+        <div className="w-36">
+          <DatePicker value={value.to} onChange={(v) => set({ to: v || undefined })} placeholder="To" />
+        </div>
 
         {hasFilters && (
           <Button

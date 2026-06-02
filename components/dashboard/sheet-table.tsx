@@ -43,13 +43,13 @@ export function SheetTable({ sheet }: { sheet: SheetData }) {
           </TableHeader>
           <TableBody>
             {sheet.rows.map((row, idx) => (
-              <TableRow key={idx}>
+              <TableRow key={idx} className="h-11">
                 {sheet.columns.map((col) => {
                   const value = row[col.key]
                   if (PHOTO_TYPES.has(col.type)) {
                     const urls = Array.isArray(value) ? (value as string[]) : []
                     return (
-                      <TableCell key={col.key}>
+                      <TableCell key={col.key} className="whitespace-nowrap">
                         {urls.length > 0 ? (
                           <button
                             type="button"
@@ -65,9 +65,12 @@ export function SheetTable({ sheet }: { sheet: SheetData }) {
                       </TableCell>
                     )
                   }
+                  const text = fmtCell(value)
                   return (
-                    <TableCell key={col.key} className={col.numeric ? "text-right tabular-nums" : ""}>
-                      {fmtCell(value)}
+                    <TableCell key={col.key} className={col.numeric ? "whitespace-nowrap text-right tabular-nums" : ""}>
+                      <span className="block max-w-[240px] truncate" title={text}>
+                        {text}
+                      </span>
                     </TableCell>
                   )
                 })}

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { FiltersBar, type ReportFiltersState } from "@/components/dashboard/filters-bar"
 import { ReportsTable } from "@/components/dashboard/reports-table"
 import { ExportButton } from "@/components/dashboard/export-button"
+import { DashSelect } from "@/components/dashboard/select"
 import { CenterSpinner, ErrorPanel } from "@/components/dashboard/states"
 import { Button } from "@/components/ui/button"
 import { filtersToParams } from "@/lib/dashboard-filters"
@@ -69,17 +70,13 @@ export default function ReportsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 px-1">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Rows per page</span>
-              <select
-                className="surface-field h-8 rounded-lg border px-2 text-sm text-foreground"
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-              >
-                {PAGE_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+              <DashSelect
+                ariaLabel="Rows per page"
+                className="h-8 w-20"
+                value={String(pageSize)}
+                onValueChange={(v) => setPageSize(Number(v))}
+                options={PAGE_SIZES.map((s) => ({ value: String(s), label: String(s) }))}
+              />
             </div>
             <div className="flex items-center gap-3 text-sm">
               <span className="tabular-nums text-muted-foreground">
