@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import { ArrowDownRight, ArrowUpRight } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { InfoHint } from "@/components/dashboard/info-hint"
 
 interface KpiCardProps {
   label: string
@@ -9,16 +11,21 @@ interface KpiCardProps {
   hint?: string
   /** Period-over-period change in %. Positive = up (green), negative = down (red). */
   delta?: number | null
+  /** Optional explanation shown via a "?" popover next to the label. */
+  info?: ReactNode
   className?: string
 }
 
-export function KpiCard({ label, value, icon: Icon, hint, delta, className }: KpiCardProps) {
+export function KpiCard({ label, value, icon: Icon, hint, delta, info, className }: KpiCardProps) {
   const hasDelta = delta != null && Number.isFinite(delta)
   const up = (delta ?? 0) >= 0
   return (
     <div className={cn("surface-panel card-interactive rounded-[calc(var(--radius)+4px)] border p-4", className)}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+          {info && <InfoHint title={label}>{info}</InfoHint>}
+        </span>
         {Icon && (
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
             <Icon className="h-4 w-4" />

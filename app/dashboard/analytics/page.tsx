@@ -1,9 +1,11 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { useEffect, useState } from "react"
 import { CalendarClock, CheckCircle2, Clock, FileText, ImageIcon, PencilLine, TrendingUp, UserCheck, Users } from "lucide-react"
 import { ActivityHeatmap, BarBreakdown, DistributionPie, HorizontalBars, TrendAreaChart } from "@/components/dashboard/charts"
 import { KpiCard } from "@/components/dashboard/kpi-card"
+import { InfoHint } from "@/components/dashboard/info-hint"
 import { CenterSpinner, EmptyPanel, ErrorPanel } from "@/components/dashboard/states"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -48,12 +50,22 @@ export default function AnalyticsPage() {
     setTo(todayISO())
   }
   const activeRange = (n: number) => from === daysAgoISO(n) && to === todayISO()
+  const span = data?.range.days ?? 30
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight">Analytics</h1>
+          <h1 className="flex items-center gap-2 font-heading text-2xl font-bold tracking-tight">
+            Analytics
+            <InfoHint title="How to read this page">
+              Every number, chart and list below is calculated <strong>only</strong> from reports submitted within the
+              date range on the right. Change the range (or use 7d / 30d / 90d) and everything recalculates. Coloured
+              badges compare the current range to the <strong>previous period of equal length</strong> (e.g. a 30-day
+              window is compared to the 30 days before it). Data is scoped to what you can see — admins get the whole
+              org, team leads &amp; members get their team.
+            </InfoHint>
+          </h1>
           <p className="text-sm text-muted-foreground">Deep insights across your scope.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -79,61 +91,122 @@ export default function AnalyticsPage() {
         <div className={cn("space-y-4", loading && "opacity-60 transition-opacity")}>
           {/* KPI row */}
           <div className="grid grid-cols-2 gap-3 stagger-children md:grid-cols-3 lg:grid-cols-6">
-            <KpiCard label="Submissions" value={data.kpis.total} icon={FileText} delta={data.kpis.totalDeltaPct} hint={`vs prev ${data.range.days}d`} />
+            <KpiCard
+              label="Submissions"
+              value={data.kpis.total}
+              icon={FileText}
+              delta={data.kpis.totalDeltaPct}
+              hint={`vs prev ${span}d`}
+              info={
+                <>
+                  Total reports submitted in the selected range. The badge is the % change vs the previous {span} days
+                  (previously {data.kpis.totalPrev}).
+                </>
+              }
+            />
             <KpiCard
               label="Active People"
               value={data.kpis.activeSubmitters}
               icon={UserCheck}
               delta={pctDelta(data.kpis.activeSubmitters, data.kpis.activeSubmittersPrev)}
               hint={`prev ${data.kpis.activeSubmittersPrev}`}
+              info={<>Number of distinct people who submitted at least one report in the range. The badge compares to the previous period.</>}
             />
-            <KpiCard label="Avg / Day" value={data.kpis.avgPerDay} icon={TrendingUp} />
-            <KpiCard label="Coverage" value={`${data.kpis.coverage.pct}%`} icon={Users} hint={`${data.kpis.coverage.submitted}/${data.kpis.coverage.members} submitted`} />
-            <KpiCard label="With Photos" value={`${data.kpis.withPhotosPct}%`} icon={ImageIcon} hint={`${data.kpis.withPhotos} reports`} />
-            <KpiCard label="Edited" value={`${data.kpis.editedPct}%`} icon={PencilLine} hint={`${data.kpis.edited} reports`} />
+            <KpiCard
+              label="Avg / Day"
+              value={data.kpis.avgPerDay}
+              icon={TrendingUp}
+              info={<>Average reports per day = total submissions ÷ {span} days in the range.</>}
+            />
+            <KpiCard
+              label="Coverage"
+              value={`${data.kpis.coverage.pct}%`}
+              icon={Users}
+              hint={`${data.kpis.coverage.submitted}/${data.kpis.coverage.members} submitted`}
+              info={
+                <>
+                  Share of team members who submitted at least once in the range
+                  ({data.kpis.coverage.submitted} of {data.kpis.coverage.members}). Low coverage means many members
+                  aren&apos;t reporting — see &ldquo;Needs attention&rdquo; below.
+                </>
+              }
+            />
+            <KpiCard
+              label="With Photos"
+              value={`${data.kpis.withPhotosPct}%`}
+              icon={ImageIcon}
+              hint={`${data.kpis.withPhotos} reports`}
+              info={<>Percentage of reports in the range that include at least one uploaded photo or file.</>}
+            />
+            <KpiCard
+              label="Edited"
+              value={`${data.kpis.editedPct}%`}
+              icon={PencilLine}
+              hint={`${data.kpis.edited} reports`}
+              info={<>Percentage of reports changed after they were first submitted (last-updated time is later than the submitted time).</>}
+            />
           </div>
 
           {/* quick facts */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="surface-panel flex items-center gap-3 rounded-[calc(var(--radius)+4px)] border p-4">
               <CalendarClock className="h-5 w-5 text-primary" />
-              <div className="text-sm">
+              <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-muted-foreground">Busiest day: </span>
                 <span className="font-semibold">
                   {data.kpis.busiestDay ? `${data.kpis.busiestDay.date} (${data.kpis.busiestDay.count})` : "—"}
                 </span>
+                <InfoHint title="Busiest day">The single calendar day in the range with the most reports submitted.</InfoHint>
               </div>
             </div>
             <div className="surface-panel flex items-center gap-3 rounded-[calc(var(--radius)+4px)] border p-4">
               <Clock className="h-5 w-5 text-primary" />
-              <div className="text-sm">
+              <div className="flex items-center gap-1.5 text-sm">
                 <span className="text-muted-foreground">Peak hour: </span>
                 <span className="font-semibold">
                   {data.kpis.peakHour ? `${String(data.kpis.peakHour.hour).padStart(2, "0")}:00 (${data.kpis.peakHour.count})` : "—"}
                 </span>
+                <InfoHint title="Peak hour">The hour of day (local Tashkent time) when the most reports are submitted, across the whole range.</InfoHint>
               </div>
             </div>
           </div>
 
-          <ChartCard title="Submissions over time">
+          <ChartCard
+            title="Submissions over time"
+            info={<>Reports submitted per calendar day across the range. Use it to spot spikes, dips and overall momentum.</>}
+          >
             <TrendAreaChart data={data.trend} />
           </ChartCard>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard title="By day of week">
+            <ChartCard
+              title="By day of week"
+              info={<>Reports grouped by weekday (local time). Reveals which weekdays people report on — e.g. Monday-heavy, quiet weekends.</>}
+            >
               <BarBreakdown data={data.dow} height={240} />
             </ChartCard>
-            <ChartCard title="By hour of day">
+            <ChartCard
+              title="By hour of day"
+              info={<>Reports grouped by the hour they were submitted (local time, 00–23). Shows when during the day reports come in.</>}
+            >
               <BarBreakdown data={data.hours} height={240} />
             </ChartCard>
           </div>
 
-          <ChartCard title="When reports come in (local time)">
+          <ChartCard
+            title="When reports come in"
+            info={
+              <>
+                Each cell is a weekday × hour-of-day combination (local time). Darker cells = more reports submitted in
+                that slot. It pinpoints the exact windows when reporting actually happens.
+              </>
+            }
+          >
             <ActivityHeatmap data={data.heatmap} />
           </ChartCard>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard title="By template">
+            <ChartCard title="By template" info={<>Share of reports by the form/template used. Shows which report types are most common.</>}>
               {data.perTemplate.length ? (
                 <DistributionPie data={data.perTemplate.map((t) => ({ name: t.name, count: t.count }))} />
               ) : (
@@ -141,11 +214,11 @@ export default function AnalyticsPage() {
               )}
             </ChartCard>
             {data.perTeam.length > 1 ? (
-              <ChartCard title="By team">
+              <ChartCard title="By team" info={<>Number of reports submitted per team in the range.</>}>
                 <BarBreakdown data={data.perTeam.map((t) => ({ name: t.name, count: t.count }))} />
               </ChartCard>
             ) : (
-              <ChartCard title="Top contributors">
+              <ChartCard title="Top contributors" info={<>The people who submitted the most reports in the range (top 12).</>}>
                 {data.leaderboard.length ? (
                   <HorizontalBars data={data.leaderboard.map((u) => ({ name: u.name, count: u.count }))} />
                 ) : (
@@ -156,7 +229,7 @@ export default function AnalyticsPage() {
           </div>
 
           {data.perTeam.length > 1 && (
-            <ChartCard title="Top contributors">
+            <ChartCard title="Top contributors" info={<>The people who submitted the most reports in the range (top 12).</>}>
               {data.leaderboard.length ? (
                 <HorizontalBars data={data.leaderboard.map((u) => ({ name: u.name, count: u.count }))} />
               ) : (
@@ -165,14 +238,18 @@ export default function AnalyticsPage() {
             </ChartCard>
           )}
 
-          {/* Needs attention: members who didn't submit */}
+          {/* Needs attention */}
           <Card className="surface-panel">
             <CardHeader className="pb-2">
-              <CardTitle className="font-heading text-base">
+              <CardTitle className="flex items-center gap-1.5 font-heading text-base">
                 Needs attention
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                <span className="text-xs font-normal text-muted-foreground">
                   {data.inactiveMembers.length} of {data.kpis.coverage.members} members didn&apos;t submit
                 </span>
+                <InfoHint title="Needs attention">
+                  Team members who did <strong>not</strong> submit any report in the selected range. Use it to follow up
+                  with people who are behind on reporting. (Admins see everyone; leads/members see their team.)
+                </InfoHint>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -199,10 +276,17 @@ export default function AnalyticsPage() {
             </CardContent>
           </Card>
 
-          {/* Numeric insights — the hidden data inside answers */}
+          {/* Numeric insights */}
           {data.numericInsights.length > 0 && (
             <div className="space-y-3">
-              <h2 className="font-heading text-lg font-bold tracking-tight">Reported totals</h2>
+              <h2 className="flex items-center gap-2 font-heading text-lg font-bold tracking-tight">
+                Reported totals
+                <InfoHint title="Reported totals">
+                  The actual numbers people typed into their reports. For every numeric field in each form, this sums
+                  the values across all reports in the range and shows the average per report that filled it in. It
+                  surfaces the real data (students reached, counts, etc.) — not just how many reports were filed.
+                </InfoHint>
+              </h2>
               <div className="grid gap-4 lg:grid-cols-2">
                 {data.numericInsights.map((tpl) => (
                   <Card key={tpl.templateId} className="surface-panel">
@@ -238,11 +322,14 @@ export default function AnalyticsPage() {
   )
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, info, children }: { title: string; info?: ReactNode; children: ReactNode }) {
   return (
     <Card className="surface-panel">
       <CardHeader className="pb-2">
-        <CardTitle className="font-heading text-base">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 font-heading text-base">
+          {title}
+          {info && <InfoHint title={title}>{info}</InfoHint>}
+        </CardTitle>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
