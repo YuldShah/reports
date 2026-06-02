@@ -87,9 +87,13 @@ export async function handleBotCommand(chatId: number, message: string, userId: 
     }
 
     const buttonText = isUserAdmin ? "📊 Admin Dashboard" : "📝 Submit Report"
-    const replyMarkup = webAppUrl
-      ? { inline_keyboard: [[{ text: buttonText, web_app: { url: webAppUrl } }]] }
-      : undefined
+    // Web dashboard opens in the browser (Telegram OAuth login) — a URL button, not web_app.
+    const dashboardUrl = baseAppUrl ? `${baseAppUrl}/dashboard` : null
+
+    const rows: Array<Array<{ text: string; web_app?: { url: string }; url?: string }>> = []
+    if (webAppUrl) rows.push([{ text: buttonText, web_app: { url: webAppUrl } }])
+    if (dashboardUrl) rows.push([{ text: "🌐 Open Web Dashboard", url: dashboardUrl }])
+    const replyMarkup = rows.length > 0 ? { inline_keyboard: rows } : undefined
 
     return { method: "sendMessage", chat_id: chatId, text: replyMsg, ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }
   } catch (error) {
